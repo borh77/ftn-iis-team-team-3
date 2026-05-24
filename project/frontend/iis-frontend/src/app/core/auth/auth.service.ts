@@ -1,4 +1,5 @@
-import { inject, Injectable } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, map, Observable } from 'rxjs';
 import { API_BASE_URL } from '../api.token';
@@ -9,6 +10,7 @@ export class AuthService {
   private readonly storageKey = 'iis-drug-crm.session';
   private readonly apiBaseUrl = inject(API_BASE_URL);
   private readonly http = inject(HttpClient);
+  private readonly platformId = inject(PLATFORM_ID);
   private readonly sessionSubject = new BehaviorSubject<AuthSession | null>(this.restoreSession());
 
   readonly session$ = this.sessionSubject.asObservable();
@@ -30,7 +32,9 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem(this.storageKey);
+    if (this.isBrowser()) {
+      localStorage.removeItem(this.storageKey);
+    }
     this.sessionSubject.next(null);
   }
 
@@ -71,11 +75,17 @@ export class AuthService {
   }
 
   private saveSession(session: AuthSession): void {
-    localStorage.setItem(this.storageKey, JSON.stringify(session));
+    if (this.isBrowser()) {
+      localStorage.setItem(this.storageKey, JSON.stringify(session));
+    }
     this.sessionSubject.next(session);
   }
 
   private restoreSession(): AuthSession | null {
+    if (!this.isBrowser()) {
+      return null;
+    }
+
     const raw = localStorage.getItem(this.storageKey);
     if (!raw) {
       return null;
@@ -86,5 +96,9 @@ export class AuthService {
     } catch {
       return null;
     }
+  }
+
+  private isBrowser(): boolean {
+    return isPlatformBrowser(this.platformId);
   }
 }
