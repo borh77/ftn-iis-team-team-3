@@ -1,0 +1,10 @@
+<section class="page-shell">
+  <header class="page-hero">
+    <p class="kicker">Administrator</p>
+    <h2>User management</h2>
+    <p>Browse all users with pagination and create new accounts with initial credentials.</p>
+  </header>
+
+  <app-user-create (created)="markRefreshed()"></app-user-create>
+  <app-user-list [refreshToken]="refreshToken()"></app-user-list>
+</section>

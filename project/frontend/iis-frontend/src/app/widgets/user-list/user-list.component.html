@@ -1,0 +1,49 @@
+<section class="panel">
+  <header class="panel-head">
+    <div>
+      <p class="kicker">Users</p>
+      <h3>Registered accounts</h3>
+    </div>
+
+    <button type="button" (click)="load()">Refresh</button>
+  </header>
+
+  @if (loading) {
+    <p class="muted">Loading users...</p>
+  } @else if (!data) {
+    <p class="muted">No users loaded yet.</p>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Password changed</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (user of data.content; track user.id) {
+            <tr>
+              <td>{{ user.id }}</td>
+              <td>{{ user.username }}</td>
+              <td>{{ user.email }}</td>
+              <td>{{ user.role }}</td>
+              <td>{{ user.active ? 'Active' : 'Inactive' }}</td>
+              <td>{{ user.hasChangedPassword ? 'Yes' : 'No' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination">
+      <button type="button" (click)="previousPage()" [disabled]="page === 0">Previous</button>
+      <span>Page {{ data.number + 1 }} of {{ data.totalPages }}</span>
+      <button type="button" (click)="nextPage()" [disabled]="data.last">Next</button>
+    </div>
+  }
+</section>

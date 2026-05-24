@@ -1,0 +1,20 @@
+<div class="shell">
+  <aside class="sidebar">
+    <div>
+      <p class="eyebrow">IIS Drug CRM</p>
+      <h1>{{ title() }}</h1>
+      <p class="lede">Login, admin users and access control base for the project.</p>
+    </div>
+
+    <nav class="nav">
+      <a routerLink="/login" routerLinkActive="active">Login</a>
+      <a routerLink="/admin/users" routerLinkActive="active">Admin Users</a>
+      <a routerLink="/content" routerLinkActive="active">Pricelist Owner</a>
+      <a routerLink="/published-pricelists" routerLinkActive="active">Buyer View</a>
+    </nav>
+  </aside>
+
+  <main class="workspace">
+    <router-outlet></router-outlet>
+  </main>
+</div>

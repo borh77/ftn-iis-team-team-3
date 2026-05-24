@@ -1,0 +1,44 @@
+<section class="panel">
+  <header>
+    <p class="kicker">Create User</p>
+    <h3>New account</h3>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="form-grid">
+    <label>
+      <span>Username</span>
+      <input type="text" formControlName="username" />
+    </label>
+
+    <label>
+      <span>Email</span>
+      <input type="email" formControlName="email" />
+    </label>
+
+    <label>
+      <span>Initial password</span>
+      <input type="password" formControlName="password" />
+    </label>
+
+    <label>
+      <span>Role</span>
+      <select formControlName="role">
+        <option value="ROLE_ADMIN">ROLE_ADMIN</option>
+        <option value="ROLE_PRICELIST_CREATOR">ROLE_PRICELIST_CREATOR</option>
+        <option value="ROLE_BUYER">ROLE_BUYER</option>
+      </select>
+    </label>
+
+    @if (successMessage) {
+      <div class="success-box">{{ successMessage }}</div>
+    }
+
+    @if (errorMessage) {
+      <div class="error-box">{{ errorMessage }}</div>
+    }
+
+    <button type="submit" [disabled]="form.invalid || loading">
+      {{ loading ? 'Saving...' : 'Create User' }}
+    </button>
+  </form>
+</section>

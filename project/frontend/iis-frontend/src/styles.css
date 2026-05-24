@@ -1,0 +1,22 @@
+/* Global application styles */
+:root {
+	color-scheme: dark;
+	font-family: 'Avenir Next', 'Segoe UI', sans-serif;
+	background: #0b1020;
+}
+
+html,
+body {
+	height: 100%;
+}
+
+body {
+	margin: 0;
+	background: #0b1020;
+	color: #e2e8f0;
+}
+
+* {
+	box-sizing: border-box;
+}
+/* You can add global styles to this file, and also import other style files */

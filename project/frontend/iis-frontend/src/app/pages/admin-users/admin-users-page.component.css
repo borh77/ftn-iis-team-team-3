@@ -1,0 +1,28 @@
+.page-shell {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.page-hero {
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  color: #fbbf24;
+  font-size: 0.72rem;
+}
+
+.page-hero h2 {
+  margin: 0.35rem 0 0.4rem;
+  font-size: 2rem;
+}
+
+.page-hero p {
+  margin: 0;
+  color: #cbd5e1;
+}
