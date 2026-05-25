@@ -1,8 +1,9 @@
 .panel {
-  padding: 1.5rem;
-  border-radius: 1.5rem;
-  background: rgba(15, 23, 42, 0.82);
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  padding: 1.75rem;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid rgba(11,17,32,0.04);
+  box-shadow: 0 12px 30px rgba(11,17,32,0.04);
 }
 
 .panel-head {
@@ -15,8 +16,8 @@
 
 .kicker {
   text-transform: uppercase;
-  letter-spacing: 0.24em;
-  color: #fbbf24;
+  letter-spacing: 0.12em;
+  color: var(--color-primary);
   font-size: 0.72rem;
   margin: 0;
 }
@@ -31,13 +32,13 @@ button {
   border: none;
   border-radius: 0.85rem;
   font-weight: 700;
-  color: #081120;
-  background: linear-gradient(135deg, #fbbf24, #fb7185);
+  color: var(--color-text);
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary-strong) 100%);
   cursor: pointer;
 }
 
 .muted {
-  color: #cbd5e1;
+  color: var(--color-muted);
 }
 
 .table-wrap {
@@ -52,17 +53,19 @@ table {
 th,
 td {
   text-align: left;
-  padding: 0.85rem 0.75rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  padding: 0.95rem 1rem;
+  border-bottom: 1px solid rgba(11,17,32,0.04);
 }
 
 th {
-  color: #f8fafc;
+  color: var(--color-text);
 }
 
 td {
-  color: #cbd5e1;
+  color: var(--color-muted);
 }
+
+.table-wrap { background: transparent; }
 
 .pagination {
   display: flex;

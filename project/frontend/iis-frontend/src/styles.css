@@ -1,8 +1,16 @@
-/* Global application styles */
+/* Global application styles (v24 prototype tokens - light theme) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
 :root {
-	color-scheme: dark;
-	font-family: 'Avenir Next', 'Segoe UI', sans-serif;
-	background: #0b1020;
+	--font-sans: 'Inter', 'Avenir Next', 'Segoe UI', sans-serif;
+	--color-bg: #f3f7fb; /* page background (light) */
+	--color-surface: #ffffff; /* cards, panels */
+	--color-muted: #64748b; /* slate-500 */
+	--color-text: #0b1220; /* dark text */
+	--color-primary: #0b61d8; /* azure blue from prototype */
+	--color-primary-strong: #0845b3; /* stronger blue */
+	--radius-md: 8px;
+	--radius-sm: 8px;
 }
 
 html,
@@ -12,11 +20,22 @@ body {
 
 body {
 	margin: 0;
-	background: #0b1020;
-	color: #e2e8f0;
+	background: var(--color-bg);
+	color: var(--color-text);
+	font-family: var(--font-sans);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
 
 * {
 	box-sizing: border-box;
 }
+
+/* Utility tokens for components to consume */
+.app-surface {
+	background: var(--color-surface);
+	color: var(--color-text);
+	border-radius: var(--radius-md);
+}
+
 /* You can add global styles to this file, and also import other style files */
