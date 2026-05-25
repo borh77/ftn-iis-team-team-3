@@ -5,19 +5,34 @@ import com.example.iisdrugcrm.dto.UserResponseDTO;
 import com.example.iisdrugcrm.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Locale;
+import java.util.Set;
+
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
+
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "id",
+            "username",
+            "email",
+            "role",
+            "isActive",
+            "hasChangedPassword"
+    );
 
     private final UserService userService;
 
@@ -33,7 +48,32 @@ public class UserController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Page<UserResponseDTO>> getAll(Pageable pageable) {
+    public ResponseEntity<Page<UserResponseDTO>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "8") int size,
+            @RequestParam(defaultValue = "id,asc") String sort
+    ) {
+        Pageable pageable = PageRequest.of(page, size, parseSort(sort));
         return ResponseEntity.ok(userService.getAll(pageable));
+    }
+
+    private Sort parseSort(String sort) {
+        if (sort == null || sort.isBlank()) {
+            return Sort.by(Sort.Direction.ASC, "id");
+        }
+
+        String[] parts = sort.split(",");
+        String field = parts[0].trim();
+        if (!ALLOWED_SORT_FIELDS.contains(field)) {
+            throw new IllegalArgumentException("Invalid sort field: " + field);
+        }
+
+        Sort.Direction direction = Sort.Direction.ASC;
+        if (parts.length > 1) {
+            String rawDirection = parts[1].trim().toUpperCase(Locale.ROOT);
+            direction = Sort.Direction.fromString(rawDirection);
+        }
+
+        return Sort.by(direction, field);
     }
 }

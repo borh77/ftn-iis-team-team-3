@@ -2,6 +2,7 @@ package com.example.iisdrugcrm.controller;
 
 import com.example.iisdrugcrm.exception.DuplicateUserException;
 import java.util.Map;
+import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -31,5 +32,10 @@ public class RestExceptionHandler {
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<Map<String, String>> handleBadCredentials(BadCredentialsException exception) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Pogrešno korisničko ime ili lozinka."));
+    }
+
+    @ExceptionHandler({IllegalArgumentException.class, PropertyReferenceException.class})
+    public ResponseEntity<Map<String, String>> handleBadRequest(Exception exception) {
+        return ResponseEntity.badRequest().body(Map.of("error", exception.getMessage()));
     }
 }
