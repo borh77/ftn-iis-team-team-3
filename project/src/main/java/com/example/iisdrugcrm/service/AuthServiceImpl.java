@@ -21,8 +21,6 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
     private final JwtTokenProvider tokenProvider;
-    private final String bootstrapUsername;
-    private final String bootstrapPassword;
 
     public AuthServiceImpl(
             AuthenticationManager authenticationManager,
@@ -36,16 +34,10 @@ public class AuthServiceImpl implements AuthService {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.tokenProvider = tokenProvider;
-        this.bootstrapUsername = bootstrapUsername;
-        this.bootstrapPassword = bootstrapPassword;
     }
 
     @Override
     public LoginResponseDTO login(LoginRequestDTO request) {
-        if (bootstrapUsername.equals(request.getUsername()) && bootstrapPassword.equals(request.getPassword())) {
-            return buildResponse(bootstrapUsername, List.of(UserRole.ROLE_ADMIN), true, false);
-        }
-
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
         );

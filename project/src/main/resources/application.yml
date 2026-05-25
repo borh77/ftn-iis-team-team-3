@@ -1,8 +1,8 @@
 spring:
   application:
-    name: nais-user-project
+    name: iis-drug-crm
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/nais_users}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/iis_drug_crm}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
   jpa:
@@ -28,6 +28,7 @@ app:
   security:
     bootstrap-admin:
       username: ${BOOTSTRAP_ADMIN_USERNAME:admin}
+      email: ${BOOTSTRAP_ADMIN_EMAIL:admin@local.dev}
       password: ${BOOTSTRAP_ADMIN_PASSWORD:Admin123!}
 
 server:

@@ -3,6 +3,7 @@ package com.example.iisdrugcrm.controller;
 import com.example.iisdrugcrm.dto.auth.LoginRequestDTO;
 import com.example.iisdrugcrm.dto.auth.LoginResponseDTO;
 import com.example.iisdrugcrm.service.AuthService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,6 +22,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    @Operation(summary = "User login", security = {})
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
         return ResponseEntity.ok(authService.login(request));
     }
