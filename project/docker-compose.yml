@@ -3,13 +3,18 @@ services:
     image: postgres:16-alpine
     container_name: iis-drug-crm-postgres
     environment:
-      POSTGRES_DB: nais_users
+      POSTGRES_DB: iis_drug_crm
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - iis_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d iis_drug_crm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   mailhog:
     image: mailhog/mailhog:v1.0.1
@@ -18,13 +23,27 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  pgadmin:
+    image: dpage/pgadmin4:8.12
+    container_name: iis-drug-crm-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@local.dev
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'True'
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    volumes:
+      - iis_pgadmin_data:/var/lib/pgadmin
+
   backend:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: iis-drug-crm-backend
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/nais_users
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/iis_drug_crm
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       SPRING_MAIL_HOST: mailhog
@@ -33,12 +52,26 @@ services:
       APP_JWT_SECRET: 7d4f8f9a1c2345b6789cdef0123456789cdef0123456789cdef0123456789abc
       APP_JWT_EXPIRATION_MINUTES: 480
       BOOTSTRAP_ADMIN_USERNAME: admin
+      BOOTSTRAP_ADMIN_EMAIL: admin@local.dev
       BOOTSTRAP_ADMIN_PASSWORD: Admin123!
     depends_on:
-      - postgres
-      - mailhog
+      postgres:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
     ports:
       - "8080:8080"
 
+  frontend:
+    build:
+      context: ./frontend/iis-frontend
+      dockerfile: Dockerfile
+    container_name: iis-drug-crm-frontend
+    depends_on:
+      - backend
+    ports:
+      - "4200:4200"
+
 volumes:
-  postgres_data:
+  iis_postgres_data:
+  iis_pgadmin_data:
