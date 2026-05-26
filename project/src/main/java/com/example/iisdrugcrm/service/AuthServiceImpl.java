@@ -40,15 +40,11 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginResponseDTO login(LoginRequestDTO request) {
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+            new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
         );
 
         User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new BadCredentialsException("Bad credentials"));
-
-        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new BadCredentialsException("Bad credentials");
-        }
+            .orElseThrow(() -> new BadCredentialsException("Bad credentials"));
 
         return buildResponse(
                 user.getUsername(),

@@ -10,7 +10,7 @@
   <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()">
     <label>
       <span>Username</span>
-      <input type="text" formControlName="username" autocomplete="username" />
+      <input type="text" formControlName="username" autocomplete="username" (focus)="onFieldFocus()" />
       @if (form.controls.username.touched && form.controls.username.invalid) {
         <small>Username is required.</small>
       }
@@ -18,7 +18,7 @@
 
     <label>
       <span>Password</span>
-      <input type="password" formControlName="password" autocomplete="current-password" />
+      <input type="password" formControlName="password" autocomplete="current-password" (focus)="onFieldFocus()" />
       @if (form.controls.password.touched && form.controls.password.invalid) {
         <small>Password is required.</small>
       }
