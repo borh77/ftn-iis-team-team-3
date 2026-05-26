@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from './api.token';
-import { CreateUserPayload, SpringPage, UserRow } from './auth/auth.models';
+import { CreateUserPayload, LoginResponse, PasswordChangePayload, SpringPage, UpdateProfilePayload, UserRow } from './auth/auth.models';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
@@ -16,5 +16,17 @@ export class UserService {
 
   create(payload: CreateUserPayload): Observable<UserRow> {
     return this.http.post<UserRow>(`${this.apiBaseUrl}/api/users`, payload);
+  }
+
+  getProfile(): Observable<UserRow> {
+    return this.http.get<UserRow>(`${this.apiBaseUrl}/api/users/profile`);
+  }
+
+  updateProfile(payload: UpdateProfilePayload): Observable<UserRow> {
+    return this.http.put<UserRow>(`${this.apiBaseUrl}/api/users/profile`, payload);
+  }
+
+  changePassword(payload: PasswordChangePayload): Observable<LoginResponse> {
+    return this.http.put<LoginResponse>(`${this.apiBaseUrl}/api/users/profile/password`, payload);
   }
 }

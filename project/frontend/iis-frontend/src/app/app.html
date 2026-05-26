@@ -1,4 +1,4 @@
-@if (router.url.startsWith('/login')) {
+@if (router.url.startsWith('/login') || router.url.startsWith('/force-password-change')) {
   <div class="public-layout">
     <router-outlet></router-outlet>
   </div>
@@ -13,6 +13,7 @@
         <a routerLink="/admin/users" routerLinkActive="active" title="Admin Users"><span class="icon">👥</span></a>
         <a routerLink="/content" routerLinkActive="active" title="Pricelist Owner"><span class="icon">📄</span></a>
         <a routerLink="/published-pricelists" routerLinkActive="active" title="Buyer View"><span class="icon">🛒</span></a>
+        <a routerLink="/profile" routerLinkActive="active" title="My Profile"><span class="icon">👤</span></a>
       </nav>
     </aside>
 
