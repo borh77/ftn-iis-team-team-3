@@ -5,6 +5,7 @@ import com.example.iisdrugcrm.dto.UserCreateDTO;
 import com.example.iisdrugcrm.dto.UserResponseDTO;
 import com.example.iisdrugcrm.dto.auth.LoginResponseDTO;
 import com.example.iisdrugcrm.dto.profile.PasswordChangeDTO;
+import com.example.iisdrugcrm.dto.profile.ProfileUpdateResponseDTO;
 import com.example.iisdrugcrm.dto.profile.UserUpdateDTO;
 import com.example.iisdrugcrm.exception.DuplicateUserException;
 import com.example.iisdrugcrm.repository.UserRepository;
@@ -71,17 +72,23 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserResponseDTO updateProfile(String username, UserUpdateDTO dto) {
+    public ProfileUpdateResponseDTO updateProfile(String username, UserUpdateDTO dto) {
         User user = getUser(username);
 
         if (!user.getEmail().equalsIgnoreCase(dto.getEmail()) && userRepository.existsByEmail(dto.getEmail())) {
             throw new DuplicateUserException("Email already exists");
         }
 
+        if (!user.getUsername().equals(dto.getUsername()) && userRepository.existsByUsername(dto.getUsername())) {
+            throw new DuplicateUserException("Username already exists");
+        }
+
+        user.setUsername(dto.getUsername());
         user.setEmail(dto.getEmail());
         user.setFirstName(dto.getFirstName());
         user.setLastName(dto.getLastName());
-        return UserResponseDTO.fromEntity(userRepository.save(user));
+        User savedUser = userRepository.save(user);
+        return buildProfileUpdateResponse(savedUser);
     }
 
     @Override
@@ -105,6 +112,21 @@ public class UserServiceImpl implements UserService {
     private LoginResponseDTO buildSessionResponse(User user) {
         LoginResponseDTO response = new LoginResponseDTO();
         response.setUsername(user.getUsername());
+        response.setRoles(List.of(user.getRole()));
+        response.setActive(user.isActive());
+        response.setHasChangedPassword(user.isHasChangedPassword());
+        response.setToken(tokenProvider.generateToken(user.getUsername(), List.of(user.getRole()), user.isHasChangedPassword()));
+        return response;
+    }
+
+    private ProfileUpdateResponseDTO buildProfileUpdateResponse(User user) {
+        ProfileUpdateResponseDTO response = new ProfileUpdateResponseDTO();
+        response.setId(user.getId());
+        response.setUsername(user.getUsername());
+        response.setEmail(user.getEmail());
+        response.setFirstName(user.getFirstName());
+        response.setLastName(user.getLastName());
+        response.setRole(user.getRole());
         response.setRoles(List.of(user.getRole()));
         response.setActive(user.isActive());
         response.setHasChangedPassword(user.isHasChangedPassword());

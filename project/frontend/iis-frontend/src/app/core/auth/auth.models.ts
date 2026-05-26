@@ -61,9 +61,13 @@ export interface CreateUserPayload {
 }
 
 export interface UpdateProfilePayload {
+  username: string;
   email: string;
   firstName: string;
   lastName: string;
+}
+
+export interface ProfileUpdateResponse extends UserRow, LoginResponse {
 }
 
 export interface PasswordChangePayload {

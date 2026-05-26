@@ -10,6 +10,10 @@ public class UserUpdateDTO {
     @Email
     private String email;
 
+    @NotBlank
+    @Size(max = 100)
+    private String username;
+
     @Size(max = 100)
     private String firstName;
 
@@ -22,6 +26,14 @@ public class UserUpdateDTO {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 
     public String getFirstName() {

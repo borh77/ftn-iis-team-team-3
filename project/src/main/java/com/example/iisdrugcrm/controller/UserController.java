@@ -4,6 +4,7 @@ import com.example.iisdrugcrm.dto.UserCreateDTO;
 import com.example.iisdrugcrm.dto.UserResponseDTO;
 import com.example.iisdrugcrm.dto.auth.LoginResponseDTO;
 import com.example.iisdrugcrm.dto.profile.PasswordChangeDTO;
+import com.example.iisdrugcrm.dto.profile.ProfileUpdateResponseDTO;
 import com.example.iisdrugcrm.dto.profile.UserUpdateDTO;
 import com.example.iisdrugcrm.service.UserService;
 import jakarta.validation.Valid;
@@ -70,7 +71,7 @@ public class UserController {
 
     @PutMapping("/profile")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<UserResponseDTO> updateProfile(Authentication authentication, @Valid @RequestBody UserUpdateDTO dto) {
+    public ResponseEntity<ProfileUpdateResponseDTO> updateProfile(Authentication authentication, @Valid @RequestBody UserUpdateDTO dto) {
         return ResponseEntity.ok(userService.updateProfile(authentication.getName(), dto));
     }
 

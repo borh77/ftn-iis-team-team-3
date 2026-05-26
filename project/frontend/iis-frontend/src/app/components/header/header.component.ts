@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { UserService } from '../../core/user.service';
 
@@ -11,28 +12,33 @@ import { UserService } from '../../core/user.service';
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.css']
 })
-export class HeaderComponent implements OnInit {
+export class HeaderComponent implements OnInit, OnDestroy {
   readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly userService = inject(UserService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private profileSub: Subscription | null = null;
 
   displayName: string | null = null;
 
   ngOnInit(): void {
-    this.userService.getProfile().subscribe({
-      next: (profile) => {
+    this.profileSub = this.userService.profile$.subscribe((profile) => {
+      if (profile) {
         const firstName = profile.firstName?.trim() ?? '';
         const lastName = profile.lastName?.trim() ?? '';
         const fullName = `${firstName} ${lastName}`.trim();
         this.displayName = fullName || profile.username;
-        this.cdr.detectChanges();
-      },
-      error: () => {
+      } else {
         this.displayName = null;
-        this.cdr.detectChanges();
       }
+      this.cdr.detectChanges();
     });
+
+    this.userService.getProfile().subscribe({ error: () => undefined });
+  }
+
+  ngOnDestroy(): void {
+    this.profileSub?.unsubscribe();
   }
 
   onLogout(): void {
