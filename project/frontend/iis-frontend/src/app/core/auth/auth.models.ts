@@ -56,6 +56,8 @@ export interface UserRow {
 export interface CreateUserPayload {
   username: string;
   email: string;
+  firstName: string;
+  lastName: string;
   password: string;
   role: UserRole;
 }

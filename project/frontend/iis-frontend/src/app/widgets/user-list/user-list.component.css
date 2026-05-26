@@ -48,6 +48,7 @@ button {
 table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 920px;
 }
 
 th,
@@ -73,4 +74,14 @@ td {
   justify-content: space-between;
   gap: 1rem;
   margin-top: 1rem;
+}
+
+@media (max-width: 900px) {
+  .panel {
+    padding: 1rem;
+  }
+
+  table {
+    min-width: 760px;
+  }
 }

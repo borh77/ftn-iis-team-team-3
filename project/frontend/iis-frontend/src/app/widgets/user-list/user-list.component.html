@@ -24,6 +24,8 @@
         <thead>
           <tr>
             <th>ID</th>
+            <th>First name</th>
+            <th>Last name</th>
             <th>Username</th>
             <th>Email</th>
             <th>Role</th>
@@ -35,6 +37,8 @@
           @for (user of data.content; track user.id) {
             <tr>
               <td>{{ user.id }}</td>
+              <td>{{ user.firstName || '-' }}</td>
+              <td>{{ user.lastName || '-' }}</td>
               <td>{{ user.username }}</td>
               <td>{{ user.email }}</td>
               <td>{{ user.role }}</td>
