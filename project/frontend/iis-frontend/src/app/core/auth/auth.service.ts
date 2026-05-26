@@ -3,7 +3,7 @@ import { inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, map, Observable } from 'rxjs';
 import { API_BASE_URL } from '../api.token';
-import { AuthSession, LoginRequest, LoginResponse, UserRole } from './auth.models';
+import { AuthSession, JwtPayload, LoginRequest, LoginResponse, UserRole } from './auth.models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -39,7 +39,17 @@ export class AuthService {
   }
 
   get token(): string | null {
-    return this.sessionSubject.value?.token ?? null;
+    const session = this.sessionSubject.value;
+    if (!session) {
+      return null;
+    }
+
+    if (this.isSessionExpired(session.token)) {
+      this.clearSession();
+      return null;
+    }
+
+    return session.token;
   }
 
   isLoggedIn(): boolean {
@@ -92,10 +102,34 @@ export class AuthService {
     }
 
     try {
-      return JSON.parse(raw) as AuthSession;
+      const session = JSON.parse(raw) as AuthSession;
+      return this.isSessionExpired(session.token) ? null : session;
     } catch {
       return null;
     }
+  }
+
+  private clearSession(): void {
+    if (this.isBrowser()) {
+      localStorage.removeItem(this.storageKey);
+    }
+    this.sessionSubject.next(null);
+  }
+
+  private isSessionExpired(token: string): boolean {
+    try {
+      const payload = this.decodeToken(token);
+      return payload.exp * 1000 <= Date.now();
+    } catch {
+      return true;
+    }
+  }
+
+  private decodeToken(token: string): JwtPayload {
+    const payloadBase64 = token.split('.')[1];
+    const normalizedPayload = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+    const decodedPayload = atob(normalizedPayload);
+    return JSON.parse(decodedPayload) as JwtPayload;
   }
 
   private isBrowser(): boolean {

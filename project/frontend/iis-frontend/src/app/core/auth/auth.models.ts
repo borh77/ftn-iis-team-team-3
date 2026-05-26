@@ -1,5 +1,11 @@
 export type UserRole = 'ROLE_ADMIN' | 'ROLE_PRICELIST_CREATOR' | 'ROLE_BUYER';
 
+export interface JwtPayload {
+  sub: string;
+  roles: UserRole[];
+  exp: number;
+}
+
 export interface LoginRequest {
   username: string;
   password: string;
