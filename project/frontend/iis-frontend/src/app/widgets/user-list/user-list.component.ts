@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, OnChanges, SimpleChanges, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, OnChanges, OnInit, SimpleChanges, inject } from '@angular/core';
 import { UserService } from '../../core/user.service';
 import { SpringPage, UserRow } from '../../core/auth/auth.models';
 
@@ -14,16 +14,26 @@ export class UserListComponent implements OnChanges {
   @Input() refreshToken = 0;
 
   private readonly userService = inject(UserService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   loading = false;
   pageSize = 8;
   page = 0;
   data: SpringPage<UserRow> | null = null;
 
+  ngOnInit(): void {
+    this.reload();
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['refreshToken']) {
-      this.load();
+    if (changes['refreshToken'] && !changes['refreshToken'].firstChange) {
+      this.reload();
     }
+  }
+
+  reload(): void {
+    this.page = 0;
+    this.load(0);
   }
 
   load(page = this.page): void {
@@ -32,11 +42,16 @@ export class UserListComponent implements OnChanges {
       next: (response) => {
         this.loading = false;
         this.page = response.number;
-        this.data = response;
+        this.data = {
+          ...response,
+          content: [...response.content],
+        };
+        this.cdr.detectChanges();
       },
       error: () => {
         this.loading = false;
         this.data = null;
+        this.cdr.detectChanges();
       },
     });
   }
