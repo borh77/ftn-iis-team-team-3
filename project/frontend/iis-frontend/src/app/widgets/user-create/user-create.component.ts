@@ -23,6 +23,8 @@ export class UserCreateComponent {
   readonly form = this.fb.nonNullable.group({
     username: ['', Validators.required],
     email: ['', [Validators.required, Validators.email]],
+    firstName: [''],
+    lastName: [''],
     password: ['', [Validators.required, Validators.minLength(8)]],
     role: ['ROLE_ADMIN' as const, Validators.required],
   });
@@ -41,7 +43,7 @@ export class UserCreateComponent {
       next: () => {
         this.loading = false;
         this.successMessage = 'User created successfully.';
-        this.form.reset({ username: '', email: '', password: '', role: 'ROLE_ADMIN' });
+        this.form.reset({ username: '', email: '', firstName: '', lastName: '', password: '', role: 'ROLE_ADMIN' });
         this.created.emit();
       },
       error: (error) => {
