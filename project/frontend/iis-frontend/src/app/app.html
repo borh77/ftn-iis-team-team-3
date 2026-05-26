@@ -1,19 +1,24 @@
-<div class="shell">
-  <aside class="sidebar compact">
-    <div class="logo-compact" title="IIS">
-      IIS
-    </div>
-
-    <nav class="nav-compact">
-      <a routerLink="/login" routerLinkActive="active" title="Login"><span class="icon">🔒</span></a>
-      <a routerLink="/admin/users" routerLinkActive="active" title="Admin Users"><span class="icon">👥</span></a>
-      <a routerLink="/content" routerLinkActive="active" title="Pricelist Owner"><span class="icon">📄</span></a>
-      <a routerLink="/published-pricelists" routerLinkActive="active" title="Buyer View"><span class="icon">🛒</span></a>
-    </nav>
-  </aside>
-
-  <main class="workspace">
-    <app-header></app-header>
+@if (router.url.startsWith('/login')) {
+  <div class="public-layout">
     <router-outlet></router-outlet>
-  </main>
-</div>
+  </div>
+} @else {
+  <div class="shell">
+    <aside class="sidebar compact">
+      <div class="logo-compact" title="IIS">
+        IIS
+      </div>
+
+      <nav class="nav-compact">
+        <a routerLink="/admin/users" routerLinkActive="active" title="Admin Users"><span class="icon">👥</span></a>
+        <a routerLink="/content" routerLinkActive="active" title="Pricelist Owner"><span class="icon">📄</span></a>
+        <a routerLink="/published-pricelists" routerLinkActive="active" title="Buyer View"><span class="icon">🛒</span></a>
+      </nav>
+    </aside>
+
+    <main class="workspace">
+      <app-header></app-header>
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+}

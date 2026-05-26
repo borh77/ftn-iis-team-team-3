@@ -10,6 +10,11 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
   const apiBaseUrl = inject(API_BASE_URL);
   const token = authService.token;
+  const isAuthEndpoint = req.url.startsWith(`${apiBaseUrl}/api/auth/`);
+
+  if (isAuthEndpoint) {
+    return next(req);
+  }
 
   if (!token || !req.url.startsWith(apiBaseUrl)) {
     return next(req).pipe(

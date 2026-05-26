@@ -31,7 +31,7 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<Map<String, String>> handleBadCredentials(BadCredentialsException exception) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Pogrešno korisničko ime ili lozinka."));
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Incorrect username or password."));
     }
 
     @ExceptionHandler({IllegalArgumentException.class, PropertyReferenceException.class})
