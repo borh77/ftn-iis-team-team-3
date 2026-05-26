@@ -11,27 +11,23 @@ import java.util.List;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AuthServiceImpl implements AuthService {
 
     private final AuthenticationManager authenticationManager;
-    private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
     private final JwtTokenProvider tokenProvider;
     private final TokenBlacklistService tokenBlacklistService;
 
     public AuthServiceImpl(
             AuthenticationManager authenticationManager,
-            PasswordEncoder passwordEncoder,
             UserRepository userRepository,
             JwtTokenProvider tokenProvider,
             TokenBlacklistService tokenBlacklistService
     ) {
         this.authenticationManager = authenticationManager;
-        this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.tokenProvider = tokenProvider;
         this.tokenBlacklistService = tokenBlacklistService;
@@ -60,7 +56,7 @@ public class AuthServiceImpl implements AuthService {
         response.setRoles(roles);
         response.setActive(active);
         response.setHasChangedPassword(hasChangedPassword);
-        response.setToken(tokenProvider.generateToken(username, roles));
+        response.setToken(tokenProvider.generateToken(username, roles, hasChangedPassword));
         return response;
     }
 

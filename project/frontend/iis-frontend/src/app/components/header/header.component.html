@@ -9,17 +9,16 @@
 
   <div class="header-right">
     @if (authService.session$ | async; as session) {
-      <div class="profile">
+      <a class="profile profile-link-card" routerLink="/profile" aria-label="My Profile">
         <div class="avatar">{{ session.username.charAt(0).toUpperCase() }}</div>
         <div class="profile-meta">
-          <span class="profile-name">{{ session.username }}</span>
+          <span class="profile-name">{{ displayName || session.username }}</span>
           <span class="profile-role">{{ session.roles[0] }}</span>
         </div>
-        <button type="button" class="logout-button" (click)="onLogout()">
-          <span class="logout-icon">↩</span>
-          Logout
-        </button>
-      </div>
+      </a>
+      <button type="button" class="logout-button" (click)="onLogout()">
+        Logout
+      </button>
     }
   </div>
 </header>

@@ -1,0 +1,134 @@
+<section class="profile-page">
+  <header class="profile-hero">
+    <div>
+      <p class="kicker">My Profile</p>
+      <h1>{{ profile?.username ?? 'Profile' }}</h1>
+      <p>Review your account details and keep your credentials up to date.</p>
+    </div>
+  </header>
+
+  @if (loadingProfile) {
+    <div class="status-card">Loading profile...</div>
+  } @else if (profile) {
+    <div class="profile-grid">
+      <section class="card">
+        <h2>Account details</h2>
+        <dl>
+          <div>
+            <dt>First name</dt>
+            <dd>{{ profile.firstName || '-' }}</dd>
+          </div>
+          <div>
+            <dt>Last name</dt>
+            <dd>{{ profile.lastName || '-' }}</dd>
+          </div>
+          <div>
+            <dt>Username</dt>
+            <dd>{{ profile.username }}</dd>
+          </div>
+          <div>
+            <dt>Email</dt>
+            <dd>{{ profile.email }}</dd>
+          </div>
+          <div>
+            <dt>Role</dt>
+            <dd>{{ profile.role }}</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd>{{ profile.active ? 'Active' : 'Inactive' }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="card">
+        <h2>Edit details</h2>
+        <form [formGroup]="profileForm" (ngSubmit)="submitProfile()">
+          <label>
+            <span>Username</span>
+            <input type="text" formControlName="username" autocomplete="username" />
+            @if (profileForm.controls.username.touched && profileForm.controls.username.invalid) {
+              <small>Username is required and can be at most 100 characters.</small>
+            }
+          </label>
+
+          <label>
+            <span>First name</span>
+            <input type="text" formControlName="firstName" autocomplete="given-name" />
+            @if (profileForm.controls.firstName.touched && profileForm.controls.firstName.invalid) {
+              <small>First name can be at most 100 characters.</small>
+            }
+          </label>
+
+          <label>
+            <span>Last name</span>
+            <input type="text" formControlName="lastName" autocomplete="family-name" />
+            @if (profileForm.controls.lastName.touched && profileForm.controls.lastName.invalid) {
+              <small>Last name can be at most 100 characters.</small>
+            }
+          </label>
+
+          <label>
+            <span>Email</span>
+            <input type="email" formControlName="email" autocomplete="email" />
+            @if (profileForm.controls.email.touched && profileForm.controls.email.invalid) {
+              <small>Enter a valid email address.</small>
+            }
+          </label>
+
+          @if (profileMessage) {
+            <div class="message">{{ profileMessage }}</div>
+          }
+
+          <button type="submit" [disabled]="profileForm.invalid || savingProfile">
+            {{ savingProfile ? 'Saving...' : 'Save Changes' }}
+          </button>
+        </form>
+      </section>
+
+      <section class="card card-wide">
+        <h2>Change password</h2>
+        <form [formGroup]="passwordForm" (ngSubmit)="submitPassword()">
+          <div class="form-grid">
+            <label>
+              <span>Current password</span>
+              <input type="password" formControlName="oldPassword" autocomplete="current-password" />
+              @if (passwordForm.controls.oldPassword.touched && passwordForm.controls.oldPassword.invalid) {
+                <small>Current password is required.</small>
+              }
+            </label>
+
+            <label>
+              <span>New password</span>
+              <input type="password" formControlName="newPassword" autocomplete="new-password" />
+              @if (passwordForm.controls.newPassword.touched && passwordForm.controls.newPassword.invalid) {
+                <small>Password must be at least 8 characters and include a number and special character.</small>
+              }
+              @if (passwordForm.touched && passwordForm.errors?.['passwordUnchanged']) {
+                <small>New password must be different from the current password.</small>
+              }
+            </label>
+
+            <label>
+              <span>Confirm new password</span>
+              <input type="password" formControlName="confirmNewPassword" autocomplete="new-password" />
+              @if (passwordForm.touched && passwordForm.errors?.['passwordsMismatch']) {
+                <small>Passwords do not match.</small>
+              }
+            </label>
+          </div>
+
+          @if (passwordMessage) {
+            <div class="message">{{ passwordMessage }}</div>
+          }
+
+          <button type="submit" [disabled]="passwordForm.invalid || changingPassword">
+            {{ changingPassword ? 'Saving...' : 'Update Password' }}
+          </button>
+        </form>
+      </section>
+    </div>
+  } @else {
+    <div class="status-card">{{ profileMessage || 'Unable to load profile data.' }}</div>
+  }
+</section>

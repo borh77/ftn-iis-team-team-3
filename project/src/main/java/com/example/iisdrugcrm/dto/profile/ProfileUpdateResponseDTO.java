@@ -1,31 +1,20 @@
-package com.example.iisdrugcrm.dto;
+package com.example.iisdrugcrm.dto.profile;
 
-import com.example.iisdrugcrm.domain.User;
 import com.example.iisdrugcrm.domain.UserRole;
+import java.util.List;
 
-public class UserResponseDTO {
+public class ProfileUpdateResponseDTO {
 
     private Long id;
+    private String token;
     private String username;
     private String email;
     private String firstName;
     private String lastName;
     private UserRole role;
+    private List<UserRole> roles;
     private boolean active;
     private boolean hasChangedPassword;
-
-    public static UserResponseDTO fromEntity(User user) {
-        UserResponseDTO dto = new UserResponseDTO();
-        dto.setId(user.getId());
-        dto.setUsername(user.getUsername());
-        dto.setEmail(user.getEmail());
-        dto.setFirstName(user.getFirstName());
-        dto.setLastName(user.getLastName());
-        dto.setRole(user.getRole());
-        dto.setActive(user.isActive());
-        dto.setHasChangedPassword(user.isHasChangedPassword());
-        return dto;
-    }
 
     public Long getId() {
         return id;
@@ -33,6 +22,14 @@ public class UserResponseDTO {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
     }
 
     public String getUsername() {
@@ -73,6 +70,14 @@ public class UserResponseDTO {
 
     public void setRole(UserRole role) {
         this.role = role;
+    }
+
+    public List<UserRole> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(List<UserRole> roles) {
+        this.roles = roles;
     }
 
     public boolean isActive() {

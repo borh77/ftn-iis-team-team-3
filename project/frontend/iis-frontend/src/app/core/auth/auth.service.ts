@@ -15,20 +15,30 @@ export class AuthService {
 
   readonly session$ = this.sessionSubject.asObservable();
 
+  get currentSession(): AuthSession | null {
+    return this.sessionSubject.value;
+  }
+
+  requiresPasswordChange(): boolean {
+    return !this.currentSession?.hasChangedPassword;
+  }
+
   login(request: LoginRequest): Observable<AuthSession> {
     return this.http.post<LoginResponse>(`${this.apiBaseUrl}/api/auth/login`, request).pipe(
-      map((response) => {
-        const session: AuthSession = {
-          token: response.token,
-          username: response.username,
-          roles: response.roles,
-          active: response.active,
-          hasChangedPassword: response.hasChangedPassword,
-        };
-        this.saveSession(session);
-        return session;
-      }),
+      map((response) => this.applySessionResponse(response)),
     );
+  }
+
+  applySessionResponse(response: LoginResponse): AuthSession {
+    const session: AuthSession = {
+      token: response.token,
+      username: response.username,
+      roles: response.roles,
+      active: response.active,
+      hasChangedPassword: response.hasChangedPassword,
+    };
+    this.saveSession(session);
+    return session;
   }
 
   logout(): void {
@@ -81,6 +91,10 @@ export class AuthService {
       return '/login';
     }
 
+    if (!session.hasChangedPassword) {
+      return '/force-password-change';
+    }
+
     if (session.roles.includes('ROLE_ADMIN')) {
       return '/admin/users';
     }
@@ -115,6 +129,9 @@ export class AuthService {
 
     try {
       const session = JSON.parse(raw) as AuthSession;
+      if (!Object.prototype.hasOwnProperty.call(session, 'hasChangedPassword')) {
+        session.hasChangedPassword = this.decodeToken(session.token).hasChangedPassword ?? true;
+      }
       return this.isSessionExpired(session.token) ? null : session;
     } catch {
       return null;
@@ -135,6 +152,21 @@ export class AuthService {
     const normalizedPayload = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
     const decodedPayload = atob(normalizedPayload);
     return JSON.parse(decodedPayload) as JwtPayload;
+  }
+
+  getSessionFromToken(token: string): AuthSession | null {
+    try {
+      const payload = this.decodeToken(token);
+      return {
+        token,
+        username: payload.sub,
+        roles: payload.roles,
+        active: true,
+        hasChangedPassword: payload.hasChangedPassword ?? true,
+      };
+    } catch {
+      return null;
+    }
   }
 
   private isBrowser(): boolean {

@@ -35,12 +35,17 @@ public class JwtTokenProvider {
     }
 
     public String generateToken(String username, List<UserRole> roles) {
+        return generateToken(username, roles, true);
+    }
+
+    public String generateToken(String username, List<UserRole> roles, boolean hasChangedPassword) {
         Instant issuedAt = Instant.now();
         Instant expiresAt = issuedAt.plus(expirationMinutes, ChronoUnit.MINUTES);
 
         return Jwts.builder()
                 .setSubject(username)
                 .claim("roles", roles.stream().map(Enum::name).collect(Collectors.toList()))
+                .claim("hasChangedPassword", hasChangedPassword)
                 .setIssuedAt(Date.from(issuedAt))
                 .setExpiration(Date.from(expiresAt))
                 .signWith(secretKey, SignatureAlgorithm.HS256)
@@ -75,6 +80,14 @@ public class JwtTokenProvider {
             return roles.stream().map(role -> UserRole.valueOf(role.toString())).toList();
         }
         return List.of();
+    }
+
+    public boolean isPasswordChanged(String token) {
+        Object claim = getClaims(token).get("hasChangedPassword");
+        if (claim instanceof Boolean flag) {
+            return flag;
+        }
+        return true;
     }
 
     public Date getExpiration(String token) {

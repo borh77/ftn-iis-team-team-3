@@ -4,6 +4,7 @@ export interface JwtPayload {
   sub: string;
   roles: UserRole[];
   exp: number;
+  hasChangedPassword?: boolean;
 }
 
 export interface LoginRequest {
@@ -45,6 +46,8 @@ export interface UserRow {
   id: number;
   username: string;
   email: string;
+  firstName: string | null;
+  lastName: string | null;
   role: UserRole;
   active: boolean;
   hasChangedPassword: boolean;
@@ -55,4 +58,20 @@ export interface CreateUserPayload {
   email: string;
   password: string;
   role: UserRole;
+}
+
+export interface UpdateProfilePayload {
+  username: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface ProfileUpdateResponse extends UserRow, LoginResponse {
+}
+
+export interface PasswordChangePayload {
+  oldPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
 }
