@@ -5,12 +5,53 @@
   height: 88px;
   padding: 0 1.5rem;
   background: var(--color-surface);
-  border-bottom: 1px solid rgba(255,255,255,0.03);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.04);
 }
 
 .header-left { display:flex; align-items:center; gap:1rem; }
 .logo { font-weight:700; color:var(--color-primary); font-size:1.6rem; letter-spacing:0.02em; }
-.search input { padding:0.75rem 1rem; border-radius:var(--radius-md); border:1px solid rgba(255,255,255,0.04); background: rgba(255,255,255,0.02); color:var(--color-text); box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
-.header-right .profile { background: rgba(255,255,255,0.02); padding:0.5rem 0.75rem; border-radius:14px; color:var(--color-primary); }
+.brand-copy { display:flex; flex-direction:column; gap:0.1rem; }
+.brand-title { font-size: 0.95rem; font-weight: 700; color: var(--color-text); }
+.brand-subtitle { font-size: 0.78rem; color: var(--color-muted); }
+
+.header-right .profile { display:flex; align-items:center; gap:0.8rem; background: rgba(11, 97, 216, 0.06); padding:0.55rem 0.75rem; border-radius:16px; color:var(--color-primary); border: 1px solid rgba(11, 97, 216, 0.12); }
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+}
+
+.profile-meta { display:flex; flex-direction:column; gap:0.05rem; }
+
+.profile-name { font-weight: 600; }
+
+.profile-role { font-size: 0.76rem; color: var(--color-muted); text-transform: capitalize; }
+
+.logout-button {
+  border: 1px solid rgba(11, 97, 216, 0.12);
+  background: #fff;
+  color: var(--color-primary);
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+}
+
+.logout-button:hover {
+  border-color: rgba(11, 97, 216, 0.22);
+  background: rgba(11, 97, 216, 0.06);
+}
+
+.logout-icon { font-size: 0.95rem; }
 
 .app-header .header-left { gap:1.5rem; }

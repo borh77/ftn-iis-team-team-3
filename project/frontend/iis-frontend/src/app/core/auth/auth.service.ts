@@ -32,6 +32,18 @@ export class AuthService {
   }
 
   logout(): void {
+    const token = this.token;
+
+    if (token) {
+      this.http.post<void>(`${this.apiBaseUrl}/api/auth/logout`, {}).subscribe({
+        error: () => undefined,
+      });
+    }
+
+    this.clearSession();
+  }
+
+  clearSession(): void {
     if (this.isBrowser()) {
       localStorage.removeItem(this.storageKey);
     }
@@ -107,13 +119,6 @@ export class AuthService {
     } catch {
       return null;
     }
-  }
-
-  private clearSession(): void {
-    if (this.isBrowser()) {
-      localStorage.removeItem(this.storageKey);
-    }
-    this.sessionSubject.next(null);
   }
 
   private isSessionExpired(token: string): boolean {

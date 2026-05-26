@@ -1,12 +1,25 @@
 <header class="app-header">
   <div class="header-left">
     <div class="logo">IIS</div>
-    <div class="search">
-      <input type="text" placeholder="Search..." />
+    <div class="brand-copy">
+      <span class="brand-title">Drug CRM</span>
+      <span class="brand-subtitle">Secure access portal</span>
     </div>
   </div>
 
   <div class="header-right">
-    <div class="profile">admin</div>
+    @if (authService.session$ | async; as session) {
+      <div class="profile">
+        <div class="avatar">{{ session.username.charAt(0).toUpperCase() }}</div>
+        <div class="profile-meta">
+          <span class="profile-name">{{ session.username }}</span>
+          <span class="profile-role">{{ session.roles[0] }}</span>
+        </div>
+        <button type="button" class="logout-button" (click)="onLogout()">
+          <span class="logout-icon">↩</span>
+          Logout
+        </button>
+      </div>
+    }
   </div>
 </header>
