@@ -7,7 +7,6 @@ import com.example.iisdrugcrm.dto.auth.LoginResponseDTO;
 import com.example.iisdrugcrm.repository.UserRepository;
 import com.example.iisdrugcrm.security.JwtTokenProvider;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -26,9 +25,7 @@ public class AuthServiceImpl implements AuthService {
             AuthenticationManager authenticationManager,
             PasswordEncoder passwordEncoder,
             UserRepository userRepository,
-            JwtTokenProvider tokenProvider,
-            @Value("${app.security.bootstrap-admin.username:admin}") String bootstrapUsername,
-            @Value("${app.security.bootstrap-admin.password:Admin123!}") String bootstrapPassword
+            JwtTokenProvider tokenProvider
     ) {
         this.authenticationManager = authenticationManager;
         this.passwordEncoder = passwordEncoder;

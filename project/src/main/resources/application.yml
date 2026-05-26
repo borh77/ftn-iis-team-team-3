@@ -4,7 +4,7 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/iis_drug_crm}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -23,13 +23,13 @@ spring:
 app:
   frontend-url: ${APP_FRONTEND_URL:http://localhost:4200}
   jwt:
-    secret: ${APP_JWT_SECRET:7d4f8f9a1c2345b6789cdef0123456789cdef0123456789cdef0123456789abc}
+    secret: ${APP_JWT_SECRET}
     expiration-minutes: ${APP_JWT_EXPIRATION_MINUTES:480}
   security:
     bootstrap-admin:
       username: ${BOOTSTRAP_ADMIN_USERNAME:admin}
       email: ${BOOTSTRAP_ADMIN_EMAIL:admin@local.dev}
-      password: ${BOOTSTRAP_ADMIN_PASSWORD:Admin123!}
+      password: ${BOOTSTRAP_ADMIN_PASSWORD}
 
 server:
   port: 8080

@@ -23,7 +23,7 @@ public class BootstrapAdminInitializer implements CommandLineRunner {
             PasswordEncoder passwordEncoder,
             @Value("${app.security.bootstrap-admin.username:admin}") String username,
             @Value("${app.security.bootstrap-admin.email:admin@local.dev}") String email,
-            @Value("${app.security.bootstrap-admin.password:Admin123!}") String password
+            @Value("${app.security.bootstrap-admin.password}") String password
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
