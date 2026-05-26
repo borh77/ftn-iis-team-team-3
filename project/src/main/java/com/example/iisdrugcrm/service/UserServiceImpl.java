@@ -3,8 +3,13 @@ package com.example.iisdrugcrm.service;
 import com.example.iisdrugcrm.domain.User;
 import com.example.iisdrugcrm.dto.UserCreateDTO;
 import com.example.iisdrugcrm.dto.UserResponseDTO;
+import com.example.iisdrugcrm.dto.auth.LoginResponseDTO;
+import com.example.iisdrugcrm.dto.profile.PasswordChangeDTO;
+import com.example.iisdrugcrm.dto.profile.UserUpdateDTO;
 import com.example.iisdrugcrm.exception.DuplicateUserException;
 import com.example.iisdrugcrm.repository.UserRepository;
+import com.example.iisdrugcrm.security.JwtTokenProvider;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,11 +22,18 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final JwtTokenProvider tokenProvider;
 
-    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, EmailService emailService) {
+    public UserServiceImpl(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            EmailService emailService,
+            JwtTokenProvider tokenProvider
+    ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+        this.tokenProvider = tokenProvider;
     }
 
     @Override
@@ -50,5 +62,53 @@ public class UserServiceImpl implements UserService {
     @Override
     public Page<UserResponseDTO> getAll(Pageable pageable) {
         return userRepository.findAll(pageable).map(UserResponseDTO::fromEntity);
+    }
+
+    @Override
+    public UserResponseDTO getProfile(String username) {
+        return UserResponseDTO.fromEntity(getUser(username));
+    }
+
+    @Override
+    @Transactional
+    public UserResponseDTO updateProfile(String username, UserUpdateDTO dto) {
+        User user = getUser(username);
+
+        if (!user.getEmail().equalsIgnoreCase(dto.getEmail()) && userRepository.existsByEmail(dto.getEmail())) {
+            throw new DuplicateUserException("Email already exists");
+        }
+
+        user.setEmail(dto.getEmail());
+        user.setFirstName(dto.getFirstName());
+        user.setLastName(dto.getLastName());
+        return UserResponseDTO.fromEntity(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public LoginResponseDTO changePassword(String username, PasswordChangeDTO dto) {
+        if (!dto.getNewPassword().equals(dto.getConfirmNewPassword())) {
+            throw new IllegalArgumentException("Passwords do not match");
+        }
+
+        User user = getUser(username);
+        user.changePassword(dto.getOldPassword(), dto.getNewPassword(), passwordEncoder);
+        User savedUser = userRepository.save(user);
+        return buildSessionResponse(savedUser);
+    }
+
+    private User getUser(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    }
+
+    private LoginResponseDTO buildSessionResponse(User user) {
+        LoginResponseDTO response = new LoginResponseDTO();
+        response.setUsername(user.getUsername());
+        response.setRoles(List.of(user.getRole()));
+        response.setActive(user.isActive());
+        response.setHasChangedPassword(user.isHasChangedPassword());
+        response.setToken(tokenProvider.generateToken(user.getUsername(), List.of(user.getRole()), user.isHasChangedPassword()));
+        return response;
     }
 }

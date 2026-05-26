@@ -8,6 +8,8 @@ public class UserResponseDTO {
     private Long id;
     private String username;
     private String email;
+    private String firstName;
+    private String lastName;
     private UserRole role;
     private boolean active;
     private boolean hasChangedPassword;
@@ -17,6 +19,8 @@ public class UserResponseDTO {
         dto.setId(user.getId());
         dto.setUsername(user.getUsername());
         dto.setEmail(user.getEmail());
+        dto.setFirstName(user.getFirstName());
+        dto.setLastName(user.getLastName());
         dto.setRole(user.getRole());
         dto.setActive(user.isActive());
         dto.setHasChangedPassword(user.isHasChangedPassword());
@@ -45,6 +49,22 @@ public class UserResponseDTO {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
     }
 
     public UserRole getRole() {

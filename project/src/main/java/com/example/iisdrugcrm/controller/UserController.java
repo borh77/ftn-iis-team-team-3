@@ -2,15 +2,20 @@ package com.example.iisdrugcrm.controller;
 
 import com.example.iisdrugcrm.dto.UserCreateDTO;
 import com.example.iisdrugcrm.dto.UserResponseDTO;
+import com.example.iisdrugcrm.dto.auth.LoginResponseDTO;
+import com.example.iisdrugcrm.dto.profile.PasswordChangeDTO;
+import com.example.iisdrugcrm.dto.profile.UserUpdateDTO;
 import com.example.iisdrugcrm.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -55,6 +60,24 @@ public class UserController {
     ) {
         Pageable pageable = PageRequest.of(page, size, parseSort(sort));
         return ResponseEntity.ok(userService.getAll(pageable));
+    }
+
+    @GetMapping("/profile")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserResponseDTO> getProfile(Authentication authentication) {
+        return ResponseEntity.ok(userService.getProfile(authentication.getName()));
+    }
+
+    @PutMapping("/profile")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserResponseDTO> updateProfile(Authentication authentication, @Valid @RequestBody UserUpdateDTO dto) {
+        return ResponseEntity.ok(userService.updateProfile(authentication.getName(), dto));
+    }
+
+    @PutMapping("/profile/password")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<LoginResponseDTO> changePassword(Authentication authentication, @Valid @RequestBody PasswordChangeDTO dto) {
+        return ResponseEntity.ok(userService.changePassword(authentication.getName(), dto));
     }
 
     private Sort parseSort(String sort) {

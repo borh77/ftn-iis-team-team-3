@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Entity
 @Table(name = "users")
@@ -31,6 +32,12 @@ public class User {
     @Email
     @Column(nullable = false, unique = true)
     private String email;
+
+    @Column(length = 100)
+    private String firstName;
+
+    @Column(length = 100)
+    private String lastName;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -74,6 +81,22 @@ public class User {
         this.email = email;
     }
 
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
     public UserRole getRole() {
         return role;
     }
@@ -96,5 +119,18 @@ public class User {
 
     public void setHasChangedPassword(boolean hasChangedPassword) {
         this.hasChangedPassword = hasChangedPassword;
+    }
+
+    public void changePassword(String oldPassword, String newPassword, PasswordEncoder encoder) {
+        if (!encoder.matches(oldPassword, passwordHash)) {
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+
+        if (oldPassword.equals(newPassword)) {
+            throw new IllegalArgumentException("New password must be different from the current password");
+        }
+
+        this.passwordHash = encoder.encode(newPassword);
+        this.hasChangedPassword = true;
     }
 }
