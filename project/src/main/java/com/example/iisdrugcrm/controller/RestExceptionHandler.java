@@ -2,6 +2,8 @@ package com.example.iisdrugcrm.controller;
 
 import com.example.iisdrugcrm.exception.DuplicateUserException;
 import com.example.iisdrugcrm.exception.DuplicateTeamException;
+import com.example.iisdrugcrm.exception.RegionConflictException;
+import com.example.iisdrugcrm.exception.RegionInUseException;
 import java.util.Map;
 import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -23,6 +25,16 @@ public class RestExceptionHandler {
     @ExceptionHandler(DuplicateTeamException.class)
     public ResponseEntity<Map<String, String>> handleDuplicateTeam(DuplicateTeamException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", exception.getMessage()));
+    }
+
+    @ExceptionHandler(RegionConflictException.class)
+    public ResponseEntity<Map<String, String>> handleRegionConflict(RegionConflictException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", exception.getMessage()));
+    }
+
+    @ExceptionHandler(RegionInUseException.class)
+    public ResponseEntity<Map<String, String>> handleRegionInUse(RegionInUseException exception) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", exception.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

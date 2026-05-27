@@ -1,0 +1,80 @@
+<section class="page-shell">
+  <header class="page-hero">
+    <div>
+      <p class="kicker">Administrator</p>
+      <h2>Regions</h2>
+      <p>Manage predefined geographic zones that can be reused by future price lists and teams.</p>
+    </div>
+
+    <button type="button" class="primary hero-action" (click)="openCreate()">Add region</button>
+  </header>
+
+  <app-region-list
+    [refreshToken]="refreshToken()"
+    (editRequested)="openEdit($event)"
+    (deleteRequested)="requestDelete($event)"
+  ></app-region-list>
+
+  @if (showModal) {
+    <div class="modal-backdrop" (click)="closeModal()"></div>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="region-modal-title">
+      <header class="modal-head">
+        <div>
+          <p class="kicker">Region</p>
+          <h3 id="region-modal-title">{{ selected ? 'Edit region' : 'New region' }}</h3>
+        </div>
+        <button type="button" class="ghost" (click)="closeModal()">Close</button>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="submit()" class="modal-form">
+        <label>
+          <span>Naziv</span>
+          <input type="text" formControlName="name" placeholder="Vojvodina" />
+          @if (controlError('name')) {
+            <small class="field-error">{{ controlError('name') }}</small>
+          }
+        </label>
+
+        <label>
+          <span>Oznaka</span>
+          <input type="text" formControlName="code" placeholder="VOJVODINA" />
+          @if (controlError('code')) {
+            <small class="field-error">{{ controlError('code') }}</small>
+          }
+        </label>
+
+        @if (errorMessage) {
+          <p class="error-box">{{ errorMessage }}</p>
+        }
+
+        <div class="modal-actions">
+          <button type="button" class="ghost" (click)="closeModal()">Cancel</button>
+          <button type="submit" class="primary" [disabled]="saving">{{ saving ? 'Saving...' : 'Save region' }}</button>
+        </div>
+      </form>
+    </section>
+  }
+
+  @if (showDeleteDialog && deleteCandidate) {
+    <div class="modal-backdrop" (click)="cancelDelete()"></div>
+    <section class="modal confirm-modal" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+      <header class="modal-head">
+        <div>
+          <p class="kicker">Delete</p>
+          <h3 id="delete-modal-title">Confirm deletion</h3>
+        </div>
+      </header>
+
+      <p class="confirm-copy">Delete region <strong>{{ deleteCandidate.name }}</strong> ({{ deleteCandidate.code }})?</p>
+
+      <div class="modal-actions">
+        <button type="button" class="ghost" (click)="cancelDelete()">Cancel</button>
+        <button type="button" class="danger" (click)="confirmDelete()" [disabled]="deleting">{{ deleting ? 'Deleting...' : 'Delete' }}</button>
+      </div>
+    </section>
+  }
+
+  @if (toastMessage) {
+    <div class="toast">{{ toastMessage }}</div>
+  }
+</section>

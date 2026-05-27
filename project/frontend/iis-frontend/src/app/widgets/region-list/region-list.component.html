@@ -1,0 +1,42 @@
+<section class="panel">
+  <header class="panel-head">
+    <div>
+      <p class="kicker">Catalog</p>
+      <h3>Region list</h3>
+    </div>
+
+    <button type="button" class="secondary" (click)="reload()">Refresh</button>
+  </header>
+
+  @if (loading) {
+    <p class="muted">Loading regions...</p>
+  } @else if (items.length === 0) {
+    <p class="muted">No regions created yet.</p>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Naziv</th>
+            <th>Kod</th>
+            <th>Akcije</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (region of items; track region.id) {
+            <tr>
+              <td>{{ region.id }}</td>
+              <td>{{ region.name }}</td>
+              <td>{{ region.code }}</td>
+              <td class="actions">
+                <button type="button" (click)="editRequested.emit(region)">Izmeni</button>
+                <button type="button" class="danger" (click)="deleteRequested.emit(region)">Obriši</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

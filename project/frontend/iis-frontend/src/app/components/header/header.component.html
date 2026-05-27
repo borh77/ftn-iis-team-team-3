@@ -9,6 +9,12 @@
 
   <div class="header-right">
     @if (authService.session$ | async; as session) {
+      @if (session.roles.includes('ROLE_ADMIN')) {
+        <nav class="admin-nav" aria-label="Admin navigation">
+          <a routerLink="/admin/users">Users</a>
+          <a routerLink="/admin/regions">Regions</a>
+        </nav>
+      }
       <a class="profile profile-link-card" routerLink="/profile" aria-label="My Profile">
         <div class="avatar">{{ session.username.charAt(0).toUpperCase() }}</div>
         <div class="profile-meta">
