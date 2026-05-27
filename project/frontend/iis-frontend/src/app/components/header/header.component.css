@@ -32,6 +32,30 @@
 
 .header-right { display:flex; align-items:center; gap:0.75rem; flex-wrap: wrap; justify-content: flex-end; }
 
+.admin-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-strong);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+}
+
+.admin-nav a {
+  text-decoration: none;
+  color: var(--color-text);
+  font-weight: 700;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+}
+
+.admin-nav a:hover {
+  background: rgba(29, 78, 216, 0.08);
+  color: var(--color-primary);
+}
+
 .header-right .profile { display:flex; align-items:center; gap:0.9rem; background: var(--color-surface-strong); padding:0.7rem 0.9rem; border-radius:18px; color:var(--color-primary); border: 1px solid var(--color-border); box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05); }
 
 .profile-link-card {
@@ -91,5 +115,10 @@
 
   .header-right {
     justify-content: flex-start;
+  }
+
+  .admin-nav {
+    width: 100%;
+    justify-content: space-between;
   }
 }
