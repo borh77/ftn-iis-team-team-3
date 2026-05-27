@@ -27,7 +27,7 @@ public class RegionServiceImpl implements RegionService {
     @Override
     @Transactional
     public RegionDTO createRegion(RegionDTO dto) {
-        ensureUnique(dto.getName(), dto.getCode(), null);
+        ensureUniqueName(dto.getName(), null);
 
         Region region = new Region(normalize(dto.getName()), normalize(dto.getCode()));
         return RegionDTO.fromEntity(regionRepository.save(region));
@@ -37,7 +37,7 @@ public class RegionServiceImpl implements RegionService {
     @Transactional
     public RegionDTO updateRegion(Long id, RegionDTO dto) {
         Region region = getRegion(id);
-        ensureUnique(dto.getName(), dto.getCode(), id);
+        ensureUniqueName(dto.getName(), id);
 
         region.setName(normalize(dto.getName()));
         region.setCode(normalize(dto.getCode()));
@@ -62,22 +62,14 @@ public class RegionServiceImpl implements RegionService {
                 .orElseThrow(() -> new IllegalArgumentException("Region not found"));
     }
 
-    private void ensureUnique(String name, String code, Long currentId) {
+    private void ensureUniqueName(String name, Long currentId) {
         String normalizedName = normalize(name);
-        String normalizedCode = normalize(code);
 
         boolean duplicateName = currentId == null
                 ? regionRepository.existsByNameIgnoreCase(normalizedName)
                 : regionRepository.existsByNameIgnoreCaseAndIdNot(normalizedName, currentId);
         if (duplicateName) {
-            throw new RegionConflictException("Region sa tim imenom ili kodom već postoji");
-        }
-
-        boolean duplicateCode = currentId == null
-                ? regionRepository.existsByCodeIgnoreCase(normalizedCode)
-                : regionRepository.existsByCodeIgnoreCaseAndIdNot(normalizedCode, currentId);
-        if (duplicateCode) {
-            throw new RegionConflictException("Region sa tim imenom ili kodom već postoji");
+            throw new RegionConflictException("Region sa tim imenom već postoji");
         }
     }
 

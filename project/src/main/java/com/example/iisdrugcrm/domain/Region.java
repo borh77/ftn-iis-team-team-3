@@ -12,8 +12,7 @@ import jakarta.persistence.UniqueConstraint;
 @Table(
         name = "regions",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_regions_name", columnNames = "name"),
-                @UniqueConstraint(name = "uk_regions_code", columnNames = "code")
+        @UniqueConstraint(name = "uk_regions_name", columnNames = "name")
         }
 )
 public class Region {
@@ -25,7 +24,7 @@ public class Region {
     @Column(nullable = false, unique = true, length = 120)
     private String name;
 
-    @Column(nullable = false, unique = true, length = 20)
+    @Column(nullable = false, length = 20)
     private String code;
 
     protected Region() {
