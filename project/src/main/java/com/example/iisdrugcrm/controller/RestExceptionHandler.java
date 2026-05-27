@@ -1,6 +1,7 @@
 package com.example.iisdrugcrm.controller;
 
 import com.example.iisdrugcrm.exception.DuplicateUserException;
+import com.example.iisdrugcrm.exception.DuplicateTeamException;
 import com.example.iisdrugcrm.exception.RegionConflictException;
 import com.example.iisdrugcrm.exception.RegionInUseException;
 import java.util.Map;
@@ -21,6 +22,11 @@ public class RestExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", exception.getMessage()));
     }
 
+    @ExceptionHandler(DuplicateTeamException.class)
+    public ResponseEntity<Map<String, String>> handleDuplicateTeam(DuplicateTeamException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", exception.getMessage()));
+    }
+
     @ExceptionHandler(RegionConflictException.class)
     public ResponseEntity<Map<String, String>> handleRegionConflict(RegionConflictException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", exception.getMessage()));
@@ -38,7 +44,7 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, String>> handleConstraintViolation(DataIntegrityViolationException exception) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "User already exists"));
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Conflict"));
     }
 
     @ExceptionHandler(BadCredentialsException.class)

@@ -10,6 +10,8 @@ import com.example.iisdrugcrm.dto.profile.UserUpdateDTO;
 import com.example.iisdrugcrm.exception.DuplicateUserException;
 import com.example.iisdrugcrm.repository.UserRepository;
 import com.example.iisdrugcrm.security.JwtTokenProvider;
+import com.example.iisdrugcrm.dto.team.TeamMemberDTO;
+import com.example.iisdrugcrm.domain.UserRole;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -70,6 +72,25 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponseDTO getProfile(String username) {
         return UserResponseDTO.fromEntity(getUser(username));
+    }
+
+    @Override
+    public Long getUserIdByUsername(String username) {
+        return getUser(username).getId();
+    }
+
+    @Override
+    public List<TeamMemberDTO> searchPricelistCreators(String username) {
+        String query = username == null ? "" : username.trim();
+        if (query.isBlank()) {
+            return List.of();
+        }
+
+        return userRepository
+                .findTop10ByUsernameContainingIgnoreCaseAndRoleAndIsActiveTrueOrderByUsernameAsc(query, UserRole.ROLE_PRICELIST_CREATOR)
+                .stream()
+                .map(TeamMemberDTO::fromEntity)
+                .toList();
     }
 
     @Override

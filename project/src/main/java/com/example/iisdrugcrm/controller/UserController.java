@@ -6,6 +6,7 @@ import com.example.iisdrugcrm.dto.auth.LoginResponseDTO;
 import com.example.iisdrugcrm.dto.profile.PasswordChangeDTO;
 import com.example.iisdrugcrm.dto.profile.ProfileUpdateResponseDTO;
 import com.example.iisdrugcrm.dto.profile.UserUpdateDTO;
+import com.example.iisdrugcrm.dto.team.TeamMemberDTO;
 import com.example.iisdrugcrm.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Locale;
+import java.util.List;
 import java.util.Set;
 
 @RestController
@@ -61,6 +63,12 @@ public class UserController {
     ) {
         Pageable pageable = PageRequest.of(page, size, parseSort(sort));
         return ResponseEntity.ok(userService.getAll(pageable));
+    }
+
+    @GetMapping("/search")
+    @PreAuthorize("hasRole('PRICELIST_CREATOR')")
+    public ResponseEntity<List<TeamMemberDTO>> searchPricelistCreators(@RequestParam(defaultValue = "") String username) {
+        return ResponseEntity.ok(userService.searchPricelistCreators(username));
     }
 
     @GetMapping("/profile")

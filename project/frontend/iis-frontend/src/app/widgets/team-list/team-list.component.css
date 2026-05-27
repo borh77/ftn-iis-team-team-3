@@ -1,0 +1,77 @@
+.table-wrap {
+	overflow-x: auto;
+}
+
+table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+th,
+td {
+	text-align: left;
+	padding: 0.95rem 1rem;
+	border-bottom: 1px solid rgba(11, 17, 32, 0.06);
+}
+
+th {
+	color: var(--color-text);
+}
+
+td {
+	color: var(--color-muted);
+}
+
+.clickable-row {
+	cursor: pointer;
+}
+
+.clickable-row:hover {
+	background: rgba(29, 78, 216, 0.04);
+}
+
+.actions {
+	text-align: right;
+}
+
+button {
+	border: 0;
+	border-radius: 999px;
+	padding: 0.72rem 1rem;
+	font: inherit;
+	cursor: pointer;
+	transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+	transform: translateY(-1px);
+}
+
+button:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.primary {
+	background: var(--color-primary);
+	color: white;
+}
+
+.primary:hover:not(:disabled) {
+	background: var(--color-primary-strong);
+}
+
+.manage-button {
+	min-width: 9.5rem;
+	box-shadow: 0 10px 24px rgba(29, 78, 216, 0.12);
+}
+
+@media (max-width: 720px) {
+	.actions {
+		text-align: left;
+	}
+
+	.manage-button {
+		width: 100%;
+	}
+}

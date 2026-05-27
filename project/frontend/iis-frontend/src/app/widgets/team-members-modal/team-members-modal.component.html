@@ -1,0 +1,65 @@
+@if (currentTeam) {
+  <div class="modal-backdrop" role="presentation" (click)="close()">
+    <section class="modal-panel app-surface" role="dialog" aria-modal="true" aria-labelledby="team-panel-title" (click)="$event.stopPropagation()">
+      <header class="panel-head">
+        <div>
+          <p class="kicker">Team</p>
+          <h3 id="team-panel-title">{{ currentTeam.name }}</h3>
+        </div>
+        <button type="button" class="ghost" (click)="close()">Close</button>
+      </header>
+
+      <p class="meta">Team leader: <strong>{{ currentTeam.leaderUsername || 'Unknown' }}</strong></p>
+
+      <div class="members-section">
+        <h4>Members</h4>
+        @if (currentTeam.members.length === 0) {
+          <p class="muted">There are no members in this team.</p>
+        } @else {
+          <ul class="member-list">
+            @for (member of currentTeam.members; track member.id) {
+              <li>
+                <div>
+                  <strong>{{ displayName(member) }}</strong>
+                  <span>{{ member.username }}</span>
+                </div>
+                <button type="button" class="danger ghost-icon" [disabled]="submittingMemberId === member.id" (click)="removeMember(member.id)">Remove</button>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <div class="search-section">
+        <label>
+          <span>Add member by username</span>
+          <input type="text" [formControl]="searchControl" placeholder="Search users" />
+        </label>
+
+        @if (loadingSearch) {
+          <p class="muted">Searching...</p>
+        }
+
+        @if (searchResults.length > 0) {
+          <ul class="search-results">
+            @for (member of searchResults; track member.id) {
+              <li>
+                <button type="button" class="search-result" [disabled]="submittingMemberId === member.id" (click)="addMember(member.id)">
+                  <span>
+                    <strong>{{ displayName(member) }}</strong>
+                    <small>{{ member.username }}</small>
+                  </span>
+                  <span class="badge">Add</span>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+
+        @if (errorMessage) {
+          <p class="error-box">{{ errorMessage }}</p>
+        }
+      </div>
+    </section>
+  </div>
+}
