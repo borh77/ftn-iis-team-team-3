@@ -1,0 +1,61 @@
+<section class="page-shell">
+  <header class="page-hero">
+    <div>
+      <p class="kicker">Pricelist creator</p>
+      <h2>My Teams</h2>
+      <p>Create teams and manage pricelist creator members for collaborative work.</p>
+    </div>
+  </header>
+
+  <section class="panel">
+    <header class="panel-head">
+      <div>
+        <p class="kicker">New team</p>
+        <h3>Create team</h3>
+      </div>
+    </header>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" class="team-form">
+      <label>
+        <span>Team name</span>
+        <input type="text" formControlName="teamName" placeholder="Commercial team" />
+        @if (controlError('teamName')) {
+          <small class="field-error">{{ controlError('teamName') }}</small>
+        }
+      </label>
+
+      @if (errorMessage) {
+        <p class="error-box">{{ errorMessage }}</p>
+      }
+
+      <div class="form-actions">
+        <button type="submit" class="primary" [disabled]="saving">{{ saving ? 'Saving...' : 'Create team' }}</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <header class="panel-head">
+      <div>
+        <p class="kicker">My membership</p>
+        <h3>Teams</h3>
+      </div>
+
+      <button type="button" class="secondary" (click)="markRefreshed()">Refresh</button>
+    </header>
+
+    <app-team-list [refreshToken]="refreshToken()" (teamSelected)="openTeam($event)"></app-team-list>
+  </section>
+
+  @if (showMembersModal && selectedTeam) {
+    <app-team-members-modal
+      [team]="selectedTeam"
+      (closed)="closeMembersModal()"
+      (teamChanged)="handleTeamUpdated($event)"
+    ></app-team-members-modal>
+  }
+
+  @if (toastMessage) {
+    <div class="toast">{{ toastMessage }}</div>
+  }
+</section>
