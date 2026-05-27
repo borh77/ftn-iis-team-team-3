@@ -1,0 +1,238 @@
+.page-shell {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.page-hero,
+.panel {
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(11, 97, 216, 0.08);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+}
+
+.page-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background:
+    radial-gradient(circle at top right, rgba(96, 165, 250, 0.35), transparent 30%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(29, 78, 216, 0.94));
+  border-color: rgba(147, 197, 253, 0.18);
+  box-shadow: 0 22px 50px rgba(15, 23, 42, 0.18);
+}
+
+.panel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(243, 247, 251, 0.92));
+}
+
+.kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.page-hero h2,
+.panel h3,
+.modal h3 {
+  margin: 0.35rem 0 0.4rem;
+  color: var(--color-text);
+}
+
+.page-hero p,
+.muted,
+.confirm-copy {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.page-hero p {
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.hero-action {
+  white-space: nowrap;
+}
+
+.panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.panel-head,
+.modal-head,
+.modal-actions,
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.7rem 1rem;
+  font: inherit;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.primary {
+  background: var(--color-primary);
+  color: white;
+}
+
+.secondary {
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--color-text);
+}
+
+.ghost {
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--color-text);
+}
+
+.danger {
+  background: rgba(185, 28, 28, 0.08);
+  color: #b91c1c;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.85rem 0.75rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  text-align: left;
+}
+
+th {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.actions {
+  justify-content: flex-start;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(3px);
+  z-index: 20;
+}
+
+.modal {
+  position: fixed;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  z-index: 21;
+  width: min(92vw, 520px);
+  padding: 1.25rem;
+  border-radius: 1.25rem;
+  background: white;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.24);
+  display: grid;
+  gap: 1rem;
+}
+
+.confirm-modal {
+  width: min(92vw, 420px);
+}
+
+.modal-form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+input {
+  width: 100%;
+  padding: 0.8rem 0.95rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  background: #fff;
+  color: var(--color-text);
+}
+
+input:focus {
+  outline: 2px solid rgba(11, 97, 216, 0.18);
+  border-color: var(--color-primary);
+}
+
+.field-error {
+  color: #b91c1c;
+}
+
+.error-box {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.9rem;
+  background: rgba(185, 28, 28, 0.09);
+  color: #b91c1c;
+}
+
+.toast {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 30;
+  padding: 0.9rem 1rem;
+  border-radius: 0.95rem;
+  background: #111827;
+  color: white;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.24);
+}
+
+@media (max-width: 720px) {
+  .page-hero {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .panel-head,
+  .modal-head,
+  .modal-actions,
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modal {
+    width: min(94vw, 520px);
+  }
+}
