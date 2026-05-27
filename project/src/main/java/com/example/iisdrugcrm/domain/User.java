@@ -7,6 +7,9 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -48,6 +51,10 @@ public class User {
 
     @Column(nullable = false)
     private boolean hasChangedPassword = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "region_id")
+    private Region region;
 
     public Long getId() {
         return id;
@@ -119,6 +126,14 @@ public class User {
 
     public void setHasChangedPassword(boolean hasChangedPassword) {
         this.hasChangedPassword = hasChangedPassword;
+    }
+
+    public Region getRegion() {
+        return region;
+    }
+
+    public void setRegion(Region region) {
+        this.region = region;
     }
 
     public void changePassword(String oldPassword, String newPassword, PasswordEncoder encoder) {
