@@ -3,6 +3,7 @@ import { authGuard } from './core/auth/auth.guard';
 import { passwordChangeGuard } from './core/auth/password-change.guard';
 import { LoginComponent } from './pages/login/login.component';
 import { AdminUsersPageComponent } from './pages/admin-users/admin-users-page.component';
+import { TeamManagementComponent } from './pages/team-management/team-management.component';
 import { RoleLandingComponent } from './pages/role-landing/role-landing.component';
 import { ForcePasswordChangeComponent } from './pages/force-password-change/force-password-change.component';
 import { ProfileComponent } from './pages/profile/profile.component';
@@ -28,6 +29,13 @@ export const routes: Routes = [
 		component: ProfileComponent,
 		canActivate: [authGuard, passwordChangeGuard],
 		title: 'IIS Drug CRM | Profile',
+	},
+	{
+		path: 'teams',
+		component: TeamManagementComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_PRICELIST_CREATOR'] },
+		title: 'IIS Drug CRM | Teams',
 	},
 	{
 		path: 'content',
