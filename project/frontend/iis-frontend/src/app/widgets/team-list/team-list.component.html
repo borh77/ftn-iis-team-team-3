@@ -1,0 +1,32 @@
+<section>
+  <div *ngIf="loading">
+    <p class="muted">Loading teams...</p>
+  </div>
+
+  <div *ngIf="!loading && teams.length === 0">
+    <p class="muted">You do not have any teams yet.</p>
+  </div>
+
+  <div *ngIf="!loading && teams.length > 0" class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Leader</th>
+          <th>Members</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let team of teams; trackBy: trackById" class="clickable-row" (click)="open(team)">
+          <td>{{ team.name }}</td>
+          <td>{{ team.leaderUsername || 'Unknown' }}</td>
+          <td>{{ team.members.length }}</td>
+          <td class="actions">
+            <button type="button" class="primary manage-button" (click)="$event.stopPropagation(); open(team)">Manage members</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
