@@ -81,6 +81,14 @@ public class Lead {
         status = LeadStatus.QUALIFIED;
     }
 
+    public void convert() {
+        if (status != LeadStatus.QUALIFIED) {
+            throw new IllegalStateException("Only qualified lead can be converted.");
+        }
+
+        status = LeadStatus.CONVERTED;
+    }    
+
     public Long getId() { return id; }
     public String getName() { return name; }
     public String getEmail() { return email; }

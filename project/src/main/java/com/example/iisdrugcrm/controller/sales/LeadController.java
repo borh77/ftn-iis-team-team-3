@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.example.iisdrugcrm.dto.sales.customer.CustomerResponseDTO;
 
 import java.util.List;
 
@@ -43,5 +44,11 @@ public class LeadController {
     @PreAuthorize("hasRole('SALES_REPRESENTATIVE')")
     public ResponseEntity<LeadResponseDTO> qualify(@PathVariable Long id) {
         return ResponseEntity.ok(leadService.qualify(id));
+    }
+
+    @PatchMapping("/{id}/convert")
+    @PreAuthorize("hasRole('SALES_REPRESENTATIVE')")
+    public ResponseEntity<CustomerResponseDTO> convert(@PathVariable Long id) {
+        return ResponseEntity.ok(leadService.convert(id));
     }
 }
