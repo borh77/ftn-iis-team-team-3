@@ -36,6 +36,10 @@ public class SalesProcess {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private SalesStage stage;
+
     protected SalesProcess() {
     }
 
@@ -45,6 +49,7 @@ public class SalesProcess {
         this.currentStage = "QUALIFICATION";
         this.status = SalesProcessStatus.ACTIVE;
         this.outcome = SalesProcessOutcome.OPEN;
+        this.stage = SalesStage.NEW;
     }
 
     @PrePersist
@@ -59,6 +64,10 @@ public class SalesProcess {
         updatedAt = LocalDateTime.now();
     }
 
+    public void changeStage(SalesStage stage) {
+        this.stage = stage;
+    }
+
     public Long getId() { return id; }
     public Customer getCustomer() { return customer; }
     public String getTitle() { return title; }
@@ -67,4 +76,6 @@ public class SalesProcess {
     public SalesProcessOutcome getOutcome() { return outcome; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public SalesStage getStage() { return stage; }
+
 }

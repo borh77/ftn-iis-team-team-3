@@ -4,9 +4,11 @@ import com.example.iisdrugcrm.domain.sales.Customer;
 import com.example.iisdrugcrm.domain.sales.SalesProcess;
 import com.example.iisdrugcrm.dto.sales.process.CreateSalesProcessRequestDTO;
 import com.example.iisdrugcrm.dto.sales.process.SalesProcessResponseDTO;
+import com.example.iisdrugcrm.dto.sales.process.StageUpdateRequestDTO;
 import com.example.iisdrugcrm.repository.sales.CustomerRepository;
 import com.example.iisdrugcrm.repository.sales.SalesProcessRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -38,13 +40,23 @@ public class SalesProcessService {
         return mapToDto(salesProcessRepository.save(salesProcess));
     }
 
+    @Transactional
+    public SalesProcessResponseDTO updateStage(Long id, StageUpdateRequestDTO dto) {
+        SalesProcess process = salesProcessRepository.findWithCustomerById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Sales process not found."));
+
+        process.changeStage(dto.getStage());
+
+        return mapToDto(process);
+    }
+
     private SalesProcessResponseDTO mapToDto(SalesProcess salesProcess) {
         return new SalesProcessResponseDTO(
                 salesProcess.getId(),
                 salesProcess.getCustomer().getId(),
                 salesProcess.getCustomer().getName(),
                 salesProcess.getTitle(),
-                salesProcess.getCurrentStage(),
+                salesProcess.getStage(),
                 salesProcess.getStatus(),
                 salesProcess.getOutcome(),
                 salesProcess.getCreatedAt(),

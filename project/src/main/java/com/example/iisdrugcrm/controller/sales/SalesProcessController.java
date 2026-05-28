@@ -2,6 +2,7 @@ package com.example.iisdrugcrm.controller.sales;
 
 import com.example.iisdrugcrm.dto.sales.process.CreateSalesProcessRequestDTO;
 import com.example.iisdrugcrm.dto.sales.process.SalesProcessResponseDTO;
+import com.example.iisdrugcrm.dto.sales.process.StageUpdateRequestDTO;
 import com.example.iisdrugcrm.service.sales.SalesProcessService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -31,5 +32,14 @@ public class SalesProcessController {
     @PreAuthorize("hasRole('SALES_REPRESENTATIVE')")
     public ResponseEntity<SalesProcessResponseDTO> create(@Valid @RequestBody CreateSalesProcessRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(salesProcessService.create(dto));
+    }
+
+    @PatchMapping("/{id}/stage")
+    @PreAuthorize("hasRole('SALES_REPRESENTATIVE')")
+    public ResponseEntity<SalesProcessResponseDTO> updateStage(
+            @PathVariable Long id,
+            @Valid @RequestBody StageUpdateRequestDTO dto
+    ) {
+        return ResponseEntity.ok(salesProcessService.updateStage(id, dto));
     }
 }
