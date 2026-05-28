@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
 import { passwordChangeGuard } from './core/auth/password-change.guard';
+import { CreateDoctorReportComponent } from './features/adverse-effects/pages/create-doctor-report/create-doctor-report.component';
 import { LoginComponent } from './pages/login/login.component';
 import { AdminUsersPageComponent } from './pages/admin-users/admin-users-page.component';
 import { TeamManagementComponent } from './pages/team-management/team-management.component';
@@ -132,6 +133,14 @@ export const routes: Routes = [
 		  ],
 		},
 		title: 'IIS Drug CRM | Communications',
+	},
+	// Podsistem neželjenih efekata lekova
+	{
+		path: 'adverse-effects/create-doctor-report',
+		component: CreateDoctorReportComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_LEKAR'] },
+		title: 'IIS Drug CRM | Novi nalog — Lekar',
 	},
 	{ path: '**', redirectTo: 'login' },
 ];

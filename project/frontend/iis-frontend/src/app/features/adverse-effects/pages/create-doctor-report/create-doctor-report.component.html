@@ -1,0 +1,87 @@
+<div class="page-wrapper">
+  <div class="form-card">
+    <div class="form-header">
+      <h1>Novi nalog o neželjenom efektu</h1>
+      <p>Popunite sve obavezne podatke o neželjenom efektu leka.</p>
+    </div>
+
+    <form (ngSubmit)="submit()" #reportForm="ngForm">
+
+      <div class="form-group">
+        <label for="medicationName">Naziv leka *</label>
+        <input
+          id="medicationName"
+          type="text"
+          [(ngModel)]="form.medicationName"
+          name="medicationName"
+          placeholder="npr. Aspirin 500mg"
+          required
+        />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="severity">Ozbiljnost *</label>
+          <select id="severity" [(ngModel)]="form.severity" name="severity" required>
+            <option value="">-- Izaberite --</option>
+            <option *ngFor="let s of severityOptions" [value]="s">{{ s }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="source">Kanal prijave</label>
+          <select id="source" [(ngModel)]="form.source" name="source">
+            <option *ngFor="let s of sourceOptions" [value]="s">{{ s }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="symptomDate">Datum simptoma *</label>
+        <input
+          id="symptomDate"
+          type="date"
+          [(ngModel)]="form.symptomDate"
+          name="symptomDate"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="effectDescription">Opis efekta *</label>
+        <textarea
+          id="effectDescription"
+          [(ngModel)]="form.effectDescription"
+          name="effectDescription"
+          rows="4"
+          placeholder="Opišite neželjeni efekat koji je pacijent doživeo..."
+          required
+        ></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="additionalNotes">Dodatne napomene</label>
+        <textarea
+          id="additionalNotes"
+          [(ngModel)]="form.additionalNotes"
+          name="additionalNotes"
+          rows="3"
+          placeholder="Opciono — unesite dodatne informacije..."
+        ></textarea>
+      </div>
+
+      <div class="success-message" *ngIf="successMessage">{{ successMessage }}</div>
+      <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" (click)="goToMyReports()">
+          Moji nalozi
+        </button>
+        <button type="submit" class="btn-primary" [disabled]="saving || reportForm.invalid">
+          {{ saving ? 'Čuvanje...' : 'Kreiraj nalog' }}
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>

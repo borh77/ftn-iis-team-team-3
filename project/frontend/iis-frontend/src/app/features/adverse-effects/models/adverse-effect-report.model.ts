@@ -1,0 +1,35 @@
+export type ReportStatus = 'SUBMITTED' | 'UNDER_REVIEW' | 'CLOSED' | 'EVIDENCED';
+export type ReportType = 'DOCTOR' | 'PATIENT';
+
+export interface AdverseEffectReport {
+  id: number;
+  createdAt: string;
+  source: string;
+  severity: string;
+  symptomDate: string;
+  status: ReportStatus;
+  medicationName: string;
+  reportType: ReportType;
+  reporterUsername: string;
+  // Doctor-specific
+  effectDescription?: string;
+  additionalNotes?: string;
+  // Patient-specific
+  symptoms?: string;
+  additionalDesc?: string;
+}
+
+export interface CreateDoctorReportRequest {
+  medicationName: string;
+  severity: string;
+  source: string;
+  symptomDate: string;
+  effectDescription: string;
+  additionalNotes?: string;
+}
+
+export interface CreatePatientReportRequest {
+  medicationName: string;
+  symptoms: string;
+  additionalDesc?: string;
+}
