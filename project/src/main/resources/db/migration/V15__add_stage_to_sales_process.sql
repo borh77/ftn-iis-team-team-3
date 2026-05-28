@@ -1,0 +1,2 @@
+ALTER TABLE sales_processes
+ADD COLUMN stage VARCHAR(50) NOT NULL DEFAULT 'NEW';

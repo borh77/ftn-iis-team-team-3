@@ -9,6 +9,11 @@ import { RoleLandingComponent } from './pages/role-landing/role-landing.componen
 import { ForcePasswordChangeComponent } from './pages/force-password-change/force-password-change.component';
 import { ProfileComponent } from './pages/profile/profile.component';
 import { PricelistCreateComponent } from './pages/pricelist-create/pricelist-create.component';
+import { SalesDashboardComponent } from './pages/sales-dashboard/sales-dashboard.component';
+import { LeadsListComponent } from './features/sales/pages/leads-list/leads-list.component';
+import { CustomersListComponent } from './features/sales/pages/customers-list/customers-list.component';
+import { ProcessesListComponent } from './features/sales/pages/processes-list/processes-list.component';
+import { CommunicationsListComponent } from './features/sales/pages/communications-list/communications-list.component';
 
 export const routes: Routes = [
 	{ path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -81,6 +86,67 @@ export const routes: Routes = [
 			subtitle: 'Buyer landing page.',
 		},
 		title: 'IIS Drug CRM | Pricelists',
+	},
+	{
+		path: 'sales',
+		component: SalesDashboardComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: {
+			roles: ['ROLE_SALES_REPRESENTATIVE', 'ROLE_ACCOUNT_MANAGER', 'ROLE_SALES_MANAGER'],
+		},
+		title: 'IIS Drug CRM | Sales',
+	},
+	{
+		path: 'sales/leads',
+		component: LeadsListComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: {
+			roles: [
+			'ROLE_SALES_REPRESENTATIVE',
+			'ROLE_ACCOUNT_MANAGER',
+			'ROLE_SALES_MANAGER',
+			],
+		},
+		title: 'IIS Drug CRM | Leads',
+	},
+	{
+		path: 'sales/customers',
+		component: CustomersListComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: {
+			roles: [
+			'ROLE_SALES_REPRESENTATIVE',
+			'ROLE_ACCOUNT_MANAGER',
+			'ROLE_SALES_MANAGER',
+			],
+		},
+		title: 'IIS Drug CRM | Customers',
+	},
+	{
+		path: 'sales/processes',
+		component: ProcessesListComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: {
+			roles: [
+			'ROLE_SALES_REPRESENTATIVE',
+			'ROLE_ACCOUNT_MANAGER',
+			'ROLE_SALES_MANAGER',
+			],
+		},
+		title: 'IIS Drug CRM | Sales Pipeline',
+	},
+	{
+		path: 'sales/communications',
+		component: CommunicationsListComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: {
+		  roles: [
+				'ROLE_SALES_REPRESENTATIVE',
+				'ROLE_ACCOUNT_MANAGER',
+				'ROLE_SALES_MANAGER',
+		  ],
+		},
+		title: 'IIS Drug CRM | Communications',
 	},
 	{ path: '**', redirectTo: 'login' },
 ];
