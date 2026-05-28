@@ -1,0 +1,110 @@
+<main class="page">
+  <section class="page-header">
+    <div>
+        <p class="eyebrow">Sales workspace</p>
+        <h1>Leads</h1>
+        <p>Manage incoming leads and convert them into customers.</p>
+    </div>
+
+   <button
+        *ngIf="canManageLeads"
+        class="primary-button"
+        type="button"
+        (click)="showCreateForm = !showCreateForm">
+        + Add Lead
+    </button>
+  </section>
+
+  <section *ngIf="showCreateForm && canManageLeads" class="form-card">
+    <h2>Add Lead</h2>
+
+    <form (ngSubmit)="createLead()" class="lead-form">
+      <label>
+        Name
+        <input name="name" [(ngModel)]="newLead.name" required />
+      </label>
+
+      <label>
+        Email
+        <input name="email" type="email" [(ngModel)]="newLead.email" required />
+      </label>
+
+      <label>
+        Address
+        <input name="address" [(ngModel)]="newLead.address" required />
+      </label>
+
+      <label>
+        Source
+        <input name="source" [(ngModel)]="newLead.source" required />
+      </label>
+
+      <label>
+        Score
+        <input name="score" type="number" [(ngModel)]="newLead.score" required />
+      </label>
+
+      <div class="form-actions">
+        <button type="button" class="secondary-button" (click)="showCreateForm = false">
+            Cancel
+        </button>
+
+        <button type="submit" class="primary-button" [disabled]="saving">
+            {{ saving ? 'Saving...' : 'Save Lead' }}
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <section class="table-card">
+    <div *ngIf="loading" class="loading">
+      Loading leads...
+    </div>
+
+    <table *ngIf="!loading">
+        <thead>
+            <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Address</th>
+            <th>Source</th>
+            <th>Score</th>
+            <th>Status</th>
+            <th *ngIf="canManageLeads">Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            <tr *ngFor="let lead of leads">
+                <td>{{ lead.name }}</td>
+                <td>{{ lead.email }}</td>
+                <td>{{ lead.address }}</td>
+                <td>{{ lead.source }}</td>
+                <td>{{ lead.score }}</td>
+                <td>
+                <span class="status">
+                    {{ lead.status }}
+                </span>
+                </td>
+                <td *ngIf="canManageLeads">
+                    <button
+                        *ngIf="lead.status === 'NEW'"
+                        class="secondary-button"
+                        type="button"
+                        (click)="qualifyLead(lead.id)">
+                        Qualify
+                    </button>
+
+                    <button
+                        *ngIf="lead.status === 'QUALIFIED'"
+                        class="primary-button"
+                        type="button"
+                        (click)="convertLead(lead.id)">
+                        Convert
+                    </button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+  </section>
+</main>

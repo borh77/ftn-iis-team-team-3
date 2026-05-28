@@ -1,0 +1,93 @@
+<main class="page">
+  <section class="page-header">
+    <div>
+      <p class="eyebrow">Sales workspace</p>
+      <h1>Sales Pipeline</h1>
+      <p>Start sales processes and track their current stage.</p>
+    </div>
+
+    <button
+        *ngIf="canCreateProcess"
+        class="primary-button"
+        type="button"
+        (click)="showCreateForm = !showCreateForm">
+        + Add Process
+    </button>
+  </section>
+
+  <section *ngIf="showCreateForm && canCreateProcess" class="form-card">
+    <h2>Add Sales Process</h2>
+
+    <form (ngSubmit)="createProcess()" class="process-form">
+      <label>
+        Customer
+        <select name="customerId" [(ngModel)]="newProcess.customerId" required>
+          <option [ngValue]="0" disabled>Select customer</option>
+          <option *ngFor="let customer of customers" [ngValue]="customer.id">
+            {{ customer.name }}
+          </option>
+        </select>
+      </label>
+
+      <label>
+        Title
+        <input name="title" [(ngModel)]="newProcess.title" required />
+      </label>
+
+      <div class="form-actions">
+        <button type="button" class="secondary-button" (click)="showCreateForm = false">
+          Cancel
+        </button>
+
+        <button type="submit" class="primary-button" [disabled]="saving || newProcess.customerId === 0">
+          {{ saving ? 'Saving...' : 'Save Process' }}
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <section class="table-card">
+    <div *ngIf="loading" class="loading">
+      Loading sales processes...
+    </div>
+
+    <table *ngIf="!loading && processes.length > 0">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Customer</th>
+          <th>Stage</th>
+          <th>Status</th>
+          <th>Outcome</th>
+          <th *ngIf="canManageProcesses">Change Stage</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngFor="let process of processes">
+          <td>{{ process.title }}</td>
+          <td>{{ process.customerName }}</td>
+          <td>
+            <span class="status">{{ process.stage }}</span>
+          </td>
+          <td>{{ process.status }}</td>
+          <td>{{ process.outcome }}</td>
+          <td *ngIf="canManageProcesses">
+            <select
+              [ngModel]="process.stage"
+              (ngModelChange)="updateStage(process, $event)"
+              name="stage-{{ process.id }}">
+              <option *ngFor="let stage of stages" [ngValue]="stage">
+                {{ stage }}
+              </option>
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="!loading && processes.length === 0" class="loading">
+      No sales processes found.
+    </div>
+  </section>
+</main>

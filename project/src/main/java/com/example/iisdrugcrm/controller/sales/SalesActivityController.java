@@ -32,7 +32,7 @@ public class SalesActivityController {
     }
 
     @GetMapping("/processes/{id}/activities")
-    @PreAuthorize("hasAnyRole('SALES_REPRESENTATIVE', 'SALES_MANAGER')")
+    @PreAuthorize("hasAnyRole('SALES_REPRESENTATIVE', 'SALES_MANAGER', 'ACCOUNT_MANAGER')")
     public ResponseEntity<List<ActivityResponseDTO>> getByProcess(
             @PathVariable Long id
     ) {

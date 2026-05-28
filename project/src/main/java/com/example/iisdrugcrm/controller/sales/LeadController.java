@@ -23,7 +23,7 @@ public class LeadController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('SALES_REPRESENTATIVE', 'SALES_MANAGER')")
+    @PreAuthorize("hasAnyRole('SALES_REPRESENTATIVE', 'SALES_MANAGER', 'ACCOUNT_MANAGER')")
     public ResponseEntity<List<LeadResponseDTO>> getAll() {
         return ResponseEntity.ok(leadService.getAll());
     }

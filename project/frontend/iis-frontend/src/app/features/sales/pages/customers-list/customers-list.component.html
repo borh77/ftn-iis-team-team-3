@@ -1,0 +1,96 @@
+<main class="page">
+  <section class="page-header">
+    <div>
+      <p class="eyebrow">Sales workspace</p>
+      <h1>Customers</h1>
+      <p>Manage wholesale customers and their sales information.</p>
+    </div>
+
+    <button
+        *ngIf="canManageCustomers"
+        class="primary-button"
+        type="button"
+        (click)="showCreateForm = !showCreateForm">
+      + Add Customer
+    </button>
+  </section>
+
+  <section *ngIf="showCreateForm && canManageCustomers" class="form-card">
+    <h2>Add Customer</h2>
+
+    <form (ngSubmit)="createCustomer()" class="customer-form">
+      <label>
+        Name
+        <input name="name" [(ngModel)]="newCustomer.name" required />
+      </label>
+
+      <label>
+        Email
+        <input name="email" type="email" [(ngModel)]="newCustomer.email" required />
+      </label>
+
+      <label>
+        Phone
+        <input name="phone" [(ngModel)]="newCustomer.phone" />
+      </label>
+
+      <label>
+        Website
+        <input name="website" [(ngModel)]="newCustomer.website" />
+      </label>
+
+      <label>
+        Address
+        <input name="address" [(ngModel)]="newCustomer.address" />
+      </label>
+
+      <div class="form-actions">
+        <button type="button" class="secondary-button" (click)="showCreateForm = false">
+          Cancel
+        </button>
+
+        <button type="submit" class="primary-button" [disabled]="saving">
+          {{ saving ? 'Saving...' : 'Save Customer' }}
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <section class="table-card">
+    <div *ngIf="loading" class="loading">
+      Loading customers...
+    </div>
+
+    <table *ngIf="!loading && customers.length > 0">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Phone</th>
+          <th>Website</th>
+          <th>Address</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngFor="let customer of customers">
+          <td>{{ customer.name }}</td>
+          <td>{{ customer.email }}</td>
+          <td>{{ customer.phone || '-' }}</td>
+          <td>{{ customer.website || '-' }}</td>
+          <td>{{ customer.address || '-' }}</td>
+          <td>
+            <span class="status">
+              {{ customer.status }}
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="!loading && customers.length === 0" class="loading">
+      No customers found.
+    </div>
+  </section>
+</main>

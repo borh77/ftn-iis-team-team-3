@@ -23,7 +23,7 @@ public class SalesProcessController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('SALES_REPRESENTATIVE', 'SALES_MANAGER')")
+    @PreAuthorize("hasAnyRole('SALES_REPRESENTATIVE', 'SALES_MANAGER', 'ACCOUNT_MANAGER')")
     public ResponseEntity<List<SalesProcessResponseDTO>> getAll() {
         return ResponseEntity.ok(salesProcessService.getAll());
     }
