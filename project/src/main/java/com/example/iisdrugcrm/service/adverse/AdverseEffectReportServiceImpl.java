@@ -77,6 +77,31 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
     }
 
     @Override
+    public AdverseEffectReportResponseDTO updateDoctorReport(Long id, UpdateDoctorReportRequestDTO dto, String username) {
+        DoctorReport report = doctorReportRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Nalog nije pronađen: " + id));
+
+        // US-03: editovanje dozvoljeno SAMO dok je status SUBMITTED
+        if (report.getStatus() != ReportStatus.SUBMITTED) {
+            throw new IllegalStateException("Nalog se može menjati samo dok je u statusu SUBMITTED.");
+        }
+
+        // Provera da lekar može da menja samo SVOJE naloge
+        if (!report.getReporter().getUsername().equals(username)) {
+            throw new IllegalStateException("Nemate pravo da menjate tuđi nalog.");
+        }
+
+        report.setMedicationName(dto.getMedicationName());
+        report.setSeverity(dto.getSeverity());
+        report.setSource(dto.getSource());
+        report.setSymptomDate(dto.getSymptomDate());
+        report.setEffectDescription(dto.getEffectDescription());
+        report.setAdditionalNotes(dto.getAdditionalNotes());
+
+        return toDTO(doctorReportRepository.save(report));
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<AdverseEffectReportResponseDTO> getAllReports() {
         return reportRepository.findAll()

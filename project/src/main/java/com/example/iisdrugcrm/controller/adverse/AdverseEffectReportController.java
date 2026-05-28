@@ -3,6 +3,7 @@ package com.example.iisdrugcrm.controller.adverse;
 import com.example.iisdrugcrm.dto.adverse.AdverseEffectReportResponseDTO;
 import com.example.iisdrugcrm.dto.adverse.CreateDoctorReportRequestDTO;
 import com.example.iisdrugcrm.dto.adverse.CreatePatientReportRequestDTO;
+import com.example.iisdrugcrm.dto.adverse.UpdateDoctorReportRequestDTO;
 import com.example.iisdrugcrm.service.adverse.AdverseEffectReportService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -62,5 +63,15 @@ public class AdverseEffectReportController {
     @PreAuthorize("hasAnyRole('LEKAR', 'FARMAKOVIGILANT')")
     public ResponseEntity<AdverseEffectReportResponseDTO> getReportById(@PathVariable Long id) {
         return ResponseEntity.ok(service.getReportById(id));
+    }
+
+    // US-03: Editovanje naloga lekara (samo dok je SUBMITTED)
+    @PutMapping("/doctor-reports/{id}")
+    @PreAuthorize("hasRole('LEKAR')")
+    public ResponseEntity<AdverseEffectReportResponseDTO> updateDoctorReport(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateDoctorReportRequestDTO dto,
+            Authentication auth) {
+        return ResponseEntity.ok(service.updateDoctorReport(id, dto, auth.getName()));
     }
 }

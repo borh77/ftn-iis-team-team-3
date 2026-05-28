@@ -1,0 +1,55 @@
+<div class="page-wrapper">
+  <div class="page-header">
+    <div>
+      <h1>Moji nalozi</h1>
+      <p>Pregled svih vaših prijava neželjenih efekata lekova.</p>
+    </div>
+    <button class="btn-primary" (click)="goToCreate()">+ Novi nalog</button>
+  </div>
+
+  <div class="loading" *ngIf="loading">Učitavanje...</div>
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="empty-state" *ngIf="!loading && reports.length === 0">
+    <p>Nemate kreiranih naloga. Kliknite "Novi nalog" da biste prijavili neželjeni efekat.</p>
+  </div>
+
+  <div class="reports-table" *ngIf="!loading && reports.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th>#ID</th>
+          <th>Lek</th>
+          <th>Ozbiljnost</th>
+          <th>Datum simptoma</th>
+          <th>Status</th>
+          <th>Kreirano</th>
+          <th>Akcije</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let report of reports">
+          <td>{{ report.id }}</td>
+          <td>{{ report.medicationName }}</td>
+          <td>{{ report.severity }}</td>
+          <td>{{ report.symptomDate }}</td>
+          <td>
+            <span class="status-badge" [ngClass]="getStatusClass(report.status)">
+              {{ report.status }}
+            </span>
+          </td>
+          <td>{{ report.createdAt | date:'dd.MM.yyyy HH:mm' }}</td>
+          <td>
+            <button
+              class="btn-edit"
+              [disabled]="!canEdit(report)"
+              [title]="canEdit(report) ? 'Izmeni nalog' : 'Nalog se ne može menjati — status nije SUBMITTED'"
+              (click)="goToEdit(report.id)">
+              Izmeni
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

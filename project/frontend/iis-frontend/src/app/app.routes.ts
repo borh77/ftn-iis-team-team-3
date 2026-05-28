@@ -2,6 +2,8 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
 import { passwordChangeGuard } from './core/auth/password-change.guard';
 import { CreateDoctorReportComponent } from './features/adverse-effects/pages/create-doctor-report/create-doctor-report.component';
+import { MyReportsComponent } from './features/adverse-effects/pages/my-reports/my-reports.component';
+import { AllReportsComponent } from './features/adverse-effects/pages/all-reports/all-reports.component';
 import { LoginComponent } from './pages/login/login.component';
 import { AdminUsersPageComponent } from './pages/admin-users/admin-users-page.component';
 import { TeamManagementComponent } from './pages/team-management/team-management.component';
@@ -141,6 +143,20 @@ export const routes: Routes = [
 		canActivate: [authGuard, passwordChangeGuard],
 		data: { roles: ['ROLE_LEKAR'] },
 		title: 'IIS Drug CRM | Novi nalog — Lekar',
+	},
+	{
+		path: 'adverse-effects/my-reports',
+		component: MyReportsComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_LEKAR'] },
+		title: 'IIS Drug CRM | Moji nalozi',
+	},
+	{
+		path: 'adverse-effects/all-reports',
+		component: AllReportsComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_FARMAKOVIGILANT'] },
+		title: 'IIS Drug CRM | Svi nalozi',
 	},
 	{ path: '**', redirectTo: 'login' },
 ];

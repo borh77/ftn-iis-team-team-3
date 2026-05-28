@@ -1,0 +1,63 @@
+<div class="page-wrapper">
+  <div class="page-header">
+    <div>
+      <h1>Svi nalozi neželjenih efekata</h1>
+      <p>Pregled svih prijavljenih naloga u sistemu.</p>
+    </div>
+    <div class="filter-bar">
+      <select [(ngModel)]="selectedStatus" (change)="applyFilter()">
+        <option value="">Svi statusi</option>
+        <option *ngFor="let s of statusOptions" [value]="s">{{ s }}</option>
+      </select>
+      <button class="btn-clear" *ngIf="selectedStatus" (click)="clearFilter()">✕ Ukloni filter</button>
+    </div>
+  </div>
+
+  <div class="loading" *ngIf="loading">Učitavanje...</div>
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="summary" *ngIf="!loading">
+    Prikazano: <strong>{{ filteredReports.length }}</strong> od <strong>{{ allReports.length }}</strong> naloga
+  </div>
+
+  <div class="empty-state" *ngIf="!loading && filteredReports.length === 0">
+    <p>Nema naloga koji odgovaraju izabranom filteru.</p>
+  </div>
+
+  <div class="reports-table" *ngIf="!loading && filteredReports.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th>#ID</th>
+          <th>Tip</th>
+          <th>Reporter</th>
+          <th>Lek</th>
+          <th>Ozbiljnost</th>
+          <th>Status</th>
+          <th>Datum simptoma</th>
+          <th>Kreirano</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let report of filteredReports">
+          <td>{{ report.id }}</td>
+          <td>
+            <span class="type-badge" [class.type-doctor]="report.reportType === 'DOCTOR'" [class.type-patient]="report.reportType === 'PATIENT'">
+              {{ report.reportType === 'DOCTOR' ? 'Lekar' : 'Pacijent' }}
+            </span>
+          </td>
+          <td>{{ report.reporterUsername }}</td>
+          <td>{{ report.medicationName }}</td>
+          <td>{{ report.severity || '—' }}</td>
+          <td>
+            <span class="status-badge" [ngClass]="getStatusClass(report.status)">
+              {{ report.status }}
+            </span>
+          </td>
+          <td>{{ report.symptomDate || '—' }}</td>
+          <td>{{ report.createdAt | date:'dd.MM.yyyy HH:mm' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
