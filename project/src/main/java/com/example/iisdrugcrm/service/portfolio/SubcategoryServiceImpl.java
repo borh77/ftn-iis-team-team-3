@@ -3,9 +3,8 @@ package com.example.iisdrugcrm.service.portfolio;
 import com.example.iisdrugcrm.domain.portfolio.Category;
 import com.example.iisdrugcrm.domain.portfolio.EntityStatus;
 import com.example.iisdrugcrm.domain.portfolio.Subcategory;
-import com.example.iisdrugcrm.dto.portfolio.SubcategoryCreateDTO;
+import com.example.iisdrugcrm.dto.portfolio.SubcategoryRequestDTO;
 import com.example.iisdrugcrm.dto.portfolio.SubcategoryResponseDTO;
-import com.example.iisdrugcrm.dto.portfolio.SubcategoryUpdateDTO;
 import com.example.iisdrugcrm.exception.PortfolioDuplicateResourceException;
 import com.example.iisdrugcrm.exception.PortfolioResourceNotFoundException;
 import com.example.iisdrugcrm.repository.portfolio.CategoryRepository;
@@ -47,7 +46,7 @@ public class SubcategoryServiceImpl implements SubcategoryService {
 
     @Override
     @Transactional
-    public SubcategoryResponseDTO create(SubcategoryCreateDTO dto) {
+    public SubcategoryResponseDTO create(SubcategoryRequestDTO dto) {
         Category category = getCategory(dto.getCategoryId());
 
         if (subcategoryRepository.existsByCategoryIdAndNameIgnoreCase(dto.getCategoryId(), dto.getName())) {
@@ -60,7 +59,7 @@ public class SubcategoryServiceImpl implements SubcategoryService {
 
     @Override
     @Transactional
-    public SubcategoryResponseDTO update(Long id, SubcategoryUpdateDTO dto) {
+    public SubcategoryResponseDTO update(Long id, SubcategoryRequestDTO dto) {
         Subcategory subcategory = getSubcategory(id);
         Category category = getCategory(dto.getCategoryId());
 

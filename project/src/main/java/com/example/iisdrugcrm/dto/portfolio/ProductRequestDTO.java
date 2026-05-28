@@ -1,25 +1,23 @@
 package com.example.iisdrugcrm.dto.portfolio;
 
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-public class SubcategoryUpdateDTO {
-
-    @NotNull
-    private Long categoryId;
+public class ProductRequestDTO {
 
     @NotBlank
-    @Size(max = 120)
+    @Size(max = 255)
     private String name;
 
     @Size(max = 500)
     private String description;
 
-    public Long getCategoryId() {
-        return categoryId;
-    }
+    @NotNull
+    private Long subcategoryId;
+
+    @NotNull
+    private Long therapeuticAreaId;
 
     public String getName() {
         return name;
@@ -27,5 +25,13 @@ public class SubcategoryUpdateDTO {
 
     public String getDescription() {
         return description;
+    }
+
+    public Long getSubcategoryId() {
+        return subcategoryId;
+    }
+
+    public Long getTherapeuticAreaId() {
+        return therapeuticAreaId;
     }
 }

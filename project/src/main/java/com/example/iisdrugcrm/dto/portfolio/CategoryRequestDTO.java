@@ -1,13 +1,9 @@
 package com.example.iisdrugcrm.dto.portfolio;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-public class SubcategoryCreateDTO {
-
-    @NotNull
-    private Long categoryId;
+public class CategoryRequestDTO {
 
     @NotBlank
     @Size(max = 120)
@@ -15,10 +11,6 @@ public class SubcategoryCreateDTO {
 
     @Size(max = 500)
     private String description;
-
-    public Long getCategoryId() {
-        return categoryId;
-    }
 
     public String getName() {
         return name;

@@ -3,7 +3,7 @@ package com.example.iisdrugcrm.dto.portfolio;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public class TherapeuticAreaCreateDTO {
+public class TherapeuticAreaRequestDTO {
 
     @NotBlank
     @Size(max = 120)

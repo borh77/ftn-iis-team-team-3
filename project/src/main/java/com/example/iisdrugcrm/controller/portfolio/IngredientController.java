@@ -1,8 +1,7 @@
 package com.example.iisdrugcrm.controller.portfolio;
 
-import com.example.iisdrugcrm.dto.portfolio.IngredientCreateDTO;
+import com.example.iisdrugcrm.dto.portfolio.IngredientRequestDTO;
 import com.example.iisdrugcrm.dto.portfolio.IngredientResponseDTO;
-import com.example.iisdrugcrm.dto.portfolio.IngredientUpdateDTO;
 import com.example.iisdrugcrm.service.portfolio.IngredientService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -31,7 +30,7 @@ public class IngredientController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('PORTFOLIO_MANAGER')")
-    public IngredientResponseDTO create(@Valid @RequestBody IngredientCreateDTO dto) {
+    public IngredientResponseDTO create(@Valid @RequestBody IngredientRequestDTO dto) {
         return ingredientService.create(dto);
     }
 
@@ -39,7 +38,7 @@ public class IngredientController {
     @PreAuthorize("hasRole('PORTFOLIO_MANAGER')")
     public IngredientResponseDTO update(
             @PathVariable Long id,
-            @Valid @RequestBody IngredientUpdateDTO dto
+            @Valid @RequestBody IngredientRequestDTO dto
     ) {
         return ingredientService.update(id, dto);
     }
