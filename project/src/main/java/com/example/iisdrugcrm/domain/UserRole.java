@@ -8,5 +8,10 @@ public enum UserRole {
 
     ROLE_SALES_REPRESENTATIVE,
     ROLE_ACCOUNT_MANAGER,
-    ROLE_SALES_MANAGER
+    ROLE_SALES_MANAGER,
+
+    // Podsistem neželjenih efekata lekova
+    ROLE_LEKAR,
+    ROLE_PACIJENT,
+    ROLE_FARMAKOVIGILANT
 }
