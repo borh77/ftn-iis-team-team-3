@@ -1,8 +1,7 @@
 package com.example.iisdrugcrm.controller.portfolio;
 
-import com.example.iisdrugcrm.dto.portfolio.CategoryCreateDTO;
+import com.example.iisdrugcrm.dto.portfolio.CategoryRequestDTO;
 import com.example.iisdrugcrm.dto.portfolio.CategoryResponseDTO;
-import com.example.iisdrugcrm.dto.portfolio.CategoryUpdateDTO;
 import com.example.iisdrugcrm.service.portfolio.CategoryService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -29,7 +28,7 @@ public class CategoryController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ROLE_PORTFOLIO_MANAGER')")
-    public CategoryResponseDTO create(@Valid @RequestBody CategoryCreateDTO dto) {
+    public CategoryResponseDTO create(@Valid @RequestBody CategoryRequestDTO dto) {
         return categoryService.create(dto);
     }
 
@@ -37,7 +36,7 @@ public class CategoryController {
     @PreAuthorize("hasRole('ROLE_PORTFOLIO_MANAGER')")
     public CategoryResponseDTO update(
             @PathVariable Long id,
-            @Valid @RequestBody CategoryUpdateDTO dto
+            @Valid @RequestBody CategoryRequestDTO dto
     ) {
         return categoryService.update(id, dto);
     }

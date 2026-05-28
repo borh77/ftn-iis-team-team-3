@@ -2,9 +2,8 @@ package com.example.iisdrugcrm.service.portfolio;
 
 import com.example.iisdrugcrm.domain.portfolio.EntityStatus;
 import com.example.iisdrugcrm.domain.portfolio.Ingredient;
-import com.example.iisdrugcrm.dto.portfolio.IngredientCreateDTO;
+import com.example.iisdrugcrm.dto.portfolio.IngredientRequestDTO;
 import com.example.iisdrugcrm.dto.portfolio.IngredientResponseDTO;
-import com.example.iisdrugcrm.dto.portfolio.IngredientUpdateDTO;
 import com.example.iisdrugcrm.exception.PortfolioDuplicateResourceException;
 import com.example.iisdrugcrm.exception.PortfolioResourceNotFoundException;
 import com.example.iisdrugcrm.repository.portfolio.IngredientRepository;
@@ -41,7 +40,7 @@ public class IngredientServiceImpl implements IngredientService {
 
     @Override
     @Transactional
-    public IngredientResponseDTO create(IngredientCreateDTO dto) {
+    public IngredientResponseDTO create(IngredientRequestDTO dto) {
         if (ingredientRepository.existsByCasIgnoreCase(dto.getCas())) {
             throw new PortfolioDuplicateResourceException("Ingredient CAS already exists");
         }
@@ -58,7 +57,7 @@ public class IngredientServiceImpl implements IngredientService {
 
     @Override
     @Transactional
-    public IngredientResponseDTO update(Long id, IngredientUpdateDTO dto) {
+    public IngredientResponseDTO update(Long id, IngredientRequestDTO dto) {
         Ingredient ingredient = getIngredient(id);
 
         if (ingredientRepository.existsByCasIgnoreCaseAndIdNot(dto.getCas(), id)) {

@@ -1,8 +1,7 @@
 package com.example.iisdrugcrm.controller.portfolio;
 
-import com.example.iisdrugcrm.dto.portfolio.TherapeuticAreaCreateDTO;
+import com.example.iisdrugcrm.dto.portfolio.TherapeuticAreaRequestDTO;
 import com.example.iisdrugcrm.dto.portfolio.TherapeuticAreaResponseDTO;
-import com.example.iisdrugcrm.dto.portfolio.TherapeuticAreaUpdateDTO;
 import com.example.iisdrugcrm.service.portfolio.TherapeuticAreaService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -29,7 +28,7 @@ public class TherapeuticAreaController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ROLE_PORTFOLIO_MANAGER')")
-    public TherapeuticAreaResponseDTO create(@Valid @RequestBody TherapeuticAreaCreateDTO dto) {
+    public TherapeuticAreaResponseDTO create(@Valid @RequestBody TherapeuticAreaRequestDTO dto) {
         return therapeuticAreaService.create(dto);
     }
 
@@ -37,7 +36,7 @@ public class TherapeuticAreaController {
     @PreAuthorize("hasRole('ROLE_PORTFOLIO_MANAGER')")
     public TherapeuticAreaResponseDTO update(
             @PathVariable Long id,
-            @Valid @RequestBody TherapeuticAreaUpdateDTO dto
+            @Valid @RequestBody TherapeuticAreaRequestDTO dto
     ) {
         return therapeuticAreaService.update(id, dto);
     }

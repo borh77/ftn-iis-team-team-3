@@ -2,9 +2,8 @@ package com.example.iisdrugcrm.service.portfolio;
 
 import com.example.iisdrugcrm.domain.portfolio.Category;
 import com.example.iisdrugcrm.domain.portfolio.EntityStatus;
-import com.example.iisdrugcrm.dto.portfolio.CategoryCreateDTO;
+import com.example.iisdrugcrm.dto.portfolio.CategoryRequestDTO;
 import com.example.iisdrugcrm.dto.portfolio.CategoryResponseDTO;
-import com.example.iisdrugcrm.dto.portfolio.CategoryUpdateDTO;
 import com.example.iisdrugcrm.exception.PortfolioDuplicateResourceException;
 import com.example.iisdrugcrm.exception.PortfolioResourceNotFoundException;
 import com.example.iisdrugcrm.repository.portfolio.CategoryRepository;
@@ -32,7 +31,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
-    public CategoryResponseDTO create(CategoryCreateDTO dto) {
+    public CategoryResponseDTO create(CategoryRequestDTO dto) {
         if (categoryRepository.existsByNameIgnoreCase(dto.getName())) {
             throw new PortfolioDuplicateResourceException("Category name already exists");
         }
@@ -43,7 +42,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
-    public CategoryResponseDTO update(Long id, CategoryUpdateDTO dto) {
+    public CategoryResponseDTO update(Long id, CategoryRequestDTO dto) {
         Category category = getCategory(id);
 
         if (categoryRepository.existsByNameIgnoreCaseAndIdNot(dto.getName(), id)) {

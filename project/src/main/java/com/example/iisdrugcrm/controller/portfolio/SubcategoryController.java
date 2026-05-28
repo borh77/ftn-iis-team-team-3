@@ -1,8 +1,7 @@
 package com.example.iisdrugcrm.controller.portfolio;
 
-import com.example.iisdrugcrm.dto.portfolio.SubcategoryCreateDTO;
 import com.example.iisdrugcrm.dto.portfolio.SubcategoryResponseDTO;
-import com.example.iisdrugcrm.dto.portfolio.SubcategoryUpdateDTO;
+import com.example.iisdrugcrm.dto.portfolio.SubcategoryRequestDTO;
 import com.example.iisdrugcrm.service.portfolio.SubcategoryService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -35,7 +34,7 @@ public class SubcategoryController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ROLE_PORTFOLIO_MANAGER')")
-    public SubcategoryResponseDTO create(@Valid @RequestBody SubcategoryCreateDTO dto) {
+    public SubcategoryResponseDTO create(@Valid @RequestBody SubcategoryRequestDTO dto) {
         return subcategoryService.create(dto);
     }
 
@@ -43,7 +42,7 @@ public class SubcategoryController {
     @PreAuthorize("hasRole('ROLE_PORTFOLIO_MANAGER')")
     public SubcategoryResponseDTO update(
             @PathVariable Long id,
-            @Valid @RequestBody SubcategoryUpdateDTO dto
+            @Valid @RequestBody SubcategoryRequestDTO dto
     ) {
         return subcategoryService.update(id, dto);
     }
