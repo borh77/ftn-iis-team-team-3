@@ -6,6 +6,7 @@ import { AdminUsersPageComponent } from './pages/admin-users/admin-users-page.co
 import { RoleLandingComponent } from './pages/role-landing/role-landing.component';
 import { ForcePasswordChangeComponent } from './pages/force-password-change/force-password-change.component';
 import { ProfileComponent } from './pages/profile/profile.component';
+import { SalesDashboardComponent } from './pages/sales-dashboard/sales-dashboard.component';
 
 export const routes: Routes = [
 	{ path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -50,6 +51,15 @@ export const routes: Routes = [
 			subtitle: 'Buyer landing page.',
 		},
 		title: 'IIS Drug CRM | Pricelists',
+	},
+	{
+		path: 'sales',
+		component: SalesDashboardComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: {
+			roles: ['ROLE_SALES_REPRESENTATIVE', 'ROLE_ACCOUNT_MANAGER', 'ROLE_SALES_MANAGER'],
+		},
+		title: 'IIS Drug CRM | Sales',
 	},
 	{ path: '**', redirectTo: 'login' },
 ];
