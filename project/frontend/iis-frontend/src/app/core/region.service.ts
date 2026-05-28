@@ -10,7 +10,7 @@ export class RegionService {
   private readonly http = inject(HttpClient);
 
   list(): Observable<Region[]> {
-    return this.http.get<Region[]>(`${this.apiBaseUrl}/api/admin/regions`);
+    return this.http.get<Region[]>(`${this.apiBaseUrl}/api/regions`);
   }
 
   create(payload: RegionPayload): Observable<Region> {

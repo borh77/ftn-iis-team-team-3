@@ -31,3 +31,7 @@ export interface CreatePricelistPayload {
   periodEnd: string;
   items: PricelistItem[];
 }
+
+export interface CreatePricelistErrorResponse {
+  error?: string;
+}
