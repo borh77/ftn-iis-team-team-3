@@ -1,0 +1,189 @@
+<section class="page-shell">
+  <header class="page-hero">
+    <div>
+      <p class="kicker">Pricelist Creator</p>
+      <h2>Nova forma cenovnika</h2>
+      <p>Definiši region, segment kupaca, valutu, period i stavke sa više količinskih pragova.</p>
+    </div>
+
+    <a class="ghost hero-action" routerLink="/content">Nazad na workspace</a>
+  </header>
+
+  <form class="panel pricelist-form" [formGroup]="form" (ngSubmit)="submit()">
+    <div class="form-grid header-grid">
+      <label>
+        <span>Region</span>
+        <select formControlName="regionId">
+          <option [ngValue]="null">Izaberi region</option>
+          @for (region of regions; track region.id) {
+            <option [ngValue]="region.id">{{ region.name }} ({{ region.code }})</option>
+          }
+        </select>
+        @if (form.controls['regionId'].touched && form.controls['regionId'].hasError('required')) {
+          <small class="field-error">Region je obavezan.</small>
+        }
+      </label>
+
+      <label>
+        <span>Segment kupaca</span>
+        <input type="text" formControlName="customerSegment" placeholder="Lanci apoteka" />
+        @if (form.controls['customerSegment'].touched && form.controls['customerSegment'].hasError('required')) {
+          <small class="field-error">Segment je obavezan.</small>
+        }
+      </label>
+
+      <label>
+        <span>Valuta</span>
+        <input type="text" formControlName="currency" placeholder="RSD" maxlength="3" />
+        @if (form.controls['currency'].touched && form.controls['currency'].hasError('required')) {
+          <small class="field-error">Valuta je obavezna.</small>
+        }
+        @if (form.controls['currency'].touched && form.controls['currency'].hasError('pattern')) {
+          <small class="field-error">Valuta mora biti ISO 4217 format, npr. RSD ili EUR.</small>
+        }
+      </label>
+
+      <label>
+        <span>Period od</span>
+        <input type="datetime-local" formControlName="periodStart" />
+      </label>
+
+      <label>
+        <span>Period do</span>
+        <input type="datetime-local" formControlName="periodEnd" />
+      </label>
+    </div>
+
+    @if (periodError()) {
+      <p class="error-box">{{ periodError() }}</p>
+    }
+
+    <div class="panel-head">
+      <div>
+        <h3>Stavke cenovnika</h3>
+        <p class="muted">Kroz kategoriju, podkategoriju, proizvod i varijantu biraš lek za cenovnik.</p>
+      </div>
+      <button type="button" class="secondary" (click)="addItem()">Dodaj stavku</button>
+    </div>
+
+    <div class="items-list">
+      @for (item of items.controls; track $index; let itemIndex = $index) {
+        <section class="item-card" [formGroup]="itemGroup(itemIndex)">
+          <header class="item-head">
+            <div>
+              <p class="kicker">Stavka {{ itemIndex + 1 }}</p>
+              <h4>Varijanta leka</h4>
+            </div>
+            <button type="button" class="ghost" (click)="removeItem(itemIndex)">Ukloni</button>
+          </header>
+
+          <div class="form-grid item-grid">
+            <label>
+              <span>Kategorija</span>
+              <select formControlName="categoryId" (change)="onCategoryChange(itemIndex)">
+                <option [ngValue]="null">Izaberi kategoriju</option>
+                @for (category of categories; track category.id) {
+                  <option [ngValue]="category.id">{{ category.name }}</option>
+                }
+              </select>
+              @if (controlError(itemIndex, 'categoryId')) {
+                <small class="field-error">{{ controlError(itemIndex, 'categoryId') }}</small>
+              }
+            </label>
+
+            <label>
+              <span>Podkategorija</span>
+              <select formControlName="subcategoryId" (change)="onSubcategoryChange(itemIndex)">
+                <option [ngValue]="null">Izaberi podkategoriju</option>
+                @for (subcategory of (subcategoriesByItem[itemIndex] ?? []); track subcategory.id) {
+                  <option [ngValue]="subcategory.id">{{ subcategory.name }}</option>
+                }
+              </select>
+              @if (controlError(itemIndex, 'subcategoryId')) {
+                <small class="field-error">{{ controlError(itemIndex, 'subcategoryId') }}</small>
+              }
+            </label>
+
+            <label>
+              <span>Proizvod</span>
+              <select formControlName="productId" (change)="onProductChange(itemIndex)">
+                <option [ngValue]="null">Izaberi proizvod</option>
+                @for (product of (productsByItem[itemIndex] ?? []); track product.id) {
+                  <option [ngValue]="product.id">{{ product.name }}</option>
+                }
+              </select>
+              @if (controlError(itemIndex, 'productId')) {
+                <small class="field-error">{{ controlError(itemIndex, 'productId') }}</small>
+              }
+            </label>
+
+            <label>
+              <span>Varijanta</span>
+              <select formControlName="variantId">
+                <option [ngValue]="null">Izaberi varijantu</option>
+                @for (variant of (variantsByItem[itemIndex] ?? []); track variant.id) {
+                  <option [ngValue]="variant.id">{{ variant.productName }} - {{ variant.form }} / {{ variant.dosage }}</option>
+                }
+              </select>
+              @if (controlError(itemIndex, 'variantId')) {
+                <small class="field-error">{{ controlError(itemIndex, 'variantId') }}</small>
+              }
+            </label>
+          </div>
+
+          <div class="threshold-block" formArrayName="thresholds">
+            <div class="panel-head compact-head">
+              <div>
+                <h4>Količinski pragovi</h4>
+                <p class="muted">Svaka stavka mora imati bar jedan prag.</p>
+              </div>
+              <button type="button" class="secondary" (click)="addThreshold(itemIndex)">Dodaj prag</button>
+            </div>
+
+            @for (threshold of thresholdsFor(itemIndex).controls; track $index; let thresholdIndex = $index) {
+              <div class="threshold-grid" [formGroupName]="thresholdIndex">
+                <label>
+                  <span>Količina od</span>
+                  <input type="number" min="1" formControlName="quantityFrom" />
+                  @if (thresholdError(itemIndex, thresholdIndex, 'quantityFrom')) {
+                    <small class="field-error">{{ thresholdError(itemIndex, thresholdIndex, 'quantityFrom') }}</small>
+                  }
+                </label>
+
+                <label>
+                  <span>Količina do</span>
+                  <input type="number" min="1" formControlName="quantityTo" placeholder="Ostaviti prazno za N+" />
+                </label>
+
+                <label>
+                  <span>Cena</span>
+                  <input type="number" min="0.01" step="0.01" formControlName="price" />
+                  @if (thresholdError(itemIndex, thresholdIndex, 'price')) {
+                    <small class="field-error">{{ thresholdError(itemIndex, thresholdIndex, 'price') }}</small>
+                  }
+                </label>
+
+                <div class="threshold-actions">
+                  <button type="button" class="ghost" (click)="removeThreshold(itemIndex, thresholdIndex)">Ukloni prag</button>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
+    </div>
+
+    @if (errorMessage) {
+      <p class="error-box">{{ errorMessage }}</p>
+    }
+
+    @if (successMessage) {
+      <p class="success-box">{{ successMessage }}</p>
+    }
+
+    <div class="actions-row">
+      <button type="button" class="ghost" routerLink="/content">Otkaži</button>
+      <button type="submit" class="primary" [disabled]="saving">{{ saving ? 'Čuvanje...' : 'Kreiraj cenovnik' }}</button>
+    </div>
+  </form>
+</section>
