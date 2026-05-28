@@ -19,9 +19,6 @@ public class SalesProcess {
     @Column(nullable = false, length = 200)
     private String title;
 
-    @Column(nullable = false, length = 80)
-    private String currentStage;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SalesProcessStatus status;
@@ -46,7 +43,6 @@ public class SalesProcess {
     public SalesProcess(Customer customer, String title) {
         this.customer = customer;
         this.title = title;
-        this.currentStage = "QUALIFICATION";
         this.status = SalesProcessStatus.ACTIVE;
         this.outcome = SalesProcessOutcome.OPEN;
         this.stage = SalesStage.NEW;
@@ -71,7 +67,6 @@ public class SalesProcess {
     public Long getId() { return id; }
     public Customer getCustomer() { return customer; }
     public String getTitle() { return title; }
-    public String getCurrentStage() { return currentStage; }
     public SalesProcessStatus getStatus() { return status; }
     public SalesProcessOutcome getOutcome() { return outcome; }
     public LocalDateTime getCreatedAt() { return createdAt; }

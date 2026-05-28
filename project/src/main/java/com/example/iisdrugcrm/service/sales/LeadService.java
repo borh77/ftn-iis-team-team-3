@@ -5,6 +5,9 @@ import com.example.iisdrugcrm.dto.sales.lead.LeadRequestDTO;
 import com.example.iisdrugcrm.dto.sales.lead.LeadResponseDTO;
 import com.example.iisdrugcrm.repository.sales.CustomerRepository;
 import com.example.iisdrugcrm.repository.sales.LeadRepository;
+
+import org.springframework.transaction.annotation.Transactional;
+
 import com.example.iisdrugcrm.domain.sales.Customer;
 import com.example.iisdrugcrm.dto.sales.customer.CustomerResponseDTO;
 import org.springframework.stereotype.Service;
@@ -62,6 +65,7 @@ public class LeadService {
         return mapToDto(leadRepository.save(lead));
     }
 
+    @Transactional
     public CustomerResponseDTO convert(Long id) {
         Lead lead = leadRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Lead not found."));
