@@ -29,7 +29,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     JOIN FETCH p.subcategory s
     JOIN FETCH p.therapeuticArea ta
     WHERE (:includeArchived = true OR p.status = :activeStatus)
-      AND (:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')))
+      AND (:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
       AND (:subcategoryId IS NULL OR s.id = :subcategoryId)
       AND (:therapeuticAreaId IS NULL OR ta.id = :therapeuticAreaId)
     """)

@@ -52,7 +52,7 @@ services:
       APP_JWT_SECRET: ${APP_JWT_SECRET:-change-me-before-use-change-me-before-use}
       APP_JWT_EXPIRATION_MINUTES: 480
       BOOTSTRAP_ADMIN_USERNAME: admin
-      BOOTSTRAP_ADMIN_EMAIL: admin@local.dev
+      BOOTSTRAP_ADMIN_EMAIL: dev_admin@local.dev
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-Admin123!}
     depends_on:
       postgres:

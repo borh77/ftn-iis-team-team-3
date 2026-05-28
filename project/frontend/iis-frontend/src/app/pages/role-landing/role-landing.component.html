@@ -2,4 +2,7 @@
   <p class="kicker">Role access</p>
   <h2>{{ title }}</h2>
   <p>{{ subtitle }}</p>
+  @if (title === 'Content workspace') {
+    <a class="workspace-link" routerLink="/content/new">Kreiraj novi cenovnik</a>
+  }
 </section>

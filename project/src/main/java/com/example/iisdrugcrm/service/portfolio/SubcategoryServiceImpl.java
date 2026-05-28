@@ -29,6 +29,7 @@ public class SubcategoryServiceImpl implements SubcategoryService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<SubcategoryResponseDTO> getAllActive() {
         return subcategoryRepository.findByStatus(EntityStatus.ACTIVE)
                 .stream()
@@ -37,6 +38,7 @@ public class SubcategoryServiceImpl implements SubcategoryService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<SubcategoryResponseDTO> getActiveByCategory(Long categoryId) {
         return subcategoryRepository.findByCategoryIdAndStatus(categoryId, EntityStatus.ACTIVE)
                 .stream()

@@ -31,9 +31,9 @@ public interface VariantRepository extends JpaRepository<Variant, Long> {
       AND (:productId IS NULL OR p.id = :productId)
       AND (
             :search IS NULL
-            OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))
-            OR LOWER(v.form) LIKE LOWER(CONCAT('%', :search, '%'))
-            OR LOWER(v.dosage) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+            OR LOWER(v.form) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+            OR LOWER(v.dosage) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
       )
     """)
     List<Variant> searchVariants(

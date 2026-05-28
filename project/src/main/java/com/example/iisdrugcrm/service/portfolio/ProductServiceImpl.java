@@ -34,6 +34,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ProductResponseDTO> getProducts(
         String search,
         Long subcategoryId,
