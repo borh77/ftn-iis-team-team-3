@@ -10,6 +10,14 @@ export class PricelistService {
   private readonly http = inject(HttpClient);
 
   create(payload: CreatePricelistPayload): Observable<Pricelist> {
-    return this.http.post<Pricelist>(`${this.apiBaseUrl}/api/cenovnici`, payload);
+    return this.http.post<Pricelist>(`${this.apiBaseUrl}/api/pricelists`, payload);
+  }
+
+  list(): Observable<Pricelist[]> {
+    return this.http.get<Pricelist[]>(`${this.apiBaseUrl}/api/pricelists`);
+  }
+
+  mine(): Observable<Pricelist[]> {
+    return this.http.get<Pricelist[]>(`${this.apiBaseUrl}/api/pricelists/mine`);
   }
 }

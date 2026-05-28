@@ -51,6 +51,9 @@ public class Pricelist {
     @OrderBy("id ASC")
     private List<PricelistItem> items = new ArrayList<>();
 
+    @Column(name = "created_by")
+    private Long createdBy;
+
     public Pricelist() {
     }
 
@@ -112,6 +115,14 @@ public class Pricelist {
 
     public List<PricelistItem> getItems() {
         return items;
+    }
+
+    public Long getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(Long createdBy) {
+        this.createdBy = createdBy;
     }
 
     public void setItems(List<PricelistItem> items) {

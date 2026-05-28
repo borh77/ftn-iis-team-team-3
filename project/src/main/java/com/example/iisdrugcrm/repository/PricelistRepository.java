@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface PricelistRepository extends JpaRepository<Pricelist, Long> {
 
     List<Pricelist> findAllByOrderByIdDesc();
+
+    List<Pricelist> findAllByCreatedByOrderByIdDesc(Long createdBy);
 }

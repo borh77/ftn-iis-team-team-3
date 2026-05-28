@@ -1,0 +1,55 @@
+<section class="panel">
+  <p class="kicker">Pricelists</p>
+  <h2>Moji draft cenovnici</h2>
+
+  <div *ngIf="loading">Učitavanje...</div>
+
+  <div *ngIf="!loading && pricelists.length === 0" class="muted">Nemate nijedan draft cenovnik.</div>
+
+  <div *ngIf="!loading && pricelists.length > 0" class="pricelist-grid">
+    <article *ngFor="let p of pricelists" class="pricelist-card">
+      <div class="pricelist-card__header">
+        <div>
+          <p class="kicker">Draft</p>
+          <h3>#{{ p.id }} · {{ p.regionName }}</h3>
+        </div>
+        <span class="status-badge">{{ p.status }}</span>
+      </div>
+
+      <dl class="pricelist-meta">
+        <div>
+          <dt>Customer segment</dt>
+          <dd>{{ p.customerSegment }}</dd>
+        </div>
+        <div>
+          <dt>Currency</dt>
+          <dd>{{ p.currency }}</dd>
+        </div>
+        <div>
+          <dt>Period</dt>
+          <dd>{{ p.periodStart | date:'shortDate' }} - {{ p.periodEnd | date:'shortDate' }}</dd>
+        </div>
+        <div>
+          <dt>Items</dt>
+          <dd>{{ p.items.length }}</dd>
+        </div>
+      </dl>
+
+      <div class="pricelist-items">
+        <h4>Items</h4>
+        <div *ngFor="let item of p.items" class="pricelist-item">
+          <div class="pricelist-item__title">
+            <strong>{{ item.variantName }}</strong>
+            <span class="muted">Variant ID: {{ item.variantId }}</span>
+          </div>
+          <ul class="threshold-list">
+            <li *ngFor="let threshold of item.thresholds">
+              {{ threshold.quantityFrom }} - {{ threshold.quantityTo ?? '∞' }}
+              | {{ threshold.price | number:'1.2-2' }} {{ p.currency }}
+            </li>
+          </ul>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>

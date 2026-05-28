@@ -58,6 +58,13 @@ export const routes: Routes = [
 		title: 'IIS Drug CRM | Content',
 	},
 	{
+		path: 'content/drafts',
+		loadComponent: () => import('./pages/pricelist-list/pricelist-list.component').then(m => m.PricelistListComponent),
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_PRICELIST_CREATOR'] },
+		title: 'IIS Drug CRM | My Drafts',
+	},
+	{
 		path: 'content/new',
 		component: PricelistCreateComponent,
 		canActivate: [authGuard, passwordChangeGuard],

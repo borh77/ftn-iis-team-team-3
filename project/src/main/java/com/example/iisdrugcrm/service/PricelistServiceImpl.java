@@ -36,7 +36,7 @@ public class PricelistServiceImpl implements PricelistService {
 
     @Override
     @Transactional
-    public PricelistResponseDTO createCenovnik(CreatePricelistDTO dto) {
+    public PricelistResponseDTO createCenovnik(CreatePricelistDTO dto, Long currentUserId) {
         Region region = regionRepository.findById(dto.getRegionId())
                 .orElseThrow(() -> new IllegalArgumentException("Region not found"));
 
@@ -79,6 +79,8 @@ public class PricelistServiceImpl implements PricelistService {
             pricelist.addItem(item);
         }
 
+        pricelist.setCreatedBy(currentUserId);
+
         return PricelistResponseDTO.fromEntity(pricelistRepository.save(pricelist));
     }
 
@@ -86,6 +88,14 @@ public class PricelistServiceImpl implements PricelistService {
     @Transactional(readOnly = true)
     public List<PricelistResponseDTO> listCenovnici() {
         return pricelistRepository.findAllByOrderByIdDesc().stream()
+                .map(PricelistResponseDTO::fromEntity)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PricelistResponseDTO> listCenovniciForUser(Long currentUserId) {
+        return pricelistRepository.findAllByCreatedByOrderByIdDesc(currentUserId).stream()
                 .map(PricelistResponseDTO::fromEntity)
                 .toList();
     }

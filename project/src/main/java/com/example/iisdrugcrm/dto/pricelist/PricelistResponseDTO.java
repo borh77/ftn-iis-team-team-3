@@ -16,6 +16,7 @@ public class PricelistResponseDTO {
     private String customerSegment;
     private String currency;
     private PricelistStatus status;
+    private Long createdBy;
     private OffsetDateTime periodStart;
     private OffsetDateTime periodEnd;
     private List<PricelistItemResponseDTO> items;
@@ -80,6 +81,14 @@ public class PricelistResponseDTO {
         return periodEnd;
     }
 
+    public Long getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(Long createdBy) {
+        this.createdBy = createdBy;
+    }
+
     public void setPeriodEnd(OffsetDateTime periodEnd) {
         this.periodEnd = periodEnd;
     }
@@ -100,6 +109,7 @@ public class PricelistResponseDTO {
         dto.setCustomerSegment(pricelist.getCustomerSegment());
         dto.setCurrency(pricelist.getCurrency());
         dto.setStatus(pricelist.getStatus());
+        dto.setCreatedBy(pricelist.getCreatedBy());
         dto.setPeriodStart(pricelist.getPeriodStart());
         dto.setPeriodEnd(pricelist.getPeriodEnd());
         dto.setItems(pricelist.getItems().stream().map(PricelistItemResponseDTO::fromEntity).toList());
