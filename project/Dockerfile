@@ -6,7 +6,7 @@ COPY src ./src
 
 RUN mvn -q -DskipTests package
 
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
 COPY --from=build /workspace/target/*.jar app.jar

@@ -5,45 +5,113 @@
 } @else {
   <div class="shell">
     <aside class="sidebar compact">
-      <div class="logo-compact" title="IIS">
-        IIS
+      <div class="sidebar-top">
+        <button
+          class="hamburger"
+          onclick="document.querySelector('.shell')?.classList.toggle('sidebar-expanded')"
+          aria-label="Toggle menu">
+
+          ☰
+        </button>
+
+        <div class="logo-compact" title="IIS">
+          <span class="logo-text">IIS</span>
+        </div>
       </div>
 
       <nav class="nav-compact">
-        <a routerLink="/admin/users" routerLinkActive="active" title="Admin Users">
+
+        <a
+          routerLink="/admin/users"
+          routerLinkActive="active"
+          title="Admin Users">
+
           <span class="icon">👥</span>
+          <span class="label">Admin</span>
         </a>
 
-        <a routerLink="/content" routerLinkActive="active" title="Pricelist Owner">
+        @if (authService.session$ | async; as session) {
+
+          @if (session.roles.includes('ROLE_PRICELIST_CREATOR')) {
+            <a
+              routerLink="/teams"
+              routerLinkActive="active"
+              title="My Teams">
+
+              <span class="icon">👥</span>
+              <span class="label">Teams</span>
+            </a>
+          }
+
+          @if (
+            session.roles.includes('ROLE_SALES_REPRESENTATIVE') ||
+            session.roles.includes('ROLE_ACCOUNT_MANAGER') ||
+            session.roles.includes('ROLE_SALES_MANAGER')
+          ) {
+
+            <a
+              routerLink="/sales/leads"
+              routerLinkActive="active"
+              title="Leads">
+
+              <span class="icon">📋</span>
+              <span class="label">Leads</span>
+            </a>
+
+            <a
+              routerLink="/sales/customers"
+              routerLinkActive="active"
+              title="Customers">
+
+              <span class="icon">🏢</span>
+              <span class="label">Customers</span>
+            </a>
+
+            <a
+              routerLink="/sales/processes"
+              routerLinkActive="active"
+              title="Sales Pipeline">
+
+              <span class="icon">📈</span>
+              <span class="label">Pipeline</span>
+            </a>
+
+            <a
+              routerLink="/sales/communications"
+              routerLinkActive="active"
+              title="Communications">
+
+              <span class="icon">💬</span>
+              <span class="label">Comms</span>
+            </a>
+          }
+        }
+
+        <a
+          routerLink="/content"
+          routerLinkActive="active"
+          title="Pricelist Owner">
+
           <span class="icon">📄</span>
+          <span class="label">Pricelists</span>
         </a>
 
-        <a routerLink="/published-pricelists" routerLinkActive="active" title="Buyer View">
+        <a
+          routerLink="/published-pricelists"
+          routerLinkActive="active"
+          title="Buyer View">
+
           <span class="icon">🛒</span>
+          <span class="label">Buy</span>
         </a>
 
-        <!-- SALES -->
+        <a
+          routerLink="/profile"
+          routerLinkActive="active"
+          title="My Profile">
 
-        <a routerLink="/sales/leads" routerLinkActive="active" title="Leads">
-          <span class="icon">📋</span>
-        </a>
-
-        <a routerLink="/sales/customers" routerLinkActive="active" title="Customers">
-          <span class="icon">🏢</span>
-        </a>
-
-        <a routerLink="/sales/processes" routerLinkActive="active" title="Sales Pipeline">
-          <span class="icon">📈</span>
-        </a>
-
-        <a routerLink="/sales/communications" routerLinkActive="active" title="Communications">
-          <span class="icon">💬</span>
-        </a>
-
-        <!-- PROFILE -->
-
-        <a routerLink="/profile" routerLinkActive="active" title="My Profile">
           <span class="icon">👤</span>
+          <span class="label">Profile</span>
         </a>
       </nav>
     </aside>
