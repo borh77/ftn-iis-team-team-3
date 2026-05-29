@@ -1,5 +1,9 @@
-<section class="role-card">
+<section class="page-hero">
   <p class="kicker">Role access</p>
   <h2>{{ title }}</h2>
   <p>{{ subtitle }}</p>
+  @if (title === 'Content workspace') {
+    <a class="workspace-link" routerLink="/content/new">Create new pricelist</a>
+    <a class="workspace-link" routerLink="/content/mine">My drafts</a>
+  }
 </section>

@@ -4,6 +4,7 @@ import com.example.iisdrugcrm.exception.DuplicateUserException;
 import com.example.iisdrugcrm.exception.DuplicateTeamException;
 import com.example.iisdrugcrm.exception.RegionConflictException;
 import com.example.iisdrugcrm.exception.RegionInUseException;
+import com.example.iisdrugcrm.exception.VariantNotFoundException;
 import java.util.Map;
 import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -34,6 +35,11 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(RegionInUseException.class)
     public ResponseEntity<Map<String, String>> handleRegionInUse(RegionInUseException exception) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", exception.getMessage()));
+    }
+
+    @ExceptionHandler(VariantNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleVariantNotFound(VariantNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", exception.getMessage()));
     }
 

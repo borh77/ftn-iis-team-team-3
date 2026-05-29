@@ -29,6 +29,7 @@ public class VariantServiceImpl implements VariantService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<VariantResponseDTO> getVariants(String search, Long productId, boolean includeArchived) {
         String normalizedSearch = search == null || search.isBlank()
                 ? null

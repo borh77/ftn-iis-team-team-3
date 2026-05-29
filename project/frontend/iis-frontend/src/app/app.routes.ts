@@ -8,6 +8,7 @@ import { AdminRegionsPageComponent } from './pages/admin-regions/admin-regions-p
 import { RoleLandingComponent } from './pages/role-landing/role-landing.component';
 import { ForcePasswordChangeComponent } from './pages/force-password-change/force-password-change.component';
 import { ProfileComponent } from './pages/profile/profile.component';
+import { PricelistCreateComponent } from './pages/pricelist-create/pricelist-create.component';
 import { SalesDashboardComponent } from './pages/sales-dashboard/sales-dashboard.component';
 import { LeadsListComponent } from './features/sales/pages/leads-list/leads-list.component';
 import { CustomersListComponent } from './features/sales/pages/customers-list/customers-list.component';
@@ -60,6 +61,20 @@ export const routes: Routes = [
 			subtitle: 'Pricelist owner landing page.',
 		},
 		title: 'IIS Drug CRM | Content',
+	},
+	{
+		path: 'content/mine',
+		loadComponent: () => import('./pages/pricelist-list/pricelist-list.component').then(m => m.PricelistListComponent),
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_PRICELIST_CREATOR'] },
+		title: 'IIS Drug CRM | My Drafts',
+	},
+	{
+		path: 'content/new',
+		component: PricelistCreateComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_PRICELIST_CREATOR'] },
+		title: 'IIS Drug CRM | New Pricelist',
 	},
 	{
 		path: 'published-pricelists',
