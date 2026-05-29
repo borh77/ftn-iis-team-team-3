@@ -1,72 +1,85 @@
 <div class="page-wrapper">
+
+  <!-- Navigation bar -->
+  <nav class="ae-nav">
+    <a class="nav-link" routerLink="/adverse-effects/my-reports" routerLinkActive="active">My Reports</a>
+    <a class="nav-link active-page" routerLink="/adverse-effects/create-doctor-report" routerLinkActive="active">+ New Report</a>
+  </nav>
+
   <div class="form-card">
     <div class="form-header">
-      <h1>Novi nalog o neželjenom efektu</h1>
-      <p>Popunite sve obavezne podatke o neželjenom efektu leka.</p>
+      <h1>New Adverse Effect Report</h1>
+      <p>Fill in all required information about the adverse drug effect.</p>
     </div>
 
     <form (ngSubmit)="submit()" #reportForm="ngForm">
 
       <div class="form-group">
-        <label for="medicationName">Naziv leka *</label>
+        <label for="medicationName">Medication name *</label>
         <input
           id="medicationName"
           type="text"
           [(ngModel)]="form.medicationName"
           name="medicationName"
-          placeholder="npr. Aspirin 500mg"
+          placeholder="e.g. Aspirin 500mg"
           required
         />
       </div>
 
+      <div class="form-group">
+        <label for="severity">Severity *</label>
+        <select id="severity" [(ngModel)]="form.severity" name="severity" required>
+          <option value="">-- Select --</option>
+          <option *ngFor="let s of severityOptions" [value]="s">{{ s }}</option>
+        </select>
+      </div>
+
       <div class="form-row">
         <div class="form-group">
-          <label for="severity">Ozbiljnost *</label>
-          <select id="severity" [(ngModel)]="form.severity" name="severity" required>
-            <option value="">-- Izaberite --</option>
-            <option *ngFor="let s of severityOptions" [value]="s">{{ s }}</option>
+          <label for="patientGender">Patient gender</label>
+          <select id="patientGender" [(ngModel)]="form.patientGender" name="patientGender">
+            <option value="">-- Select --</option>
+            <option *ngFor="let g of genderOptions" [value]="g">{{ g }}</option>
           </select>
         </div>
-
         <div class="form-group">
-          <label for="source">Kanal prijave</label>
-          <select id="source" [(ngModel)]="form.source" name="source">
-            <option *ngFor="let s of sourceOptions" [value]="s">{{ s }}</option>
-          </select>
+          <label for="patientAge">Patient age</label>
+          <input id="patientAge" type="number" [(ngModel)]="form.patientAge" name="patientAge" min="0" max="120" placeholder="e.g. 45" />
         </div>
       </div>
 
       <div class="form-group">
-        <label for="symptomDate">Datum simptoma *</label>
+        <label for="symptomDate">Symptom date *</label>
         <input
           id="symptomDate"
           type="date"
           [(ngModel)]="form.symptomDate"
           name="symptomDate"
+          [max]="today"
           required
         />
       </div>
 
       <div class="form-group">
-        <label for="effectDescription">Opis efekta *</label>
+        <label for="effectDescription">Effect description *</label>
         <textarea
           id="effectDescription"
           [(ngModel)]="form.effectDescription"
           name="effectDescription"
           rows="4"
-          placeholder="Opišite neželjeni efekat koji je pacijent doživeo..."
+          placeholder="Describe the adverse effect the patient experienced..."
           required
         ></textarea>
       </div>
 
       <div class="form-group">
-        <label for="additionalNotes">Dodatne napomene</label>
+        <label for="additionalNotes">Additional notes</label>
         <textarea
           id="additionalNotes"
           [(ngModel)]="form.additionalNotes"
           name="additionalNotes"
           rows="3"
-          placeholder="Opciono — unesite dodatne informacije..."
+          placeholder="Optional — enter any additional information..."
         ></textarea>
       </div>
 
@@ -75,10 +88,10 @@
 
       <div class="form-actions">
         <button type="button" class="btn-secondary" (click)="goToMyReports()">
-          Moji nalozi
+          ← My Reports
         </button>
         <button type="submit" class="btn-primary" [disabled]="saving || reportForm.invalid">
-          {{ saving ? 'Čuvanje...' : 'Kreiraj nalog' }}
+          {{ saving ? 'Saving...' : 'Create Report' }}
         </button>
       </div>
 

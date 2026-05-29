@@ -1,17 +1,24 @@
 <div class="page-wrapper">
+
+  <!-- Navigation bar -->
+  <nav class="ae-nav">
+    <a class="nav-link" routerLink="/adverse-effects/my-reports" routerLinkActive="active">My Reports</a>
+    <a class="nav-link" routerLink="/adverse-effects/create-doctor-report" routerLinkActive="active">+ New Report</a>
+  </nav>
+
   <div class="page-header">
     <div>
-      <h1>Moji nalozi</h1>
-      <p>Pregled svih vaših prijava neželjenih efekata lekova.</p>
+      <h1>My Reports</h1>
+      <p>Overview of all your adverse drug effect reports.</p>
     </div>
-    <button class="btn-primary" (click)="goToCreate()">+ Novi nalog</button>
   </div>
 
-  <div class="loading" *ngIf="loading">Učitavanje...</div>
+  <div class="success-message" *ngIf="successMessage">✓ {{ successMessage }}</div>
+  <div class="loading" *ngIf="loading">Loading...</div>
   <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
 
   <div class="empty-state" *ngIf="!loading && reports.length === 0">
-    <p>Nemate kreiranih naloga. Kliknite "Novi nalog" da biste prijavili neželjeni efekat.</p>
+    <p>You have no reports yet. Click <strong>"+ New Report"</strong> to submit an adverse effect.</p>
   </div>
 
   <div class="reports-table" *ngIf="!loading && reports.length > 0">
@@ -19,20 +26,20 @@
       <thead>
         <tr>
           <th>#ID</th>
-          <th>Lek</th>
-          <th>Ozbiljnost</th>
-          <th>Datum simptoma</th>
+          <th>Medication</th>
+          <th>Severity</th>
+          <th>Symptom Date</th>
           <th>Status</th>
-          <th>Kreirano</th>
-          <th>Akcije</th>
+          <th>Created</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let report of reports">
           <td>{{ report.id }}</td>
           <td>{{ report.medicationName }}</td>
-          <td>{{ report.severity }}</td>
-          <td>{{ report.symptomDate }}</td>
+          <td>{{ report.severity || '—' }}</td>
+          <td>{{ report.symptomDate || '—' }}</td>
           <td>
             <span class="status-badge" [ngClass]="getStatusClass(report.status)">
               {{ report.status }}
@@ -43,9 +50,9 @@
             <button
               class="btn-edit"
               [disabled]="!canEdit(report)"
-              [title]="canEdit(report) ? 'Izmeni nalog' : 'Nalog se ne može menjati — status nije SUBMITTED'"
+              [title]="canEdit(report) ? 'Edit report' : 'Cannot edit — status is not SUBMITTED'"
               (click)="goToEdit(report.id)">
-              Izmeni
+              Edit
             </button>
           </td>
         </tr>

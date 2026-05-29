@@ -4,6 +4,9 @@ import { passwordChangeGuard } from './core/auth/password-change.guard';
 import { CreateDoctorReportComponent } from './features/adverse-effects/pages/create-doctor-report/create-doctor-report.component';
 import { MyReportsComponent } from './features/adverse-effects/pages/my-reports/my-reports.component';
 import { AllReportsComponent } from './features/adverse-effects/pages/all-reports/all-reports.component';
+import { ReportDetailComponent } from './features/adverse-effects/pages/report-detail/report-detail.component';
+import { CreatePatientReportComponent } from './features/adverse-effects/pages/create-patient-report/create-patient-report.component';
+import { EditReportComponent } from './features/adverse-effects/pages/edit-report/edit-report.component';
 import { LoginComponent } from './pages/login/login.component';
 import { AdminUsersPageComponent } from './pages/admin-users/admin-users-page.component';
 import { TeamManagementComponent } from './pages/team-management/team-management.component';
@@ -142,21 +145,42 @@ export const routes: Routes = [
 		component: CreateDoctorReportComponent,
 		canActivate: [authGuard, passwordChangeGuard],
 		data: { roles: ['ROLE_LEKAR'] },
-		title: 'IIS Drug CRM | Novi nalog — Lekar',
+		title: 'IIS Drug CRM | New Report — Doctor',
 	},
 	{
 		path: 'adverse-effects/my-reports',
 		component: MyReportsComponent,
 		canActivate: [authGuard, passwordChangeGuard],
 		data: { roles: ['ROLE_LEKAR'] },
-		title: 'IIS Drug CRM | Moji nalozi',
+		title: 'IIS Drug CRM | My Reports',
 	},
 	{
 		path: 'adverse-effects/all-reports',
 		component: AllReportsComponent,
 		canActivate: [authGuard, passwordChangeGuard],
 		data: { roles: ['ROLE_FARMAKOVIGILANT'] },
-		title: 'IIS Drug CRM | Svi nalozi',
+		title: 'IIS Drug CRM | All Reports',
+	},
+	{
+		path: 'adverse-effects/create-patient-report',
+		component: CreatePatientReportComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_PACIJENT'] },
+		title: 'IIS Drug CRM | Report Adverse Effect',
+	},
+	{
+		path: 'adverse-effects/edit-report/:id',
+		component: EditReportComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_LEKAR'] },
+		title: 'IIS Drug CRM | Edit Report',
+	},
+	{
+		path: 'adverse-effects/report/:id',
+		component: ReportDetailComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_FARMAKOVIGILANT', 'ROLE_LEKAR'] },
+		title: 'IIS Drug CRM | Report Details',
 	},
 	{ path: '**', redirectTo: 'login' },
 ];

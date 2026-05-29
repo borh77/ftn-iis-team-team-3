@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { API_BASE_URL } from '../../../core/api.token';
 import {
   AdverseEffectReport,
   CreateDoctorReportRequest,
@@ -11,7 +12,8 @@ import {
 export class AdverseEffectsApiService {
 
   private readonly http = inject(HttpClient);
-  private readonly base = '/api/adverse-effects';
+  private readonly apiBaseUrl = inject(API_BASE_URL);
+  private get base() { return `${this.apiBaseUrl}/api/adverse-effects`; }
 
   // US-01: Lekar kreira nalog
   createDoctorReport(dto: CreateDoctorReportRequest): Observable<AdverseEffectReport> {
@@ -36,5 +38,10 @@ export class AdverseEffectsApiService {
   // Detalji jednog naloga
   getReportById(id: number): Observable<AdverseEffectReport> {
     return this.http.get<AdverseEffectReport>(`${this.base}/${id}`);
+  }
+
+  // US-03: Lekar edituje nalog (samo dok je SUBMITTED)
+  updateDoctorReport(id: number, dto: any): Observable<AdverseEffectReport> {
+    return this.http.put<AdverseEffectReport>(`${this.base}/doctor-reports/${id}`, dto);
   }
 }

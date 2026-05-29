@@ -28,3 +28,11 @@ tr:hover { background: #fafafa; }
 .type-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
 .type-doctor { background: #e0f2fe; color: #0369a1; }
 .type-patient { background: #fce7f3; color: #9d174d; }
+
+.ae-nav { display: flex; gap: 8px; margin-bottom: 24px; }
+.nav-link { padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; color: #4f46e5; border: 1.5px solid #4f46e5; transition: all 0.2s; }
+.nav-link:hover { background: #eef2ff; }
+.nav-link.active { background: #4f46e5; color: white; }
+
+.btn-view { padding: 6px 14px; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; background: white; color: #4f46e5; border: 1.5px solid #4f46e5; transition: all 0.2s; }
+.btn-view:hover { background: #4f46e5; color: white; }

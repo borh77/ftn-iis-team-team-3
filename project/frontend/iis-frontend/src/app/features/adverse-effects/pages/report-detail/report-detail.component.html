@@ -1,0 +1,77 @@
+<div class="page-wrapper">
+
+  <nav class="ae-nav">
+    <a class="nav-link" routerLink="/adverse-effects/all-reports" routerLinkActive="active">← All Reports</a>
+  </nav>
+
+  <div class="loading" *ngIf="loading">Loading...</div>
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="detail-card" *ngIf="report">
+
+    <div class="card-header">
+      <div>
+        <h1>Report #{{ report.id }}</h1>
+        <p>{{ report.reportType === 'DOCTOR' ? 'Submitted by a doctor' : 'Submitted by a patient' }}</p>
+      </div>
+      <span class="status-badge" [ngClass]="getStatusClass(report.status)">{{ report.status }}</span>
+    </div>
+
+    <div class="section">
+      <h2>General Information</h2>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="label">Medication</span>
+          <span class="value">{{ report.medicationName }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Severity</span>
+          <span class="value severity" [attr.data-severity]="report.severity">{{ report.severity || '—' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Symptom Date</span>
+          <span class="value">{{ report.symptomDate || '—' }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Reporter</span>
+          <span class="value">{{ report.reporterUsername }}</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Created</span>
+          <span class="value">{{ report.createdAt | date:'dd.MM.yyyy HH:mm' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Doctor report fields -->
+    <div class="section" *ngIf="report.reportType === 'DOCTOR'">
+      <h2>Clinical Details</h2>
+      <div class="info-item full-width">
+        <span class="label">Effect Description</span>
+        <span class="value text-block">{{ report.effectDescription || '—' }}</span>
+      </div>
+      <div class="info-item full-width" *ngIf="report.additionalNotes">
+        <span class="label">Additional Notes</span>
+        <span class="value text-block">{{ report.additionalNotes }}</span>
+      </div>
+    </div>
+
+    <!-- Patient report fields -->
+    <div class="section" *ngIf="report.reportType === 'PATIENT'">
+      <h2>Patient Details</h2>
+      <div class="info-item full-width">
+        <span class="label">Symptoms</span>
+        <span class="value text-block">{{ report.symptoms || '—' }}</span>
+      </div>
+      <div class="info-item full-width" *ngIf="report.additionalDesc">
+        <span class="label">Additional Description</span>
+        <span class="value text-block">{{ report.additionalDesc }}</span>
+      </div>
+    </div>
+
+    <div class="card-footer">
+      <button class="btn-secondary" (click)="goBack()">← Back to All Reports</button>
+    </div>
+
+  </div>
+</div>

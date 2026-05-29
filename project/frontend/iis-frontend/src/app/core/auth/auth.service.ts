@@ -115,6 +115,18 @@ export class AuthService {
       return '/sales';
     }
 
+    if (session.roles.includes('ROLE_LEKAR')) {
+      return '/adverse-effects/my-reports';
+    }
+
+    if (session.roles.includes('ROLE_PACIJENT')) {
+      return '/adverse-effects/create-patient-report';
+    }
+
+    if (session.roles.includes('ROLE_FARMAKOVIGILANT')) {
+      return '/adverse-effects/all-reports';
+    }
+
     return '/login';
   }
 

@@ -1,27 +1,33 @@
 <div class="page-wrapper">
+
+  <!-- Navigation bar -->
+  <nav class="ae-nav">
+    <a class="nav-link" routerLink="/adverse-effects/all-reports" routerLinkActive="active">All Reports</a>
+  </nav>
+
   <div class="page-header">
     <div>
-      <h1>Svi nalozi neželjenih efekata</h1>
-      <p>Pregled svih prijavljenih naloga u sistemu.</p>
+      <h1>All Adverse Effect Reports</h1>
+      <p>Overview of all reports submitted in the system.</p>
     </div>
     <div class="filter-bar">
       <select [(ngModel)]="selectedStatus" (change)="applyFilter()">
-        <option value="">Svi statusi</option>
+        <option value="">All statuses</option>
         <option *ngFor="let s of statusOptions" [value]="s">{{ s }}</option>
       </select>
-      <button class="btn-clear" *ngIf="selectedStatus" (click)="clearFilter()">✕ Ukloni filter</button>
+      <button class="btn-clear" *ngIf="selectedStatus" (click)="clearFilter()">✕ Clear filter</button>
     </div>
   </div>
 
-  <div class="loading" *ngIf="loading">Učitavanje...</div>
+  <div class="loading" *ngIf="loading">Loading...</div>
   <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
 
   <div class="summary" *ngIf="!loading">
-    Prikazano: <strong>{{ filteredReports.length }}</strong> od <strong>{{ allReports.length }}</strong> naloga
+    Showing: <strong>{{ filteredReports.length }}</strong> of <strong>{{ allReports.length }}</strong> reports
   </div>
 
   <div class="empty-state" *ngIf="!loading && filteredReports.length === 0">
-    <p>Nema naloga koji odgovaraju izabranom filteru.</p>
+    <p>No reports match the selected filter.</p>
   </div>
 
   <div class="reports-table" *ngIf="!loading && filteredReports.length > 0">
@@ -29,13 +35,14 @@
       <thead>
         <tr>
           <th>#ID</th>
-          <th>Tip</th>
+          <th>Type</th>
           <th>Reporter</th>
-          <th>Lek</th>
-          <th>Ozbiljnost</th>
+          <th>Medication</th>
+          <th>Severity</th>
           <th>Status</th>
-          <th>Datum simptoma</th>
-          <th>Kreirano</th>
+          <th>Symptom Date</th>
+          <th>Created</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -43,7 +50,7 @@
           <td>{{ report.id }}</td>
           <td>
             <span class="type-badge" [class.type-doctor]="report.reportType === 'DOCTOR'" [class.type-patient]="report.reportType === 'PATIENT'">
-              {{ report.reportType === 'DOCTOR' ? 'Lekar' : 'Pacijent' }}
+              {{ report.reportType === 'DOCTOR' ? 'Doctor' : 'Patient' }}
             </span>
           </td>
           <td>{{ report.reporterUsername }}</td>
@@ -56,6 +63,7 @@
           </td>
           <td>{{ report.symptomDate || '—' }}</td>
           <td>{{ report.createdAt | date:'dd.MM.yyyy HH:mm' }}</td>
+          <td><button class="btn-view" (click)="viewReport(report.id)">View</button></td>
         </tr>
       </tbody>
     </table>

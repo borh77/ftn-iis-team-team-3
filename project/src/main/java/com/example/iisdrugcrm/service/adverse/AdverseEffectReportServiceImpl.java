@@ -44,8 +44,10 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
         report.setSymptomDate(dto.getSymptomDate());
         report.setEffectDescription(dto.getEffectDescription());
         report.setAdditionalNotes(dto.getAdditionalNotes());
+        report.setPatientGender(dto.getPatientGender());
+        report.setPatientAge(dto.getPatientAge());
         report.setReporter(reporter);
-        report.setStatus(ReportStatus.SUBMITTED); // US-01: uvek počinje kao SUBMITTED
+        report.setStatus(ReportStatus.SUBMITTED);
 
         DoctorReport saved = doctorReportRepository.save(report);
         return toDTO(saved);
@@ -59,8 +61,11 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
         report.setMedicationName(dto.getMedicationName());
         report.setSymptoms(dto.getSymptoms());
         report.setAdditionalDesc(dto.getAdditionalDesc());
+        report.setPatientGender(dto.getPatientGender());
+        report.setPatientAge(dto.getPatientAge());
+        report.setSymptomDate(dto.getSymptomDate());
         report.setReporter(reporter);
-        report.setStatus(ReportStatus.EVIDENCED); // US-02: pacijentov nalog odmah EVIDENCED
+        report.setStatus(ReportStatus.EVIDENCED);
 
         PatientReport saved = patientReportRepository.save(report);
         return toDTO(saved);
@@ -134,10 +139,15 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
             dto.setReportType("DOCTOR");
             dto.setEffectDescription(dr.getEffectDescription());
             dto.setAdditionalNotes(dr.getAdditionalNotes());
+            dto.setPatientGender(dr.getPatientGender());
+            dto.setPatientAge(dr.getPatientAge());
         } else if (report instanceof PatientReport pr) {
             dto.setReportType("PATIENT");
             dto.setSymptoms(pr.getSymptoms());
             dto.setAdditionalDesc(pr.getAdditionalDesc());
+            dto.setPatientGender(pr.getPatientGender());
+            dto.setPatientAge(pr.getPatientAge());
+            dto.setSymptomDate(pr.getSymptomDate());
         }
 
         return dto;

@@ -17,6 +17,18 @@ export interface AdverseEffectReport {
   // Patient-specific
   symptoms?: string;
   additionalDesc?: string;
+  // Shared patient info
+  patientGender?: string;
+  patientAge?: number;
+}
+
+export interface CreatePatientReportRequest {
+  medicationName: string;
+  symptoms: string;
+  additionalDesc?: string;
+  patientGender?: string;
+  patientAge?: number;
+  symptomDate: string;
 }
 
 export interface CreateDoctorReportRequest {
@@ -26,10 +38,6 @@ export interface CreateDoctorReportRequest {
   symptomDate: string;
   effectDescription: string;
   additionalNotes?: string;
-}
-
-export interface CreatePatientReportRequest {
-  medicationName: string;
-  symptoms: string;
-  additionalDesc?: string;
+  patientGender?: string;
+  patientAge?: number;
 }

@@ -1,59 +1,50 @@
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AdverseEffectsApiService } from '../../api/adverse-effects-api.service';
 import { AdverseEffectReport } from '../../models/adverse-effect-report.model';
 
 @Component({
-  selector: 'app-my-reports',
+  selector: 'app-report-detail',
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive],
-  templateUrl: './my-reports.component.html',
-  styleUrls: ['./my-reports.component.css']
+  templateUrl: './report-detail.component.html',
+  styleUrls: ['./report-detail.component.css']
 })
-export class MyReportsComponent implements OnInit {
+export class ReportDetailComponent implements OnInit {
 
   private readonly api = inject(AdverseEffectsApiService);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
 
-  reports: AdverseEffectReport[] = [];
+  report: AdverseEffectReport | null = null;
   loading = true;
   errorMessage = '';
-  successMessage = '';
 
   ngOnInit(): void {
-    const nav = this.router.getCurrentNavigation();
-    const state = nav?.extras?.state ?? history.state;
-    if (state?.['successMessage']) {
-      this.successMessage = state['successMessage'];
+    const idParam = this.route.snapshot.paramMap.get('id');
+    const id = Number(idParam);
+
+    if (!idParam || isNaN(id)) {
+      this.errorMessage = 'Invalid report ID.';
+      this.loading = false;
+      this.cdr.detectChanges();
+      return;
     }
 
-    this.api.getMyReports().subscribe({
+    this.api.getReportById(id).subscribe({
       next: (data) => {
-        this.reports = data;
+        this.report = data;
         this.loading = false;
         this.cdr.detectChanges();
       },
-      error: () => {
-        this.errorMessage = 'Error loading reports.';
+      error: (err) => {
+        this.errorMessage = `Error loading report (${err.status}).`;
         this.loading = false;
         this.cdr.detectChanges();
       }
     });
-  }
-
-  // Edit is only allowed when status is SUBMITTED
-  canEdit(report: AdverseEffectReport): boolean {
-    return report.status === 'SUBMITTED';
-  }
-
-  goToCreate(): void {
-    this.router.navigate(['/adverse-effects/create-doctor-report']);
-  }
-
-  goToEdit(id: number): void {
-    this.router.navigate(['/adverse-effects/edit-report', id]);
   }
 
   getStatusClass(status: string): string {
@@ -64,5 +55,9 @@ export class MyReportsComponent implements OnInit {
       'EVIDENCED': 'status-evidenced'
     };
     return map[status] ?? '';
+  }
+
+  goBack(): void {
+    this.router.navigate(['/adverse-effects/all-reports']);
   }
 }

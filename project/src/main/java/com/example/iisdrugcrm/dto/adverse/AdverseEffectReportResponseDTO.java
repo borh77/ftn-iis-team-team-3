@@ -61,4 +61,15 @@ public class AdverseEffectReportResponseDTO {
 
     public String getAdditionalDesc() { return additionalDesc; }
     public void setAdditionalDesc(String additionalDesc) { this.additionalDesc = additionalDesc; }
+
+    // Shared patient info
+    private String patientGender;
+    private Integer patientAge;
+
+    public String getPatientGender() { return patientGender; }
+    public void setPatientGender(String patientGender) { this.patientGender = patientGender; }
+
+    public Integer getPatientAge() { return patientAge; }
+    public void setPatientAge(Integer patientAge) { this.patientAge = patientAge; }
+
 }

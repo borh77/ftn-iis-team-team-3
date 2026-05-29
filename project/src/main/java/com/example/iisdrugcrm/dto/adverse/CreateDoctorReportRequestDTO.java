@@ -6,21 +6,25 @@ import java.time.LocalDate;
 
 public class CreateDoctorReportRequestDTO {
 
-    @NotBlank(message = "Naziv leka je obavezan")
+    @NotBlank(message = "Medication name is required")
     private String medicationName;
 
-    @NotBlank(message = "Ozbiljnost je obavezna")
-    private String severity; // MILD / MODERATE / SEVERE / CRITICAL
+    @NotBlank(message = "Severity is required")
+    private String severity;
 
-    private String source; // web / mobile / api
+    private String source;
 
-    @NotNull(message = "Datum simptoma je obavezan")
+    @NotNull(message = "Symptom date is required")
     private LocalDate symptomDate;
 
-    @NotBlank(message = "Opis efekta je obavezan")
+    @NotBlank(message = "Effect description is required")
     private String effectDescription;
 
     private String additionalNotes;
+
+    private String patientGender;
+
+    private Integer patientAge;
 
     public String getMedicationName() { return medicationName; }
     public void setMedicationName(String medicationName) { this.medicationName = medicationName; }
@@ -39,4 +43,10 @@ public class CreateDoctorReportRequestDTO {
 
     public String getAdditionalNotes() { return additionalNotes; }
     public void setAdditionalNotes(String additionalNotes) { this.additionalNotes = additionalNotes; }
+
+    public String getPatientGender() { return patientGender; }
+    public void setPatientGender(String patientGender) { this.patientGender = patientGender; }
+
+    public Integer getPatientAge() { return patientAge; }
+    public void setPatientAge(Integer patientAge) { this.patientAge = patientAge; }
 }

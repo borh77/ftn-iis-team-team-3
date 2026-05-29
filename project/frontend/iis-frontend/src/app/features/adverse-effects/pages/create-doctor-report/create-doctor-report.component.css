@@ -114,3 +114,10 @@ textarea { resize: vertical; }
 }
 
 .btn-secondary:hover { background: #eef2ff; }
+
+.ae-nav { display: flex; gap: 8px; margin-bottom: 24px; }
+.nav-link { padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; color: #4f46e5; border: 1.5px solid #4f46e5; transition: all 0.2s; }
+.nav-link:hover { background: #eef2ff; }
+.nav-link.active { background: #4f46e5; color: white; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }

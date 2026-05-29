@@ -1,5 +1,6 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AdverseEffectsApiService } from '../../api/adverse-effects-api.service';
 import { AdverseEffectReport, ReportStatus } from '../../models/adverse-effect-report.model';
@@ -7,27 +8,37 @@ import { AdverseEffectReport, ReportStatus } from '../../models/adverse-effect-r
 @Component({
   selector: 'app-all-reports',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive],
   templateUrl: './all-reports.component.html',
   styleUrls: ['./all-reports.component.css']
 })
 export class AllReportsComponent implements OnInit {
 
   private readonly api = inject(AdverseEffectsApiService);
+  private readonly router = inject(Router);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   allReports: AdverseEffectReport[] = [];
   filteredReports: AdverseEffectReport[] = [];
   loading = true;
   errorMessage = '';
 
-  // Filter po statusu
   selectedStatus: string = '';
   statusOptions: ReportStatus[] = ['SUBMITTED', 'UNDER_REVIEW', 'CLOSED', 'EVIDENCED'];
 
   ngOnInit(): void {
     this.api.getAllReports().subscribe({
-      next: (data) => { this.allReports = data; this.filteredReports = data; this.loading = false; },
-      error: () => { this.errorMessage = 'Greška pri učitavanju naloga.'; this.loading = false; }
+      next: (data) => {
+        this.allReports = data;
+        this.filteredReports = data;
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.errorMessage = 'Error loading reports.';
+        this.loading = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -42,6 +53,10 @@ export class AllReportsComponent implements OnInit {
   clearFilter(): void {
     this.selectedStatus = '';
     this.filteredReports = this.allReports;
+  }
+
+  viewReport(id: number): void {
+    this.router.navigate(['/adverse-effects/report', id]);
   }
 
   getStatusClass(status: string): string {
