@@ -1,55 +1,78 @@
-<section class="panel">
-  <p class="kicker">Pricelists</p>
-  <h2>Moji draft cenovnici</h2>
+<section class="page-hero">
+  <div class="page-hero__head">
+    <div>
+      <p class="kicker">Pricelists</p>
+      <h2>My Pricelists</h2>
+      <p class="lede">Create and manage your pricelists before publishing.</p>
+    </div>
 
-  <div *ngIf="loading">Učitavanje...</div>
-
-  <div *ngIf="!loading && pricelists.length === 0" class="muted">Nemate nijedan draft cenovnik.</div>
-
-  <div *ngIf="!loading && pricelists.length > 0" class="pricelist-grid">
-    <article *ngFor="let p of pricelists" class="pricelist-card">
-      <div class="pricelist-card__header">
-        <div>
-          <p class="kicker">Draft</p>
-          <h3>#{{ p.id }} · {{ p.regionName }}</h3>
-        </div>
-        <span class="status-badge">{{ p.status }}</span>
-      </div>
-
-      <dl class="pricelist-meta">
-        <div>
-          <dt>Customer segment</dt>
-          <dd>{{ p.customerSegment }}</dd>
-        </div>
-        <div>
-          <dt>Currency</dt>
-          <dd>{{ p.currency }}</dd>
-        </div>
-        <div>
-          <dt>Period</dt>
-          <dd>{{ p.periodStart | date:'shortDate' }} - {{ p.periodEnd | date:'shortDate' }}</dd>
-        </div>
-        <div>
-          <dt>Items</dt>
-          <dd>{{ p.items.length }}</dd>
-        </div>
-      </dl>
-
-      <div class="pricelist-items">
-        <h4>Items</h4>
-        <div *ngFor="let item of p.items" class="pricelist-item">
-          <div class="pricelist-item__title">
-            <strong>{{ item.variantName }}</strong>
-            <span class="muted">Variant ID: {{ item.variantId }}</span>
-          </div>
-          <ul class="threshold-list">
-            <li *ngFor="let threshold of item.thresholds">
-              {{ threshold.quantityFrom }} - {{ threshold.quantityTo ?? '∞' }}
-              | {{ threshold.price | number:'1.2-2' }} {{ p.currency }}
-            </li>
-          </ul>
-        </div>
-      </div>
-    </article>
+    <button type="button" class="secondary" (click)="reload()" [disabled]="loading">
+      {{ loading ? 'Refreshing...' : 'Refresh' }}
+    </button>
   </div>
+</section>
+
+<section class="panel">
+  @if (loading) {
+    <p class="muted">Loading pricelists...</p>
+  } @else if (!pricelists.length) {
+    <p class="muted">You don't have any pricelists yet.</p>
+  } @else {
+    <div class="pricelist-grid">
+      @for (p of pricelists; track p.id) {
+        <article class="pricelist-card">
+          <div class="pricelist-card__header">
+            <div>
+              <p class="kicker">Pricelist</p>
+              <h3>#{{ p.id }} · {{ p.regionName }}</h3>
+            </div>
+            <span class="status-badge">{{ p.status }}</span>
+          </div>
+
+          <dl class="pricelist-meta">
+            <div>
+              <dt>Customer segment</dt>
+              <dd>{{ p.customerSegment || '-' }}</dd>
+            </div>
+            <div>
+              <dt>Currency</dt>
+              <dd>{{ p.currency || '-' }}</dd>
+            </div>
+            <div>
+              <dt>Period</dt>
+              <dd>{{ p.periodStart ? (p.periodStart | date:'shortDate') : '-' }} - {{ p.periodEnd ? (p.periodEnd | date:'shortDate') : '-' }}</dd>
+            </div>
+            <div>
+              <dt>Items</dt>
+              <dd>{{ p.items?.length ?? 0 }}</dd>
+            </div>
+          </dl>
+
+          <div class="pricelist-items">
+            <h4>Items</h4>
+            @if (p.items && p.items.length) {
+              @for (item of p.items; track item.variantId) {
+                <div class="pricelist-item">
+                  <div class="pricelist-item__title">
+                    <strong>{{ item.variantName }}</strong>
+                    <span class="muted">Variant ID: {{ item.variantId }}</span>
+                  </div>
+                  <ul class="threshold-list">
+                    @for (threshold of item.thresholds; track threshold.quantityFrom + '-' + (threshold.quantityTo ?? 'open')) {
+                      <li>
+                        {{ threshold.quantityFrom }} - {{ threshold.quantityTo ?? '∞' }}
+                        | {{ threshold.price | number:'1.2-2' }} {{ p.currency || '' }}
+                      </li>
+                    }
+                  </ul>
+                </div>
+              }
+            } @else {
+              <p class="muted">This pricelist has no items yet.</p>
+            }
+          </div>
+        </article>
+      }
+    </div>
+  }
 </section>

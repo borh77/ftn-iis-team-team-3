@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { PricelistService } from '../../core/pricelist.service';
 import { Pricelist } from '../../core/pricelist.models';
 
@@ -12,6 +12,7 @@ import { Pricelist } from '../../core/pricelist.models';
 })
 export class PricelistListComponent implements OnInit {
   private readonly service = inject(PricelistService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   loading = false;
   pricelists: Pricelist[] = [];
@@ -25,13 +26,19 @@ export class PricelistListComponent implements OnInit {
     this.service.mine().subscribe({
       next: (list) => {
         console.log('Pricelists.mine response:', list);
-        // server returns only current user's pricelists; additionally filter to DRAFT
-        this.pricelists = list.filter(p => p.status === 'DRAFT');
+        this.loading = false;
+        this.pricelists = [...list];
+        this.cdr.detectChanges();
       },
       error: () => {
+        this.loading = false;
         this.pricelists = [];
+        this.cdr.detectChanges();
       },
-      complete: () => (this.loading = false),
     });
+  }
+
+  reload(): void {
+    this.load();
   }
 }
