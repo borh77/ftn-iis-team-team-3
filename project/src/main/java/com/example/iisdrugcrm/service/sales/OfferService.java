@@ -9,6 +9,7 @@ import com.example.iisdrugcrm.repository.sales.OfferRepository;
 import com.example.iisdrugcrm.repository.sales.SalesProcessRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.iisdrugcrm.repository.sales.SalesProcessHistoryRepository;
 
 import java.util.List;
 
@@ -19,17 +20,20 @@ public class OfferService {
     private final CustomerRepository customerRepository;
     private final SalesProcessRepository salesProcessRepository;
     private final ProductRepository productRepository;
+    private final SalesProcessHistoryRepository salesProcessHistoryRepository;
 
     public OfferService(
             OfferRepository offerRepository,
             CustomerRepository customerRepository,
             SalesProcessRepository salesProcessRepository,
-            ProductRepository productRepository
+            ProductRepository productRepository,
+            SalesProcessHistoryRepository salesProcessHistoryRepository
     ) {
         this.offerRepository = offerRepository;
         this.customerRepository = customerRepository;
         this.salesProcessRepository = salesProcessRepository;
         this.productRepository = productRepository;
+        this.salesProcessHistoryRepository = salesProcessHistoryRepository;
     }
 
     @Transactional
@@ -91,6 +95,28 @@ public class OfferService {
                 .orElse(0L) + 1;
 
         return "OFF-" + String.format("%05d", nextId);
+    }
+
+    @Transactional
+    public OfferResponseDTO acceptOffer(Long id) {
+        Offer offer = offerRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Offer not found."));
+
+        if (offer.getStatus() == OfferStatus.ACCEPTED) {
+            throw new IllegalArgumentException("Offer is already accepted.");
+        }
+
+        SalesProcess salesProcess = offer.getSalesProcess();
+        SalesStage previousStage = salesProcess.getStage();
+
+        offer.markAsAccepted();
+        salesProcess.changeStage(SalesStage.WON);
+
+        salesProcessHistoryRepository.save(
+                new SalesProcessHistory(salesProcess, previousStage, SalesStage.WON)
+        );
+
+        return mapToDto(offer);
     }
 
     private OfferResponseDTO mapToDto(Offer offer) {

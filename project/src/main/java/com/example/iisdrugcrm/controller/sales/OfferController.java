@@ -32,4 +32,9 @@ public class OfferController {
     public OfferResponseDTO getById(@PathVariable Long id) {
         return offerService.getById(id);
     }
+
+    @PatchMapping("/{id}/accept")
+    public OfferResponseDTO accept(@PathVariable Long id) {
+        return offerService.acceptOffer(id);
+    }
 }
