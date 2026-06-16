@@ -9,6 +9,9 @@ import com.example.iisdrugcrm.repository.sales.CustomerRepository;
 import com.example.iisdrugcrm.repository.sales.SalesProcessRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.iisdrugcrm.domain.sales.SalesProcessHistory;
+import com.example.iisdrugcrm.domain.sales.SalesStage;
+import com.example.iisdrugcrm.repository.sales.SalesProcessHistoryRepository;
 
 import java.util.List;
 
@@ -17,11 +20,14 @@ public class SalesProcessService {
 
     private final SalesProcessRepository salesProcessRepository;
     private final CustomerRepository customerRepository;
+    private final SalesProcessHistoryRepository salesProcessHistoryRepository;
 
     public SalesProcessService(SalesProcessRepository salesProcessRepository,
-                               CustomerRepository customerRepository) {
+                            CustomerRepository customerRepository,
+                            SalesProcessHistoryRepository salesProcessHistoryRepository) {
         this.salesProcessRepository = salesProcessRepository;
         this.customerRepository = customerRepository;
+        this.salesProcessHistoryRepository = salesProcessHistoryRepository;
     }
 
     public List<SalesProcessResponseDTO> getAll() {
@@ -45,7 +51,13 @@ public class SalesProcessService {
         SalesProcess process = salesProcessRepository.findWithCustomerById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Sales process not found."));
 
+        SalesStage previousStage = process.getStage();
+
         process.changeStage(dto.getStage());
+
+        salesProcessHistoryRepository.save(
+                new SalesProcessHistory(process, previousStage, dto.getStage())
+        );
 
         return mapToDto(process);
     }
