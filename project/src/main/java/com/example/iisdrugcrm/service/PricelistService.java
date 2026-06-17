@@ -14,4 +14,6 @@ public interface PricelistService {
     List<PricelistResponseDTO> listCenovniciForUser(Long currentUserId);
 
     PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto);
+
+    PricelistResponseDTO createNewVersion(Long sourcePricelistId, Long currentUserId);
 }

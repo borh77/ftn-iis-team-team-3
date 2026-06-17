@@ -19,6 +19,18 @@ public interface PricelistRepository extends JpaRepository<Pricelist, Long> {
 
     List<Pricelist> findAllByCreatedByOrderByIdDesc(Long createdBy);
 
+    List<Pricelist> findAllByRootPricelistIdOrderByVersionNumberDesc(Long rootPricelistId);
+
+    List<Pricelist> findAllByParentPricelistIdOrderByVersionNumberDesc(Long parentPricelistId);
+
+    @Query("""
+            select coalesce(max(p.versionNumber), 0)
+            from Pricelist p
+            where p.rootPricelistId = :rootPricelistId
+               or p.id = :rootPricelistId
+            """)
+    Integer findMaxVersionNumberForRoot(@Param("rootPricelistId") Long rootPricelistId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @QueryHints(@QueryHint(name = "jakarta.persistence.lock.timeout", value = "0"))
     @Query("""

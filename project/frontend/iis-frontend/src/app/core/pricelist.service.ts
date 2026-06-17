@@ -24,4 +24,8 @@ export class PricelistService {
   changeStatus(id: number, payload: ChangePricelistStatusPayload): Observable<Pricelist> {
     return this.http.put<Pricelist>(`${this.apiBaseUrl}/api/pricelists/${id}/status`, payload);
   }
+
+  createNewVersion(id: number): Observable<Pricelist> {
+    return this.http.post<Pricelist>(`${this.apiBaseUrl}/api/pricelists/${id}/versions`, {});
+  }
 }

@@ -18,6 +18,10 @@ export interface Pricelist {
   customerSegment: string;
   currency: string;
   status: 'DRAFT' | 'IN_REVIEW' | 'ACTIVE' | 'ARCHIVED';
+  versionNumber: number;
+  parentPricelistId: number | null;
+  rootPricelistId: number | null;
+  canCreateNewVersion: boolean;
   periodStart: string;
   periodEnd: string;
   items: PricelistItem[];

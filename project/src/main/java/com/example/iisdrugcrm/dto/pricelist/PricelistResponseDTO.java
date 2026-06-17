@@ -17,6 +17,10 @@ public class PricelistResponseDTO {
     private String currency;
     private PricelistStatus status;
     private Long createdBy;
+    private Integer versionNumber;
+    private Long parentPricelistId;
+    private Long rootPricelistId;
+    private boolean canCreateNewVersion;
     private OffsetDateTime periodStart;
     private OffsetDateTime periodEnd;
     private List<PricelistItemResponseDTO> items;
@@ -89,6 +93,38 @@ public class PricelistResponseDTO {
         this.createdBy = createdBy;
     }
 
+    public Integer getVersionNumber() {
+        return versionNumber;
+    }
+
+    public void setVersionNumber(Integer versionNumber) {
+        this.versionNumber = versionNumber;
+    }
+
+    public Long getParentPricelistId() {
+        return parentPricelistId;
+    }
+
+    public void setParentPricelistId(Long parentPricelistId) {
+        this.parentPricelistId = parentPricelistId;
+    }
+
+    public Long getRootPricelistId() {
+        return rootPricelistId;
+    }
+
+    public void setRootPricelistId(Long rootPricelistId) {
+        this.rootPricelistId = rootPricelistId;
+    }
+
+    public boolean isCanCreateNewVersion() {
+        return canCreateNewVersion;
+    }
+
+    public void setCanCreateNewVersion(boolean canCreateNewVersion) {
+        this.canCreateNewVersion = canCreateNewVersion;
+    }
+
     public void setPeriodEnd(OffsetDateTime periodEnd) {
         this.periodEnd = periodEnd;
     }
@@ -110,6 +146,10 @@ public class PricelistResponseDTO {
         dto.setCurrency(pricelist.getCurrency());
         dto.setStatus(pricelist.getStatus());
         dto.setCreatedBy(pricelist.getCreatedBy());
+        dto.setVersionNumber(pricelist.getVersionNumber());
+        dto.setParentPricelistId(pricelist.getParentPricelistId());
+        dto.setRootPricelistId(pricelist.getRootPricelistId());
+        dto.setCanCreateNewVersion(pricelist.getStatus() == PricelistStatus.IN_REVIEW || pricelist.getStatus() == PricelistStatus.ACTIVE);
         dto.setPeriodStart(pricelist.getPeriodStart());
         dto.setPeriodEnd(pricelist.getPeriodEnd());
         dto.setItems(pricelist.getItems().stream().map(PricelistItemResponseDTO::fromEntity).toList());

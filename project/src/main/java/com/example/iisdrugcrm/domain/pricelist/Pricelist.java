@@ -55,6 +55,15 @@ public class Pricelist {
     @Column(name = "created_by")
     private Long createdBy;
 
+    @Column(name = "version_number", nullable = false)
+    private Integer versionNumber = 1;
+
+    @Column(name = "parent_pricelist_id")
+    private Long parentPricelistId;
+
+    @Column(name = "root_pricelist_id")
+    private Long rootPricelistId;
+
     public Pricelist() {
     }
 
@@ -124,6 +133,30 @@ public class Pricelist {
 
     public void setCreatedBy(Long createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public Integer getVersionNumber() {
+        return versionNumber;
+    }
+
+    public void setVersionNumber(Integer versionNumber) {
+        this.versionNumber = versionNumber;
+    }
+
+    public Long getParentPricelistId() {
+        return parentPricelistId;
+    }
+
+    public void setParentPricelistId(Long parentPricelistId) {
+        this.parentPricelistId = parentPricelistId;
+    }
+
+    public Long getRootPricelistId() {
+        return rootPricelistId;
+    }
+
+    public void setRootPricelistId(Long rootPricelistId) {
+        this.rootPricelistId = rootPricelistId;
     }
 
     public void setItems(List<PricelistItem> items) {

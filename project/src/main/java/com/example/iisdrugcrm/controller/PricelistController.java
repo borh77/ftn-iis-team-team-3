@@ -53,4 +53,10 @@ public class PricelistController {
     public ResponseEntity<PricelistResponseDTO> changeStatus(@PathVariable Long id, @Valid @RequestBody ChangePricelistStatusDTO dto) {
         return ResponseEntity.ok(pricelistService.changeStatus(id, dto));
     }
+
+    @PostMapping("/{id}/versions")
+    public ResponseEntity<PricelistResponseDTO> createNewVersion(@PathVariable Long id, Authentication authentication) {
+        Long currentUserId = userService.getUserIdByUsername(authentication.getName());
+        return ResponseEntity.status(HttpStatus.CREATED).body(pricelistService.createNewVersion(id, currentUserId));
+    }
 }

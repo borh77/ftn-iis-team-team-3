@@ -21,6 +21,7 @@ export class PricelistListComponent implements OnInit {
 
   loading = false;
   changingStatusId: number | null = null;
+  creatingVersionId: number | null = null;
   successMessage = '';
   errorMessage = '';
   pricelists: Pricelist[] = [];
@@ -76,6 +77,25 @@ export class PricelistListComponent implements OnInit {
     this.changeStatus(pricelist, 'ARCHIVED');
   }
 
+  createNewVersion(pricelist: Pricelist): void {
+    this.creatingVersionId = pricelist.id;
+    this.successMessage = '';
+    this.errorMessage = '';
+
+    this.service.createNewVersion(pricelist.id).subscribe({
+      next: () => {
+        this.creatingVersionId = null;
+        this.successMessage = 'New draft version was created.';
+        this.load();
+      },
+      error: (error) => {
+        this.creatingVersionId = null;
+        this.errorMessage = this.versionErrorMessage(error);
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
   canSubmitForReview(pricelist: Pricelist): boolean {
     return pricelist.status === 'DRAFT';
   }
@@ -92,8 +112,16 @@ export class PricelistListComponent implements OnInit {
     return pricelist.status === 'ACTIVE';
   }
 
+  canCreateNewVersion(pricelist: Pricelist): boolean {
+    return pricelist.status === 'IN_REVIEW' || pricelist.status === 'ACTIVE' || pricelist.canCreateNewVersion;
+  }
+
   isChanging(pricelist: Pricelist): boolean {
     return this.changingStatusId === pricelist.id;
+  }
+
+  isCreatingVersion(pricelist: Pricelist): boolean {
+    return this.creatingVersionId === pricelist.id;
   }
 
   toggleOffers(pricelist: Pricelist): void {
@@ -181,6 +209,17 @@ export class PricelistListComponent implements OnInit {
       }
     }
     return 'Pricelist status update failed.';
+  }
+
+  private versionErrorMessage(error: unknown): string {
+    const backend = error instanceof HttpErrorResponse ? String(error.error?.error ?? '') : '';
+    if (backend.includes('Archived pricelists')) {
+      return 'Archived pricelists cannot be versioned.';
+    }
+    if (backend.includes('Draft pricelists')) {
+      return 'Draft pricelists can be edited directly.';
+    }
+    return 'New version could not be created.';
   }
 
   private loadOffers(pricelistId: number): void {

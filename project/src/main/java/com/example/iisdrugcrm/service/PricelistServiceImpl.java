@@ -76,6 +76,7 @@ public class PricelistServiceImpl implements PricelistService {
         pricelist.setStatus(PricelistStatus.DRAFT);
         pricelist.setPeriodStart(periodStart);
         pricelist.setPeriodEnd(periodEnd);
+        pricelist.setVersionNumber(1);
 
         for (CreatePricelistDTO.PricelistItemDTO itemDTO : dto.getItems()) {
             PricelistItem item = new PricelistItem();
@@ -102,6 +103,60 @@ public class PricelistServiceImpl implements PricelistService {
 
         Pricelist saved = pricelistRepository.save(pricelist);
         LOGGER.info("Created pricelist {} for region {} and customer segment {}", saved.getId(), region.getId(), saved.getCustomerSegment());
+        return PricelistResponseDTO.fromEntity(saved);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PricelistResponseDTO createNewVersion(Long sourcePricelistId, Long currentUserId) {
+        Pricelist source = pricelistRepository.findById(sourcePricelistId)
+                .orElseThrow(() -> new PricelistNotFoundException("Pricelist not found"));
+        validateOwnership(source, currentUserId);
+
+        if (source.getStatus() == PricelistStatus.ARCHIVED) {
+            throw new IllegalArgumentException("Archived pricelists cannot be versioned.");
+        }
+        if (source.getStatus() == PricelistStatus.DRAFT) {
+            throw new IllegalArgumentException("Draft pricelists can be edited directly.");
+        }
+
+        Long rootPricelistId = source.getRootPricelistId() != null ? source.getRootPricelistId() : source.getId();
+        Integer maxVersion = pricelistRepository.findMaxVersionNumberForRoot(rootPricelistId);
+
+        Pricelist newVersion = new Pricelist();
+        newVersion.setRegion(source.getRegion());
+        newVersion.setCustomerSegment(source.getCustomerSegment());
+        newVersion.setCurrency(source.getCurrency());
+        newVersion.setPeriodStart(source.getPeriodStart());
+        newVersion.setPeriodEnd(source.getPeriodEnd());
+        newVersion.setStatus(PricelistStatus.DRAFT);
+        newVersion.setCreatedBy(currentUserId);
+        newVersion.setParentPricelistId(source.getId());
+        newVersion.setRootPricelistId(rootPricelistId);
+        int currentVersion = maxVersion != null && maxVersion > 0
+                ? maxVersion
+                : source.getVersionNumber() != null ? source.getVersionNumber() : 1;
+        newVersion.setVersionNumber(currentVersion + 1);
+
+        for (PricelistItem sourceItem : source.getItems()) {
+            PricelistItem item = new PricelistItem();
+            item.setVariantId(sourceItem.getVariantId());
+            item.setVariantName(sourceItem.getVariantName());
+
+            List<QuantityThreshold> thresholds = new ArrayList<>();
+            for (QuantityThreshold sourceThreshold : sourceItem.getThresholds()) {
+                QuantityThreshold threshold = new QuantityThreshold();
+                threshold.setQuantityFrom(sourceThreshold.getQuantityFrom());
+                threshold.setQuantityTo(sourceThreshold.getQuantityTo());
+                threshold.setPrice(sourceThreshold.getPrice());
+                thresholds.add(threshold);
+            }
+            item.setThresholds(thresholds);
+            newVersion.addItem(item);
+        }
+
+        Pricelist saved = pricelistRepository.save(newVersion);
+        LOGGER.info("Created draft version {} from pricelist {}", saved.getId(), source.getId());
         return PricelistResponseDTO.fromEntity(saved);
     }
 
@@ -151,6 +206,12 @@ public class PricelistServiceImpl implements PricelistService {
                  | LockTimeoutException
                  | PessimisticLockException exception) {
             throw new PricelistLockedException("Cenovnici za izabrani region i segment se trenutno menjaju. Pokusajte ponovo.");
+        }
+    }
+
+    private void validateOwnership(Pricelist pricelist, Long currentUserId) {
+        if (pricelist.getCreatedBy() != null && !pricelist.getCreatedBy().equals(currentUserId)) {
+            throw new IllegalArgumentException("Pricelist does not belong to current user.");
         }
     }
 
