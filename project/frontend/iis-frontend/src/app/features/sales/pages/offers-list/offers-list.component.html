@@ -35,7 +35,7 @@
             <td>
               <div class="action-buttons">
                 <button
-                    *ngIf="offer.status !== 'ACCEPTED' && offer.offerNumber !== 'OFF-00001'"
+                    *ngIf="offer.status !== 'ACCEPTED'"
                     type="button"
                     class="secondary-button"
                     (click)="acceptOffer(offer)">

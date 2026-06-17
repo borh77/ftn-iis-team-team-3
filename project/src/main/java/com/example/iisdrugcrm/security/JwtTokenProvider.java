@@ -72,7 +72,6 @@ public class JwtTokenProvider {
         return getClaims(token).getSubject();
     }
 
-    @SuppressWarnings("unchecked")
     public List<UserRole> getRoles(String token) {
         Object rolesClaim = getClaims(token).get("roles");
         if (rolesClaim instanceof List<?> roles) {

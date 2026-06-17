@@ -85,7 +85,7 @@ export class OffersListComponent implements OnInit {
 
   acceptOffer(offer: Offer): void {
     this.salesApiService.acceptOffer(offer.id).subscribe({
-      next: () => this.loadOffers(),
+      next: () => this.loadData(),
       error: (error) => console.error('Failed to accept offer:', error),
     });
   }
@@ -108,7 +108,7 @@ export class OffersListComponent implements OnInit {
     this.salesApiService.createContract(this.newContract).subscribe({
       next: () => {
         this.showContractFormForOfferId = null;
-        this.loadOffers();
+        this.loadData();
       },
       error: (error) => console.error('Failed to create contract:', error),
     });
