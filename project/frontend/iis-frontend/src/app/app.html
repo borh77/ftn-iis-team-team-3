@@ -96,14 +96,18 @@
           <span class="label">Pricelist Workspace</span>
         </a>
 
-        <a
-          routerLink="/published-pricelists"
-          routerLinkActive="active"
-          title="Buyer View">
+          @if (authService.session$ | async; as buyerSession) {
+            @if (buyerSession.roles.includes('ROLE_BUYER')) {
+            <a
+              routerLink="/catalog"
+              routerLinkActive="active"
+              title="Medicine Catalog">
 
-          <span class="icon">🛒</span>
-          <span class="label">Buy</span>
-        </a>
+              <span class="icon">🛒</span>
+              <span class="label">Catalog</span>
+            </a>
+            }
+          }
 
         <a
           routerLink="/profile"

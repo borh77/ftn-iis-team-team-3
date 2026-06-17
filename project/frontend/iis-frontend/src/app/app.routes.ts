@@ -11,6 +11,7 @@ import { ProfileComponent } from './pages/profile/profile.component';
 import { PortfolioPageComponent } from './pages/portfolio/portfolio-page.component';
 import { PricelistCreateComponent } from './pages/pricelist-create/pricelist-create.component';
 import { SalesDashboardComponent } from './pages/sales-dashboard/sales-dashboard.component';
+import { BuyerCatalogComponent } from './pages/buyer-catalog/buyer-catalog.component';
 import { LeadsListComponent } from './features/sales/pages/leads-list/leads-list.component';
 import { CustomersListComponent } from './features/sales/pages/customers-list/customers-list.component';
 import { ProcessesListComponent } from './features/sales/pages/processes-list/processes-list.component';
@@ -79,14 +80,17 @@ export const routes: Routes = [
     },
     {
         path: 'published-pricelists',
-        component: RoleLandingComponent,
+        component: BuyerCatalogComponent,
         canActivate: [authGuard, passwordChangeGuard],
-        data: {
-            roles: ['ROLE_BUYER'],
-            title: 'Published pricelists',
-            subtitle: 'Buyer landing page.',
-        },
+        data: { roles: ['ROLE_BUYER'] },
         title: 'IIS Drug CRM | Pricelists',
+    },
+    {
+        path: 'catalog',
+        component: BuyerCatalogComponent,
+        canActivate: [authGuard, passwordChangeGuard],
+        data: { roles: ['ROLE_BUYER'] },
+        title: 'IIS Drug CRM | Medicine Catalog',
     },
     {
         path: 'portfolio',

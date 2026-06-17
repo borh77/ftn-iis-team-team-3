@@ -1,0 +1,75 @@
+<section class="page-hero">
+  <div class="page-hero__head">
+    <div>
+      <p class="kicker">Buyer Catalog</p>
+      <h2>Medicine Catalog</h2>
+      <p class="lede">Browse active medicine prices available for your region and customer segment.</p>
+    </div>
+
+    <button type="button" class="secondary" (click)="loadCatalog()" [disabled]="loading">
+      {{ loading ? 'Refreshing...' : 'Refresh' }}
+    </button>
+  </div>
+</section>
+
+<section class="panel">
+  @if (loading) {
+    <p class="muted">Loading catalog...</p>
+  } @else if (errorMessage) {
+    <p class="error-box">{{ errorMessage }}</p>
+  } @else if (!hasItems()) {
+    <p class="muted">No active pricelist is available for your region and customer segment.</p>
+  } @else if (catalog) {
+    <div class="catalog-context">
+      <div>
+        <span>Region</span>
+        <strong>{{ catalog.regionName }}</strong>
+      </div>
+      <div>
+        <span>Customer segment</span>
+        <strong>{{ catalog.customerSegment }}</strong>
+      </div>
+      <div>
+        <span>Currency</span>
+        <strong>{{ catalog.currency }}</strong>
+      </div>
+      <div>
+        <span>Valid period</span>
+        <strong>{{ catalog.periodStart | date:'shortDate' }} - {{ catalog.periodEnd | date:'shortDate' }}</strong>
+      </div>
+    </div>
+
+    <div class="catalog-table-wrap">
+      <table class="catalog-table">
+        <thead>
+          <tr>
+            <th>Medicine / Variant</th>
+            <th>Base price</th>
+            <th>Threshold prices</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of catalog.items; track item.variantId) {
+            <tr>
+              <td>
+                <strong>{{ item.variantName }}</strong>
+                <span class="muted">Variant ID: {{ item.variantId }}</span>
+              </td>
+              <td>{{ item.basePrice | number:'1.2-2' }} {{ item.currency }}</td>
+              <td>
+                <ul class="threshold-list">
+                  @for (threshold of item.thresholds; track threshold.quantityFrom + '-' + (threshold.quantityTo ?? 'open')) {
+                    <li>
+                      {{ threshold.quantityFrom }} - {{ threshold.quantityTo ?? 'open' }}:
+                      {{ threshold.price | number:'1.2-2' }} {{ item.currency }}
+                    </li>
+                  }
+                </ul>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

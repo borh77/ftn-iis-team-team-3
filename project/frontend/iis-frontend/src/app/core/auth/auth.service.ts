@@ -108,7 +108,7 @@ export class AuthService {
     }
 
     if (session.roles.includes('ROLE_BUYER')) {
-      return '/published-pricelists';
+      return '/catalog';
     }
 
     if (

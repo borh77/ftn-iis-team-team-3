@@ -13,6 +13,9 @@ public class UserResponseDTO {
     private UserRole role;
     private boolean active;
     private boolean hasChangedPassword;
+    private Long regionId;
+    private String regionName;
+    private String customerSegment;
 
     public static UserResponseDTO fromEntity(User user) {
         UserResponseDTO dto = new UserResponseDTO();
@@ -24,6 +27,11 @@ public class UserResponseDTO {
         dto.setRole(user.getRole());
         dto.setActive(user.isActive());
         dto.setHasChangedPassword(user.isHasChangedPassword());
+        if (user.getBuyerRegion() != null) {
+            dto.setRegionId(user.getBuyerRegion().getId());
+            dto.setRegionName(user.getBuyerRegion().getName());
+        }
+        dto.setCustomerSegment(user.getCustomerSegment());
         return dto;
     }
 
@@ -89,5 +97,29 @@ public class UserResponseDTO {
 
     public void setHasChangedPassword(boolean hasChangedPassword) {
         this.hasChangedPassword = hasChangedPassword;
+    }
+
+    public Long getRegionId() {
+        return regionId;
+    }
+
+    public void setRegionId(Long regionId) {
+        this.regionId = regionId;
+    }
+
+    public String getRegionName() {
+        return regionName;
+    }
+
+    public void setRegionName(String regionName) {
+        this.regionName = regionName;
+    }
+
+    public String getCustomerSegment() {
+        return customerSegment;
+    }
+
+    public void setCustomerSegment(String customerSegment) {
+        this.customerSegment = customerSegment;
     }
 }

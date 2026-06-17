@@ -8,6 +8,7 @@ import com.example.iisdrugcrm.dto.profile.PasswordChangeDTO;
 import com.example.iisdrugcrm.dto.profile.ProfileUpdateResponseDTO;
 import com.example.iisdrugcrm.dto.profile.UserUpdateDTO;
 import com.example.iisdrugcrm.exception.DuplicateUserException;
+import com.example.iisdrugcrm.repository.RegionRepository;
 import com.example.iisdrugcrm.repository.UserRepository;
 import com.example.iisdrugcrm.security.JwtTokenProvider;
 import com.example.iisdrugcrm.dto.team.TeamMemberDTO;
@@ -26,17 +27,20 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final JwtTokenProvider tokenProvider;
+    private final RegionRepository regionRepository;
 
     public UserServiceImpl(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             EmailService emailService,
-            JwtTokenProvider tokenProvider
+            JwtTokenProvider tokenProvider,
+            RegionRepository regionRepository
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
         this.tokenProvider = tokenProvider;
+        this.regionRepository = regionRepository;
     }
 
     @Override
@@ -58,6 +62,13 @@ public class UserServiceImpl implements UserService {
         user.setActive(true);
         user.setHasChangedPassword(false);
         user.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
+        if (dto.getRole() == UserRole.ROLE_BUYER) {
+            if (dto.getRegionId() != null) {
+                user.setBuyerRegion(regionRepository.findById(dto.getRegionId())
+                        .orElseThrow(() -> new IllegalArgumentException("Region not found")));
+            }
+            user.setCustomerSegment(dto.getCustomerSegment() == null ? null : dto.getCustomerSegment().trim());
+        }
 
         User savedUser = userRepository.save(user);
         emailService.sendInitialCredentials(savedUser, dto.getPassword());
