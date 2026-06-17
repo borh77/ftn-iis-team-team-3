@@ -1,18 +1,22 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { PricelistService } from '../../core/pricelist.service';
 import { Pricelist } from '../../core/pricelist.models';
+import { SpecialOfferService } from '../../core/special-offer.service';
+import { DiscountType, SpecialOffer } from '../../core/special-offer.models';
 
 @Component({
   selector: 'app-pricelist-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './pricelist-list.component.html',
   styleUrls: ['./pricelist-list.component.css'],
 })
 export class PricelistListComponent implements OnInit {
   private readonly service = inject(PricelistService);
+  private readonly offerService = inject(SpecialOfferService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   loading = false;
@@ -20,6 +24,11 @@ export class PricelistListComponent implements OnInit {
   successMessage = '';
   errorMessage = '';
   pricelists: Pricelist[] = [];
+  expandedOffers: Record<number, boolean> = {};
+  offersByPricelist: Record<number, SpecialOffer[]> = {};
+  offerForms: Record<number, OfferForm> = {};
+  loadingOffersId: number | null = null;
+  changingOfferId: number | null = null;
 
   ngOnInit(): void {
     this.load();
@@ -87,6 +96,55 @@ export class PricelistListComponent implements OnInit {
     return this.changingStatusId === pricelist.id;
   }
 
+  toggleOffers(pricelist: Pricelist): void {
+    this.expandedOffers[pricelist.id] = !this.expandedOffers[pricelist.id];
+    if (this.expandedOffers[pricelist.id]) {
+      this.ensureOfferForm(pricelist);
+      this.loadOffers(pricelist.id);
+    }
+  }
+
+  createOffer(pricelist: Pricelist): void {
+    const form = this.ensureOfferForm(pricelist);
+    this.successMessage = '';
+    this.errorMessage = '';
+
+    if (!form.variantId || !form.discountValue || !form.startDate || !form.endDate) {
+      this.errorMessage = 'Offer could not be created.';
+      return;
+    }
+
+    this.offerService.create({
+      pricelistId: pricelist.id,
+      variantId: Number(form.variantId),
+      discountType: form.discountType,
+      discountValue: Number(form.discountValue),
+      startDate: new Date(form.startDate).toISOString(),
+      endDate: new Date(form.endDate).toISOString(),
+    }).subscribe({
+      next: () => {
+        this.successMessage = 'Offer was created successfully.';
+        this.offerForms[pricelist.id] = this.defaultOfferForm(pricelist);
+        this.loadOffers(pricelist.id);
+      },
+      error: (error) => {
+        this.errorMessage = this.offerErrorMessage(error);
+      },
+    });
+  }
+
+  activateOffer(offer: SpecialOffer): void {
+    this.changeOfferStatus(offer, 'activate');
+  }
+
+  archiveOffer(offer: SpecialOffer): void {
+    this.changeOfferStatus(offer, 'archive');
+  }
+
+  isOfferChanging(offer: SpecialOffer): boolean {
+    return this.changingOfferId === offer.id;
+  }
+
   statusLabel(status: Pricelist['status']): string {
     return status.replace('_', ' ');
   }
@@ -124,4 +182,76 @@ export class PricelistListComponent implements OnInit {
     }
     return 'Pricelist status update failed.';
   }
+
+  private loadOffers(pricelistId: number): void {
+    this.loadingOffersId = pricelistId;
+    this.offerService.listForPricelist(pricelistId).subscribe({
+      next: (offers) => {
+        this.offersByPricelist[pricelistId] = offers;
+        this.loadingOffersId = null;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.offersByPricelist[pricelistId] = [];
+        this.loadingOffersId = null;
+        this.errorMessage = 'Offers could not be loaded.';
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  private changeOfferStatus(offer: SpecialOffer, action: 'activate' | 'archive'): void {
+    this.changingOfferId = offer.id;
+    const request = action === 'activate' ? this.offerService.activate(offer.id) : this.offerService.archive(offer.id);
+    request.subscribe({
+      next: () => {
+        this.changingOfferId = null;
+        this.successMessage = action === 'activate' ? 'Offer was activated successfully.' : 'Offer was archived successfully.';
+        this.loadOffers(offer.pricelistId);
+      },
+      error: (error) => {
+        this.changingOfferId = null;
+        this.errorMessage = this.offerErrorMessage(error);
+      },
+    });
+  }
+
+  private offerErrorMessage(error: unknown): string {
+    const backend = error instanceof HttpErrorResponse ? String(error.error?.error ?? '') : '';
+    if (backend.includes('Discount value')) {
+      return 'Discount value is invalid.';
+    }
+    if (backend.includes('period')) {
+      return 'Offer period must be inside the pricelist period.';
+    }
+    if (backend.includes('variant')) {
+      return 'Selected variant is not part of this pricelist.';
+    }
+    return 'Offer could not be created.';
+  }
+
+  private ensureOfferForm(pricelist: Pricelist): OfferForm {
+    if (!this.offerForms[pricelist.id]) {
+      this.offerForms[pricelist.id] = this.defaultOfferForm(pricelist);
+    }
+    return this.offerForms[pricelist.id];
+  }
+
+  private defaultOfferForm(pricelist: Pricelist): OfferForm {
+    return {
+      variantId: pricelist.items[0]?.variantId ?? null,
+      discountType: 'PERCENTAGE',
+      discountValue: null,
+      startDate: '',
+      endDate: '',
+    };
+  }
+}
+
+interface OfferForm {
+  variantId: number | null;
+  discountType: DiscountType;
+  discountValue: number | null;
+  startDate: string;
+  endDate: string;
 }

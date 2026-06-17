@@ -55,7 +55,17 @@
                 <strong>{{ item.variantName }}</strong>
                 <span class="muted">Variant ID: {{ item.variantId }}</span>
               </td>
-              <td>{{ item.basePrice | number:'1.2-2' }} {{ item.currency }}</td>
+              <td>
+                @if (item.hasActiveOffer) {
+                  <span class="old-price">{{ item.basePrice | number:'1.2-2' }} {{ item.currency }}</span>
+                  <strong class="discounted-price">{{ item.discountedPrice | number:'1.2-2' }} {{ item.currency }}</strong>
+                  <span class="discount-badge">
+                    {{ item.discountType === 'PERCENTAGE' ? item.discountValue + '% off' : item.discountValue + ' ' + item.currency + ' off' }}
+                  </span>
+                } @else {
+                  {{ item.basePrice | number:'1.2-2' }} {{ item.currency }}
+                }
+              </td>
               <td>
                 <ul class="threshold-list">
                   @for (threshold of item.thresholds; track threshold.quantityFrom + '-' + (threshold.quantityTo ?? 'open')) {

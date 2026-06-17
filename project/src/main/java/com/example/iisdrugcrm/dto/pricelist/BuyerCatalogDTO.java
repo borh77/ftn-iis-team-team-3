@@ -3,10 +3,14 @@ package com.example.iisdrugcrm.dto.pricelist;
 import com.example.iisdrugcrm.domain.pricelist.Pricelist;
 import com.example.iisdrugcrm.domain.pricelist.PricelistItem;
 import com.example.iisdrugcrm.domain.pricelist.QuantityThreshold;
+import com.example.iisdrugcrm.domain.pricelist.DiscountType;
+import com.example.iisdrugcrm.domain.pricelist.SpecialOffer;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 public class BuyerCatalogDTO {
 
@@ -23,6 +27,10 @@ public class BuyerCatalogDTO {
     }
 
     public static BuyerCatalogDTO fromEntity(Pricelist pricelist) {
+        return fromEntity(pricelist, Map.of());
+    }
+
+    public static BuyerCatalogDTO fromEntity(Pricelist pricelist, Map<Long, SpecialOffer> activeOffersByVariantId) {
         BuyerCatalogDTO dto = new BuyerCatalogDTO();
         dto.setPricelistId(pricelist.getId());
         dto.setRegionName(pricelist.getRegion().getName());
@@ -30,7 +38,9 @@ public class BuyerCatalogDTO {
         dto.setCurrency(pricelist.getCurrency());
         dto.setPeriodStart(pricelist.getPeriodStart());
         dto.setPeriodEnd(pricelist.getPeriodEnd());
-        dto.setItems(pricelist.getItems().stream().map(item -> BuyerCatalogItemDTO.fromEntity(item, pricelist.getCurrency())).toList());
+        dto.setItems(pricelist.getItems().stream()
+                .map(item -> BuyerCatalogItemDTO.fromEntity(item, pricelist.getCurrency(), activeOffersByVariantId.get(item.getVariantId())))
+                .toList());
         return dto;
     }
 
@@ -94,10 +104,18 @@ public class BuyerCatalogDTO {
         private Long variantId;
         private String variantName;
         private BigDecimal basePrice;
+        private BigDecimal discountedPrice;
+        private DiscountType discountType;
+        private BigDecimal discountValue;
+        private boolean hasActiveOffer;
         private String currency;
         private List<ThresholdDTO> thresholds;
 
         public static BuyerCatalogItemDTO fromEntity(PricelistItem item, String currency) {
+            return fromEntity(item, currency, null);
+        }
+
+        public static BuyerCatalogItemDTO fromEntity(PricelistItem item, String currency, SpecialOffer activeOffer) {
             BuyerCatalogItemDTO dto = new BuyerCatalogItemDTO();
             dto.setVariantId(item.getVariantId());
             dto.setVariantName(item.getVariantName());
@@ -106,8 +124,25 @@ public class BuyerCatalogDTO {
                     .sorted(Comparator.comparing(QuantityThreshold::getQuantityFrom))
                     .toList();
             dto.setBasePrice(sortedThresholds.isEmpty() ? null : sortedThresholds.get(0).getPrice());
+            if (activeOffer != null && dto.getBasePrice() != null) {
+                dto.setHasActiveOffer(true);
+                dto.setDiscountType(activeOffer.getDiscountType());
+                dto.setDiscountValue(activeOffer.getDiscountValue());
+                dto.setDiscountedPrice(calculateDiscountedPrice(dto.getBasePrice(), activeOffer));
+            }
             dto.setThresholds(sortedThresholds.stream().map(ThresholdDTO::fromEntity).toList());
             return dto;
+        }
+
+        private static BigDecimal calculateDiscountedPrice(BigDecimal basePrice, SpecialOffer offer) {
+            BigDecimal discounted;
+            if (offer.getDiscountType() == DiscountType.PERCENTAGE) {
+                BigDecimal discount = basePrice.multiply(offer.getDiscountValue()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+                discounted = basePrice.subtract(discount);
+            } else {
+                discounted = basePrice.subtract(offer.getDiscountValue());
+            }
+            return discounted.max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
         }
 
         public Long getVariantId() {
@@ -132,6 +167,38 @@ public class BuyerCatalogDTO {
 
         public void setBasePrice(BigDecimal basePrice) {
             this.basePrice = basePrice;
+        }
+
+        public BigDecimal getDiscountedPrice() {
+            return discountedPrice;
+        }
+
+        public void setDiscountedPrice(BigDecimal discountedPrice) {
+            this.discountedPrice = discountedPrice;
+        }
+
+        public DiscountType getDiscountType() {
+            return discountType;
+        }
+
+        public void setDiscountType(DiscountType discountType) {
+            this.discountType = discountType;
+        }
+
+        public BigDecimal getDiscountValue() {
+            return discountValue;
+        }
+
+        public void setDiscountValue(BigDecimal discountValue) {
+            this.discountValue = discountValue;
+        }
+
+        public boolean isHasActiveOffer() {
+            return hasActiveOffer;
+        }
+
+        public void setHasActiveOffer(boolean hasActiveOffer) {
+            this.hasActiveOffer = hasActiveOffer;
         }
 
         public String getCurrency() {

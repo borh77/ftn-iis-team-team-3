@@ -104,7 +104,90 @@
                 {{ isChanging(p) ? 'Updating...' : 'Archive' }}
               </button>
             }
+
+            <button type="button" class="secondary" (click)="toggleOffers(p)">
+              {{ expandedOffers[p.id] ? 'Hide offers' : 'Manage offers' }}
+            </button>
           </div>
+
+          @if (expandedOffers[p.id]) {
+            <section class="offers-panel">
+              <div class="panel-head compact">
+                <div>
+                  <h4>Special offers</h4>
+                  <p class="muted">Create variant-level discounts for this pricelist.</p>
+                </div>
+              </div>
+
+              <div class="offer-form">
+                <label>
+                  <span>Variant</span>
+                  <select [(ngModel)]="offerForms[p.id].variantId" [ngModelOptions]="{standalone: true}">
+                    @for (item of p.items; track item.variantId) {
+                      <option [ngValue]="item.variantId">{{ item.variantName }}</option>
+                    }
+                  </select>
+                </label>
+
+                <label>
+                  <span>Discount type</span>
+                  <select [(ngModel)]="offerForms[p.id].discountType" [ngModelOptions]="{standalone: true}">
+                    <option value="PERCENTAGE">Percentage</option>
+                    <option value="FIXED_AMOUNT">Fixed amount</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Discount value</span>
+                  <input type="number" min="0.01" step="0.01" [(ngModel)]="offerForms[p.id].discountValue" [ngModelOptions]="{standalone: true}" />
+                </label>
+
+                <label>
+                  <span>Start date</span>
+                  <input type="datetime-local" [(ngModel)]="offerForms[p.id].startDate" [ngModelOptions]="{standalone: true}" />
+                </label>
+
+                <label>
+                  <span>End date</span>
+                  <input type="datetime-local" [(ngModel)]="offerForms[p.id].endDate" [ngModelOptions]="{standalone: true}" />
+                </label>
+
+                <button type="button" class="primary" (click)="createOffer(p)">Create offer</button>
+              </div>
+
+              @if (loadingOffersId === p.id) {
+                <p class="muted">Loading offers...</p>
+              } @else if (!(offersByPricelist[p.id]?.length)) {
+                <p class="muted">No special offers yet.</p>
+              } @else {
+                <div class="offer-list">
+                  @for (offer of offersByPricelist[p.id]; track offer.id) {
+                    <div class="offer-row">
+                      <div>
+                        <strong>{{ offer.variantName }}</strong>
+                        <span class="muted">
+                          {{ offer.discountType === 'PERCENTAGE' ? offer.discountValue + '% off' : offer.discountValue + ' ' + p.currency + ' off' }}
+                          - {{ offer.status }}
+                        </span>
+                      </div>
+                      <div class="offer-actions">
+                        @if (offer.status === 'DRAFT') {
+                          <button type="button" class="secondary" (click)="activateOffer(offer)" [disabled]="isOfferChanging(offer)">
+                            {{ isOfferChanging(offer) ? 'Updating...' : 'Activate offer' }}
+                          </button>
+                        }
+                        @if (offer.status === 'ACTIVE') {
+                          <button type="button" class="ghost" (click)="archiveOffer(offer)" [disabled]="isOfferChanging(offer)">
+                            {{ isOfferChanging(offer) ? 'Updating...' : 'Archive offer' }}
+                          </button>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </section>
+          }
         </article>
       }
     </div>

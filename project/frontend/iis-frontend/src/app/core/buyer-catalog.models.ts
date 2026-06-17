@@ -8,6 +8,10 @@ export interface BuyerCatalogItem {
   variantId: number;
   variantName: string;
   basePrice: number | null;
+  discountedPrice: number | null;
+  discountType: 'PERCENTAGE' | 'FIXED_AMOUNT' | null;
+  discountValue: number | null;
+  hasActiveOffer: boolean;
   currency: string;
   thresholds: BuyerCatalogThreshold[];
 }
