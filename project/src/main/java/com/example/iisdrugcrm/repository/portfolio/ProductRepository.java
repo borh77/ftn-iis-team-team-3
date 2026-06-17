@@ -23,14 +23,22 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByStatusWithRelations(EntityStatus status);
 
     @Query("""
-        SELECT p
-        FROM Product p
-        JOIN FETCH p.subcategory s
-        JOIN FETCH p.therapeuticArea ta
-        WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))
-          AND p.status = :status
+    SELECT p
+    FROM Product p
+    JOIN FETCH p.subcategory s
+    JOIN FETCH p.therapeuticArea ta
+    WHERE (:includeArchived = true OR p.status = :activeStatus)
+      AND (:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
+      AND (:subcategoryId IS NULL OR s.id = :subcategoryId)
+      AND (:therapeuticAreaId IS NULL OR ta.id = :therapeuticAreaId)
     """)
-    List<Product> searchByNameWithRelations(String search, EntityStatus status);
+    List<Product> searchByNameWithRelations(
+        String search, 
+        EntityStatus activeStatus, 
+        boolean includeArchived, 
+        Long subcategoryId, 
+        Long therapeuticAreaId
+    );
 
     @Query("""
         SELECT p

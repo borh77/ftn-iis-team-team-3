@@ -12,4 +12,6 @@ public interface VariantVersionIngredientsService {
     VariantVersionIngredientsResponseDTO create(VariantVersionIngredientsRequestDTO dto);
 
     VariantVersionIngredientsResponseDTO update(Long id, VariantVersionIngredientsRequestDTO dto);
+
+    void delete(Long id);
 }

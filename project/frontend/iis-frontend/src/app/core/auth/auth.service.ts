@@ -111,6 +111,14 @@ export class AuthService {
       return '/published-pricelists';
     }
 
+    if (
+      session.roles.includes('ROLE_SALES_REPRESENTATIVE') ||
+      session.roles.includes('ROLE_ACCOUNT_MANAGER') ||
+      session.roles.includes('ROLE_SALES_MANAGER')
+    ) {
+      return '/sales';
+    }
+
     return '/login';
   }
 

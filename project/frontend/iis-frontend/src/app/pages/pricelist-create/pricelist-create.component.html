@@ -1,0 +1,189 @@
+<section class="page-shell">
+  <header class="page-hero">
+    <div>
+      <p class="kicker">Pricelist Creator</p>
+      <h2>Create Pricelist</h2>
+      <p>Define the region, customer segment, currency, period, and items with multiple quantity thresholds.</p>
+    </div>
+
+    <a class="ghost hero-action" routerLink="/content">Back to workspace</a>
+  </header>
+
+  <form class="panel pricelist-form" [formGroup]="form" (ngSubmit)="submit()">
+    <div class="form-grid header-grid">
+      <label>
+        <span>Region</span>
+        <select formControlName="regionId">
+          <option [ngValue]="null">Select region</option>
+          @for (region of regions; track region.id) {
+            <option [ngValue]="region.id">{{ region.name }} ({{ region.code }})</option>
+          }
+        </select>
+        @if (form.controls['regionId'].touched && form.controls['regionId'].hasError('required')) {
+          <small class="field-error">Region is required.</small>
+        }
+      </label>
+
+      <label>
+        <span>Customer segment</span>
+        <input type="text" formControlName="customerSegment" placeholder="Pharmacy chains" />
+        @if (form.controls['customerSegment'].touched && form.controls['customerSegment'].hasError('required')) {
+          <small class="field-error">Customer segment is required.</small>
+        }
+      </label>
+
+      <label>
+        <span>Currency</span>
+        <input type="text" formControlName="currency" placeholder="RSD" maxlength="3" />
+        @if (form.controls['currency'].touched && form.controls['currency'].hasError('required')) {
+          <small class="field-error">Currency is required.</small>
+        }
+        @if (form.controls['currency'].touched && form.controls['currency'].hasError('pattern')) {
+          <small class="field-error">Currency must use ISO 4217 format, for example RSD or EUR.</small>
+        }
+      </label>
+
+      <label>
+        <span>Period from</span>
+        <input type="datetime-local" formControlName="periodStart" />
+      </label>
+
+      <label>
+        <span>Period to</span>
+        <input type="datetime-local" formControlName="periodEnd" />
+      </label>
+    </div>
+
+    @if (periodError()) {
+      <p class="error-box">{{ periodError() }}</p>
+    }
+
+    <div class="panel-head">
+      <div>
+        <h3>Pricelist items</h3>
+        <p class="muted">Choose a medicine for the pricelist through category, subcategory, product, and variant.</p>
+      </div>
+      <button type="button" class="secondary" (click)="addItem()">Add item</button>
+    </div>
+
+    <div class="items-list">
+      @for (item of items.controls; track $index; let itemIndex = $index) {
+        <section class="item-card" [formGroup]="itemGroup(itemIndex)">
+          <header class="item-head">
+            <div>
+              <p class="kicker">Item {{ itemIndex + 1 }}</p>
+              <h4>Medicine variant</h4>
+            </div>
+            <button type="button" class="ghost" (click)="removeItem(itemIndex)">Remove</button>
+          </header>
+
+          <div class="form-grid item-grid">
+            <label>
+              <span>Category</span>
+              <select formControlName="categoryId" (change)="onCategoryChange(itemIndex)">
+                <option [ngValue]="null">Select category</option>
+                @for (category of categories; track category.id) {
+                  <option [ngValue]="category.id">{{ category.name }}</option>
+                }
+              </select>
+              @if (controlError(itemIndex, 'categoryId')) {
+                <small class="field-error">{{ controlError(itemIndex, 'categoryId') }}</small>
+              }
+            </label>
+
+            <label>
+              <span>Subcategory</span>
+              <select formControlName="subcategoryId" (change)="onSubcategoryChange(itemIndex)">
+                <option [ngValue]="null">Select subcategory</option>
+                @for (subcategory of (subcategoriesByItem[itemIndex] ?? []); track subcategory.id) {
+                  <option [ngValue]="subcategory.id">{{ subcategory.name }}</option>
+                }
+              </select>
+              @if (controlError(itemIndex, 'subcategoryId')) {
+                <small class="field-error">{{ controlError(itemIndex, 'subcategoryId') }}</small>
+              }
+            </label>
+
+            <label>
+              <span>Product</span>
+              <select formControlName="productId" (change)="onProductChange(itemIndex)">
+                <option [ngValue]="null">Select product</option>
+                @for (product of (productsByItem[itemIndex] ?? []); track product.id) {
+                  <option [ngValue]="product.id">{{ product.name }}</option>
+                }
+              </select>
+              @if (controlError(itemIndex, 'productId')) {
+                <small class="field-error">{{ controlError(itemIndex, 'productId') }}</small>
+              }
+            </label>
+
+            <label>
+              <span>Variant</span>
+              <select formControlName="variantId">
+                <option [ngValue]="null">Select variant</option>
+                @for (variant of (variantsByItem[itemIndex] ?? []); track variant.id) {
+                  <option [ngValue]="variant.id">{{ variant.productName }} - {{ variant.form }} / {{ variant.dosage }}</option>
+                }
+              </select>
+              @if (controlError(itemIndex, 'variantId')) {
+                <small class="field-error">{{ controlError(itemIndex, 'variantId') }}</small>
+              }
+            </label>
+          </div>
+
+          <div class="threshold-block" formArrayName="thresholds">
+            <div class="panel-head compact-head">
+              <div>
+                <h4>Quantity thresholds</h4>
+                <p class="muted">Each item must have at least one threshold.</p>
+              </div>
+              <button type="button" class="secondary" (click)="addThreshold(itemIndex)">Add threshold</button>
+            </div>
+
+            @for (threshold of thresholdsFor(itemIndex).controls; track $index; let thresholdIndex = $index) {
+              <div class="threshold-grid" [formGroupName]="thresholdIndex">
+                <label>
+                  <span>Quantity from</span>
+                  <input type="number" min="1" formControlName="quantityFrom" />
+                  @if (thresholdError(itemIndex, thresholdIndex, 'quantityFrom')) {
+                    <small class="field-error">{{ thresholdError(itemIndex, thresholdIndex, 'quantityFrom') }}</small>
+                  }
+                </label>
+
+                <label>
+                  <span>Quantity to</span>
+                  <input type="number" min="1" formControlName="quantityTo" placeholder="Leave blank for N+" />
+                </label>
+
+                <label>
+                  <span>Price</span>
+                  <input type="number" min="0.01" step="0.01" formControlName="price" />
+                  @if (thresholdError(itemIndex, thresholdIndex, 'price')) {
+                    <small class="field-error">{{ thresholdError(itemIndex, thresholdIndex, 'price') }}</small>
+                  }
+                </label>
+
+                <div class="threshold-actions">
+                  <button type="button" class="ghost" (click)="removeThreshold(itemIndex, thresholdIndex)">Remove threshold</button>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
+    </div>
+
+    @if (errorMessage) {
+      <p class="error-box">{{ errorMessage }}</p>
+    }
+
+    @if (successMessage) {
+      <p class="success-box">{{ successMessage }}</p>
+    }
+
+    <div class="actions-row">
+      <button type="button" class="ghost" routerLink="/content">Cancel</button>
+      <button type="submit" class="primary" [disabled]="saving">{{ saving ? 'Saving...' : 'Create pricelist' }}</button>
+    </div>
+  </form>
+</section>

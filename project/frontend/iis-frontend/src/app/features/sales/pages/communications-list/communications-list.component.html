@@ -1,0 +1,126 @@
+<main class="page">
+  <section class="page-header">
+    <div>
+      <p class="eyebrow">Sales workspace</p>
+      <h1>Customer Communications</h1>
+      <p>Track communication history with customers.</p>
+    </div>
+  </section>
+
+  <section class="form-card">
+    <h2>Select Customer</h2>
+
+    <select
+      [(ngModel)]="selectedCustomerId"
+      (ngModelChange)="loadCommunications()">
+
+      <option [ngValue]="0">Select customer</option>
+
+      <option
+        *ngFor="let customer of customers"
+        [ngValue]="customer.id">
+
+        {{ customer.name }}
+      </option>
+    </select>
+  </section>
+
+  <section
+    *ngIf="selectedCustomerId && canCreateCommunication"
+    class="form-card">
+    <h2>Add Communication</h2>
+
+    <form
+      (ngSubmit)="createCommunication()"
+      class="communication-form">
+
+      <label>
+        Communication Type
+
+        <select
+          name="type"
+          [(ngModel)]="newCommunication.type">
+
+          <option
+            *ngFor="let type of communicationTypes"
+            [ngValue]="type">
+
+            {{ type }}
+          </option>
+        </select>
+      </label>
+
+      <label>
+        Communication Date
+
+        <input
+          type="datetime-local"
+          name="communicationDate"
+          [(ngModel)]="newCommunication.communicationDate"
+          required />
+      </label>
+
+      <label class="full-width">
+        Content
+
+        <textarea
+          name="summary"
+          rows="5"
+          [(ngModel)]="newCommunication.summary"
+          required>
+        </textarea>
+      </label>
+
+      <div class="form-actions">
+        <button
+          type="submit"
+          class="primary-button"
+          [disabled]="saving">
+
+          {{ saving ? 'Saving...' : 'Save Communication' }}
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <section *ngIf="selectedCustomerId" class="table-card">
+    <div *ngIf="loading" class="loading">
+      Loading communications...
+    </div>
+
+    <table *ngIf="!loading && communications.length > 0">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Date</th>
+          <th>Content</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngFor="let communication of communications">
+          <td>
+            <span class="status">
+              {{ communication.type }}
+            </span>
+          </td>
+
+          <td>
+            {{ communication.communicationDate | date:'medium' }}
+          </td>
+
+          <td>
+            {{ communication.summary }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div
+      *ngIf="!loading && communications.length === 0"
+      class="loading">
+
+      No communications found.
+    </div>
+  </section>
+</main>

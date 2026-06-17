@@ -117,6 +117,19 @@ public class VariantVersionIngredientsServiceImpl implements VariantVersionIngre
         );
     }
 
+        @Override
+        @Transactional
+        public void delete(Long id) {
+                VariantVersionIngredients item = getItem(id);
+
+                VariantVersion version = item.getVariantVersion();
+                if (version.getStatus() != VariantVersionStatus.DEVELOPMENT) {
+                        throw new IllegalStateException("BOM can only be changed while version is in DEVELOPMENT");
+                }
+
+                repository.delete(item);
+        }
+
     private VariantVersionIngredients getItem(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new PortfolioResourceNotFoundException("BOM item not found"));

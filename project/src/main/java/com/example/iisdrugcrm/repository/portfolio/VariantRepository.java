@@ -23,12 +23,24 @@ public interface VariantRepository extends JpaRepository<Variant, Long> {
     );
 
     @Query("""
-        SELECT v
-        FROM Variant v
-        JOIN FETCH v.product p
-        WHERE v.status = :status
+    SELECT v
+    FROM Variant v
+    JOIN FETCH v.product p
+    WHERE (:includeArchived = true OR v.status = :activeStatus)
+      AND (:productId IS NULL OR p.id = :productId)
+      AND (
+            :search IS NULL
+            OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+            OR LOWER(v.form) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+            OR LOWER(v.dosage) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+      )
     """)
-    List<Variant> findByStatusWithRelations(EntityStatus status);
+    List<Variant> findByStatusWithRelations(
+        EntityStatus activeStatus, 
+        boolean includeArchived, 
+        Long productId, 
+        String search
+    );
 
     @Query("""
         SELECT v

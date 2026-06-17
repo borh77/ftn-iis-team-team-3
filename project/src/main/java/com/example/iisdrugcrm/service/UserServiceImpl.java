@@ -87,10 +87,13 @@ public class UserServiceImpl implements UserService {
         }
 
         return userRepository
-                .findTop10ByUsernameContainingIgnoreCaseAndRoleAndIsActiveTrueOrderByUsernameAsc(query, UserRole.ROLE_PRICELIST_CREATOR)
-                .stream()
-                .map(TeamMemberDTO::fromEntity)
-                .toList();
+            .findTop10ByUsernameContainingIgnoreCaseAndRoleAndIsActiveTrueOrderByUsernameAsc(
+                query,
+                UserRole.ROLE_PRICELIST_CREATOR
+            )
+            .stream()
+            .map(TeamMemberDTO::fromEntity)
+            .toList();
     }
 
     @Override

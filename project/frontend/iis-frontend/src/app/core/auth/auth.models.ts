@@ -1,5 +1,11 @@
-export type UserRole = 'ROLE_ADMIN' | 'ROLE_PRICELIST_CREATOR' | 'ROLE_BUYER' | 'ROLE_PORTFOLIO_MANAGER';
-
+export type UserRole =
+  | 'ROLE_ADMIN'
+  | 'ROLE_PRICELIST_CREATOR'
+  | 'ROLE_BUYER'
+  | 'ROLE_PORTFOLIO_MANAGER'
+  | 'ROLE_SALES_REPRESENTATIVE'
+  | 'ROLE_ACCOUNT_MANAGER'
+  | 'ROLE_SALES_MANAGER';
 export interface JwtPayload {
   sub: string;
   roles: UserRole[];
