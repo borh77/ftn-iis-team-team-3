@@ -1,0 +1,124 @@
+<main class="page">
+  <div *ngIf="loading" class="loading">
+    Loading customer details...
+  </div>
+
+  <ng-container *ngIf="!loading && customer">
+    <section class="page-header">
+      <button type="button" class="back-button" (click)="goBack()">
+        ← Back
+      </button>
+
+      <div>
+        <p class="eyebrow">Customer details</p>
+        <h1>{{ customer.name }}</h1>
+        <p>{{ customer.email }}</p>
+      </div>
+
+      <span class="status">
+        {{ customer.status }}
+      </span>
+    </section>
+
+    <section class="info-card customer-info-card">
+      <h2>Customer Information</h2>
+
+      <div class="info-grid">
+        <div class="info-field">
+          <span class="field-label">Email</span>
+          <span class="field-value">{{ customer.email }}</span>
+        </div>
+
+        <div class="info-field">
+          <span class="field-label">Phone</span>
+          <span class="field-value">{{ customer.phone || '-' }}</span>
+        </div>
+
+        <div class="info-field">
+          <span class="field-label">Website</span>
+          <span class="field-value">{{ customer.website || '-' }}</span>
+        </div>
+
+        <div class="info-field">
+          <span class="field-label">Status</span>
+          <span class="field-value">{{ customer.status }}</span>
+        </div>
+
+        <div class="info-field full-width">
+          <span class="field-label">Address</span>
+          <span class="field-value">{{ customer.address || '-' }}</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="summary-grid">
+      <article class="summary-card">
+        <span class="summary-label">Sales Processes</span>
+        <h2>{{ processes.length }}</h2>
+      </article>
+
+      <article class="summary-card">
+        <span class="summary-label">Offers</span>
+        <h2>{{ offers.length }}</h2>
+      </article>
+
+      <article class="summary-card">
+        <span class="summary-label">Contracts</span>
+        <h2>{{ contracts.length }}</h2>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="info-card">
+        <h2>Sales Processes</h2>
+
+        <div *ngIf="processes.length === 0" class="muted-text">
+          No sales processes.
+        </div>
+
+        <div *ngFor="let process of processes" class="list-item">
+          <div class="row-between">
+            <div>
+              <strong>{{ process.title }}</strong>
+              <p>Stage: {{ process.stage }}</p>
+              <p>Status: {{ process.status }}</p>
+            </div>
+
+            <button
+              type="button"
+              class="secondary-button"
+              (click)="viewProcess(process)">
+              Open
+            </button>
+          </div>
+        </div>
+      </article>
+
+      <article class="info-card">
+        <h2>Recent Activity</h2>
+
+        <div *ngIf="communications.length === 0" class="muted-text">
+          No recent activity.
+        </div>
+
+        <div class="history-timeline" *ngIf="communications.length > 0">
+          <div *ngFor="let communication of communications" class="history-item">
+            <div class="history-dot"></div>
+
+            <div class="history-content">
+              <div class="history-title">
+                {{ communication.type }}
+              </div>
+
+              <div class="history-date">
+                {{ communication.communicationDate }}
+              </div>
+
+              <p>{{ communication.summary }}</p>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+  </ng-container>
+</main>
