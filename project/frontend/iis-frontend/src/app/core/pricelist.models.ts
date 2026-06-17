@@ -32,6 +32,11 @@ export interface CreatePricelistPayload {
   items: PricelistItem[];
 }
 
+export interface ChangePricelistStatusPayload {
+  targetStatus: Pricelist['status'];
+  reason?: string;
+}
+
 export interface CreatePricelistErrorResponse {
   error?: string;
 }

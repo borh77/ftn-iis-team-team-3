@@ -88,6 +88,35 @@
 	color: var(--color-text);
 }
 
+.status-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.6rem;
+	margin-top: 1rem;
+	padding-top: 1rem;
+	border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.error-box,
+.success-box {
+	margin: 0 0 1rem;
+	padding: 0.85rem 1rem;
+	border-radius: 12px;
+	font-weight: 600;
+}
+
+.error-box {
+	background: #fef2f2;
+	color: #991b1b;
+	border: 1px solid #fecaca;
+}
+
+.success-box {
+	background: #ecfdf5;
+	color: #065f46;
+	border: 1px solid #a7f3d0;
+}
+
 @media (max-width: 720px) {
 	.page-hero__head,
 	.panel-head,

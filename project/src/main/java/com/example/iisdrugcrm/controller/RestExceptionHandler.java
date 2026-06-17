@@ -3,8 +3,10 @@ package com.example.iisdrugcrm.controller;
 import com.example.iisdrugcrm.exception.DuplicateUserException;
 import com.example.iisdrugcrm.exception.DuplicateTeamException;
 import com.example.iisdrugcrm.exception.InvalidPricelistThresholdException;
+import com.example.iisdrugcrm.exception.InvalidPricelistStatusTransitionException;
 import com.example.iisdrugcrm.exception.PricelistConflictException;
 import com.example.iisdrugcrm.exception.PricelistLockedException;
+import com.example.iisdrugcrm.exception.PricelistNotFoundException;
 import com.example.iisdrugcrm.exception.RegionConflictException;
 import com.example.iisdrugcrm.exception.RegionInUseException;
 import com.example.iisdrugcrm.exception.VariantNotFoundException;
@@ -49,6 +51,16 @@ public class RestExceptionHandler {
     @ExceptionHandler(InvalidPricelistThresholdException.class)
     public ResponseEntity<Map<String, String>> handleInvalidPricelistThreshold(InvalidPricelistThresholdException exception) {
         return ResponseEntity.badRequest().body(Map.of("error", exception.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidPricelistStatusTransitionException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidPricelistStatusTransition(InvalidPricelistStatusTransitionException exception) {
+        return ResponseEntity.badRequest().body(Map.of("error", exception.getMessage()));
+    }
+
+    @ExceptionHandler(PricelistNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handlePricelistNotFound(PricelistNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", exception.getMessage()));
     }
 
     @ExceptionHandler(PricelistConflictException.class)

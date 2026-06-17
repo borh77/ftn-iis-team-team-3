@@ -2,6 +2,7 @@ package com.example.iisdrugcrm.domain.pricelist;
 
 import com.example.iisdrugcrm.domain.PricelistStatus;
 import com.example.iisdrugcrm.domain.Region;
+import com.example.iisdrugcrm.exception.InvalidPricelistStatusTransitionException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -138,5 +139,45 @@ public class Pricelist {
         for (PricelistItem item : items) {
             item.validateThresholds();
         }
+    }
+
+    public void changeStatus(PricelistStatus targetStatus, String reason) {
+        if (targetStatus == null) {
+            throw invalidTransition("Target status is required.");
+        }
+        if (status == PricelistStatus.ARCHIVED) {
+            throw invalidTransition("Archived pricelists cannot change status.");
+        }
+        if (status == targetStatus) {
+            throw invalidTransition("Pricelist is already in " + targetStatus + " status.");
+        }
+
+        switch (status) {
+            case DRAFT -> {
+                if (targetStatus != PricelistStatus.IN_REVIEW) {
+                    throw invalidTransition("Pricelist can only be submitted for review from DRAFT status.");
+                }
+            }
+            case IN_REVIEW -> {
+                if (targetStatus == PricelistStatus.DRAFT && (reason == null || reason.isBlank())) {
+                    throw invalidTransition("Return to draft requires a reason.");
+                }
+                if (targetStatus != PricelistStatus.ACTIVE && targetStatus != PricelistStatus.DRAFT) {
+                    throw invalidTransition("Pricelists in review can only be activated or returned to draft.");
+                }
+            }
+            case ACTIVE -> {
+                if (targetStatus != PricelistStatus.ARCHIVED) {
+                    throw invalidTransition("Active pricelists can only be archived.");
+                }
+            }
+            default -> throw invalidTransition("Invalid pricelist status transition.");
+        }
+
+        this.status = targetStatus;
+    }
+
+    private InvalidPricelistStatusTransitionException invalidTransition(String message) {
+        return new InvalidPricelistStatusTransitionException(message);
     }
 }

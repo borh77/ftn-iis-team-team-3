@@ -5,10 +5,12 @@ import com.example.iisdrugcrm.domain.Region;
 import com.example.iisdrugcrm.domain.pricelist.Pricelist;
 import com.example.iisdrugcrm.domain.pricelist.PricelistItem;
 import com.example.iisdrugcrm.domain.pricelist.QuantityThreshold;
+import com.example.iisdrugcrm.dto.pricelist.ChangePricelistStatusDTO;
 import com.example.iisdrugcrm.dto.pricelist.CreatePricelistDTO;
 import com.example.iisdrugcrm.dto.pricelist.PricelistResponseDTO;
 import com.example.iisdrugcrm.exception.PricelistConflictException;
 import com.example.iisdrugcrm.exception.PricelistLockedException;
+import com.example.iisdrugcrm.exception.PricelistNotFoundException;
 import com.example.iisdrugcrm.exception.VariantNotFoundException;
 import com.example.iisdrugcrm.repository.PricelistRepository;
 import com.example.iisdrugcrm.repository.RegionRepository;
@@ -119,6 +121,29 @@ public class PricelistServiceImpl implements PricelistService {
                 .toList();
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto) {
+        Pricelist pricelist = pricelistRepository.findById(id)
+                .orElseThrow(() -> new PricelistNotFoundException("Pricelist not found"));
+
+        if (pricelist.getStatus() == PricelistStatus.IN_REVIEW && dto.getTargetStatus() == PricelistStatus.ACTIVE) {
+            lockExistingPricelists(pricelist.getRegion().getId(), pricelist.getCustomerSegment());
+            validateNoBlockingOverlapExcludingCurrent(pricelist);
+        }
+
+        PricelistStatus previousStatus = pricelist.getStatus();
+        pricelist.changeStatus(dto.getTargetStatus(), dto.getReason());
+
+        if (previousStatus == PricelistStatus.IN_REVIEW && dto.getTargetStatus() == PricelistStatus.DRAFT) {
+            LOGGER.info("Pricelist {} returned to DRAFT. Reason: {}", pricelist.getId(), dto.getReason().trim());
+        }
+
+        Pricelist saved = pricelistRepository.save(pricelist);
+        LOGGER.info("Changed pricelist {} status from {} to {}", saved.getId(), previousStatus, saved.getStatus());
+        return PricelistResponseDTO.fromEntity(saved);
+    }
+
     private void lockExistingPricelists(Long regionId, String customerSegment) {
         try {
             pricelistRepository.lockByRegionAndCustomerSegment(regionId, customerSegment);
@@ -144,6 +169,27 @@ public class PricelistServiceImpl implements PricelistService {
         Pricelist conflict = conflicts.get(0);
         throw new PricelistConflictException(
                 "Cenovnik za region [" + region.getName() + "] i segment [" + customerSegment
+                        + "] vec postoji u periodu [" + conflict.getPeriodStart().toLocalDate()
+                        + " - " + conflict.getPeriodEnd().toLocalDate() + "]."
+        );
+    }
+
+    private void validateNoBlockingOverlapExcludingCurrent(Pricelist pricelist) {
+        List<Pricelist> conflicts = pricelistRepository.findOverlappingBlockingPricelistsExcludingCurrent(
+                pricelist.getRegion().getId(),
+                pricelist.getCustomerSegment(),
+                pricelist.getPeriodStart(),
+                pricelist.getPeriodEnd(),
+                BLOCKING_STATUSES,
+                pricelist.getId()
+        );
+        if (conflicts.isEmpty()) {
+            return;
+        }
+
+        Pricelist conflict = conflicts.get(0);
+        throw new PricelistConflictException(
+                "Cenovnik za region [" + pricelist.getRegion().getName() + "] i segment [" + pricelist.getCustomerSegment()
                         + "] vec postoji u periodu [" + conflict.getPeriodStart().toLocalDate()
                         + " - " + conflict.getPeriodEnd().toLocalDate() + "]."
         );

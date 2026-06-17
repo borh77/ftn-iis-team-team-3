@@ -13,6 +13,14 @@
 </section>
 
 <section class="panel">
+  @if (errorMessage) {
+    <p class="error-box">{{ errorMessage }}</p>
+  }
+
+  @if (successMessage) {
+    <p class="success-box">{{ successMessage }}</p>
+  }
+
   @if (loading) {
     <p class="muted">Loading pricelists...</p>
   } @else if (!pricelists.length) {
@@ -26,7 +34,7 @@
               <p class="kicker">Pricelist</p>
               <h3>#{{ p.id }} · {{ p.regionName }}</h3>
             </div>
-            <span class="status-badge">{{ p.status }}</span>
+            <span class="status-badge">{{ statusLabel(p.status) }}</span>
           </div>
 
           <dl class="pricelist-meta">
@@ -69,6 +77,32 @@
               }
             } @else {
               <p class="muted">This pricelist has no items yet.</p>
+            }
+          </div>
+
+          <div class="status-actions">
+            @if (canSubmitForReview(p)) {
+              <button type="button" class="secondary" (click)="submitForReview(p)" [disabled]="isChanging(p)">
+                {{ isChanging(p) ? 'Updating...' : 'Submit for review' }}
+              </button>
+            }
+
+            @if (canActivate(p)) {
+              <button type="button" class="primary" (click)="activate(p)" [disabled]="isChanging(p)">
+                {{ isChanging(p) ? 'Updating...' : 'Activate' }}
+              </button>
+            }
+
+            @if (canReturnToDraft(p)) {
+              <button type="button" class="secondary" (click)="returnToDraft(p)" [disabled]="isChanging(p)">
+                {{ isChanging(p) ? 'Updating...' : 'Return to draft' }}
+              </button>
+            }
+
+            @if (canArchive(p)) {
+              <button type="button" class="ghost" (click)="archive(p)" [disabled]="isChanging(p)">
+                {{ isChanging(p) ? 'Updating...' : 'Archive' }}
+              </button>
             }
           </div>
         </article>

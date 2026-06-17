@@ -49,4 +49,25 @@ public interface PricelistRepository extends JpaRepository<Pricelist, Long> {
             @Param("periodEnd") OffsetDateTime periodEnd,
             @Param("blockingStatuses") List<PricelistStatus> blockingStatuses
     );
+
+    @Query("""
+            select p
+            from Pricelist p
+            join fetch p.region r
+            where r.id = :regionId
+              and lower(p.customerSegment) = lower(:customerSegment)
+              and p.status in :blockingStatuses
+              and p.id <> :excludedPricelistId
+              and p.periodStart < :periodEnd
+              and p.periodEnd > :periodStart
+            order by p.periodStart asc
+            """)
+    List<Pricelist> findOverlappingBlockingPricelistsExcludingCurrent(
+            @Param("regionId") Long regionId,
+            @Param("customerSegment") String customerSegment,
+            @Param("periodStart") OffsetDateTime periodStart,
+            @Param("periodEnd") OffsetDateTime periodEnd,
+            @Param("blockingStatuses") List<PricelistStatus> blockingStatuses,
+            @Param("excludedPricelistId") Long excludedPricelistId
+    );
 }
