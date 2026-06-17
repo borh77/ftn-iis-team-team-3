@@ -76,11 +76,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<UserResponseDTO> getAll(Pageable pageable) {
         return userRepository.findAll(pageable).map(UserResponseDTO::fromEntity);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserResponseDTO getProfile(String username) {
         return UserResponseDTO.fromEntity(getUser(username));
     }
