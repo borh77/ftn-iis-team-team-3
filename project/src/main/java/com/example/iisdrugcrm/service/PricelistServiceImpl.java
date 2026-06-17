@@ -5,6 +5,7 @@ import com.example.iisdrugcrm.domain.Region;
 import com.example.iisdrugcrm.domain.pricelist.Pricelist;
 import com.example.iisdrugcrm.domain.pricelist.PricelistItem;
 import com.example.iisdrugcrm.domain.pricelist.QuantityThreshold;
+import com.example.iisdrugcrm.dto.pricelist.CatalogVariantDTO;
 import com.example.iisdrugcrm.dto.pricelist.ChangePricelistStatusDTO;
 import com.example.iisdrugcrm.dto.pricelist.CreatePricelistDTO;
 import com.example.iisdrugcrm.dto.pricelist.PricelistResponseDTO;
@@ -106,7 +107,7 @@ public class PricelistServiceImpl implements PricelistService {
 
         Pricelist saved = pricelistRepository.save(pricelist);
         LOGGER.info("Created pricelist {} for region {} and customer segment {}", saved.getId(), region.getId(), saved.getCustomerSegment());
-        return PricelistResponseDTO.fromEntity(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -160,14 +161,14 @@ public class PricelistServiceImpl implements PricelistService {
 
         Pricelist saved = pricelistRepository.save(newVersion);
         LOGGER.info("Created draft version {} from pricelist {}", saved.getId(), source.getId());
-        return PricelistResponseDTO.fromEntity(saved);
+        return toResponse(saved);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<PricelistResponseDTO> listCenovnici() {
         return pricelistRepository.findAllByOrderByIdDesc().stream()
-                .map(PricelistResponseDTO::fromEntity)
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -175,7 +176,7 @@ public class PricelistServiceImpl implements PricelistService {
     @Transactional(readOnly = true)
     public List<PricelistResponseDTO> listCenovniciForUser(Long currentUserId) {
         return pricelistRepository.findAllByCreatedByOrderByIdDesc(currentUserId).stream()
-                .map(pricelist -> PricelistResponseDTO.fromEntity(pricelist, currentUserId, true))
+                .map(pricelist -> toResponse(pricelist, currentUserId, true))
                 .toList();
     }
 
@@ -184,7 +185,7 @@ public class PricelistServiceImpl implements PricelistService {
     public List<PricelistResponseDTO> listTeamCenovniciForUser(Long currentUserId) {
         Set<Long> accessibleCreatorIds = accessService.accessibleCreatorIds(currentUserId);
         return pricelistRepository.findAllByCreatedByInOrderByIdDesc(accessibleCreatorIds).stream()
-                .map(pricelist -> PricelistResponseDTO.fromEntity(pricelist, currentUserId, accessService.canCollaborate(pricelist, currentUserId)))
+                .map(pricelist -> toResponse(pricelist, currentUserId, accessService.canCollaborate(pricelist, currentUserId)))
                 .toList();
     }
 
@@ -206,6 +207,10 @@ public class PricelistServiceImpl implements PricelistService {
     }
 
     private PricelistResponseDTO changeStatus(Pricelist pricelist, ChangePricelistStatusDTO dto) {
+        if ((pricelist.getStatus() == PricelistStatus.DRAFT && dto.getTargetStatus() == PricelistStatus.IN_REVIEW)
+                || (pricelist.getStatus() == PricelistStatus.IN_REVIEW && dto.getTargetStatus() == PricelistStatus.ACTIVE)) {
+            validateAllVariantsActive(pricelist);
+        }
         if (pricelist.getStatus() == PricelistStatus.IN_REVIEW && dto.getTargetStatus() == PricelistStatus.ACTIVE) {
             lockExistingPricelists(pricelist.getRegion().getId(), pricelist.getCustomerSegment());
             validateNoBlockingOverlapExcludingCurrent(pricelist);
@@ -220,7 +225,39 @@ public class PricelistServiceImpl implements PricelistService {
 
         Pricelist saved = pricelistRepository.save(pricelist);
         LOGGER.info("Changed pricelist {} status from {} to {}", saved.getId(), previousStatus, saved.getStatus());
-        return PricelistResponseDTO.fromEntity(saved);
+        return toResponse(saved);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PricelistResponseDTO replaceItemVariant(Long pricelistId, Long itemId, Long replacementVariantId, Long currentUserId) {
+        Pricelist pricelist = pricelistRepository.findById(pricelistId)
+                .orElseThrow(() -> new PricelistNotFoundException("Pricelist not found"));
+        accessService.validateOwnerOrTeamMember(pricelist, currentUserId);
+        if (pricelist.getStatus() != PricelistStatus.DRAFT) {
+            throw new IllegalArgumentException("Only draft pricelists can replace withdrawn variants.");
+        }
+
+        PricelistItem item = pricelist.getItems().stream()
+                .filter(candidate -> itemId.equals(candidate.getId()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Pricelist item not found."));
+
+        boolean duplicate = pricelist.getItems().stream()
+                .anyMatch(candidate -> !itemId.equals(candidate.getId()) && replacementVariantId.equals(candidate.getVariantId()));
+        if (duplicate) {
+            throw new IllegalArgumentException("Selected replacement variant already exists in this pricelist.");
+        }
+
+        Map<Long, CatalogVariantDTO> activeVariants = catalogService.findActiveVariantsByIds(List.of(replacementVariantId));
+        CatalogVariantDTO replacement = activeVariants.get(replacementVariantId);
+        if (replacement == null || !replacement.isActive()) {
+            throw new IllegalArgumentException("Selected replacement variant is not active.");
+        }
+
+        item.setVariantId(replacement.getId());
+        item.setVariantName(replacement.getName());
+        return toResponse(pricelistRepository.save(pricelist), currentUserId, accessService.canCollaborate(pricelist, currentUserId));
     }
 
     private void lockExistingPricelists(Long regionId, String customerSegment) {
@@ -251,6 +288,33 @@ public class PricelistServiceImpl implements PricelistService {
                         + "] vec postoji u periodu [" + conflict.getPeriodStart().toLocalDate()
                         + " - " + conflict.getPeriodEnd().toLocalDate() + "]."
         );
+    }
+
+    private void validateAllVariantsActive(Pricelist pricelist) {
+        List<Long> variantIds = pricelist.getItems().stream()
+                .map(PricelistItem::getVariantId)
+                .distinct()
+                .toList();
+        Map<Long, CatalogVariantDTO> activeVariants = catalogService.findActiveVariantsByIds(variantIds);
+        if (variantIds.stream().anyMatch(variantId -> !activeVariants.containsKey(variantId))) {
+            throw new IllegalArgumentException("Pricelist contains inactive catalog variants. Replace them before continuing.");
+        }
+    }
+
+    private PricelistResponseDTO toResponse(Pricelist pricelist) {
+        return PricelistResponseDTO.fromEntity(pricelist, activeVariantsFor(pricelist));
+    }
+
+    private PricelistResponseDTO toResponse(Pricelist pricelist, Long currentUserId, boolean canCollaborate) {
+        return PricelistResponseDTO.fromEntity(pricelist, currentUserId, canCollaborate, activeVariantsFor(pricelist));
+    }
+
+    private Map<Long, CatalogVariantDTO> activeVariantsFor(Pricelist pricelist) {
+        List<Long> variantIds = pricelist.getItems().stream()
+                .map(PricelistItem::getVariantId)
+                .distinct()
+                .toList();
+        return catalogService.findActiveVariantsByIds(variantIds);
     }
 
     private void validateNoBlockingOverlapExcludingCurrent(Pricelist pricelist) {

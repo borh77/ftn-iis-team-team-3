@@ -8,6 +8,9 @@ export interface PricelistItem {
   id?: number;
   variantId: number;
   variantName: string;
+  activeVariant: boolean;
+  replacementRequired: boolean;
+  catalogAvailable: boolean;
   thresholds: QuantityThreshold[];
 }
 

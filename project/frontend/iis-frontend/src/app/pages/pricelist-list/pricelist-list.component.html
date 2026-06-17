@@ -62,12 +62,18 @@
 
           <div class="pricelist-items">
             <h4>Items</h4>
+            @if (requiresReplacement(p)) {
+              <p class="error-box">This pricelist contains inactive catalog variants.</p>
+            }
             @if (p.items && p.items.length) {
               @for (item of p.items; track item.variantId) {
                 <div class="pricelist-item">
                   <div class="pricelist-item__title">
                     <strong>{{ item.variantName }}</strong>
                     <span class="muted">Variant ID: {{ item.variantId }}</span>
+                    @if (item.replacementRequired) {
+                      <span class="status-badge">Inactive variant</span>
+                    }
                   </div>
                   <ul class="threshold-list">
                     @for (threshold of item.thresholds; track threshold.quantityFrom + '-' + (threshold.quantityTo ?? 'open')) {
@@ -77,6 +83,26 @@
                       </li>
                     }
                   </ul>
+                  @if (item.replacementRequired) {
+                    @if (canReplaceVariants(p)) {
+                      <div class="offer-form">
+                        <label>
+                          <span>Replacement variant</span>
+                          <select [(ngModel)]="replacementVariantIds[item.id!]" [ngModelOptions]="{standalone: true}">
+                            <option [ngValue]="null">Select active variant</option>
+                            @for (variant of activeVariants; track variant.id) {
+                              <option [ngValue]="variant.id">{{ variant.name }}</option>
+                            }
+                          </select>
+                        </label>
+                        <button type="button" class="secondary" (click)="replaceVariant(p, item)" [disabled]="isReplacing(item)">
+                          {{ isReplacing(item) ? 'Replacing...' : 'Replace variant' }}
+                        </button>
+                      </div>
+                    } @else {
+                      <p class="muted">Create a new draft version before replacing inactive variants.</p>
+                    }
+                  }
                 </div>
               }
             } @else {

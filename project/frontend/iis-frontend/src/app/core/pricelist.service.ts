@@ -32,4 +32,10 @@ export class PricelistService {
   createNewVersion(id: number): Observable<Pricelist> {
     return this.http.post<Pricelist>(`${this.apiBaseUrl}/api/pricelists/${id}/versions`, {});
   }
+
+  replaceVariant(pricelistId: number, itemId: number, replacementVariantId: number): Observable<Pricelist> {
+    return this.http.put<Pricelist>(`${this.apiBaseUrl}/api/pricelists/${pricelistId}/items/${itemId}/replace-variant`, {
+      replacementVariantId,
+    });
+  }
 }

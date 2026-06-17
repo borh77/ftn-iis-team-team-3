@@ -3,9 +3,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PricelistService } from '../../core/pricelist.service';
-import { Pricelist } from '../../core/pricelist.models';
+import { Pricelist, PricelistItem } from '../../core/pricelist.models';
 import { SpecialOfferService } from '../../core/special-offer.service';
 import { DiscountType, SpecialOffer } from '../../core/special-offer.models';
+import { CatalogService } from '../../core/catalog.service';
+import { CatalogVariant } from '../../core/catalog.model';
 
 @Component({
   selector: 'app-pricelist-list',
@@ -17,6 +19,7 @@ import { DiscountType, SpecialOffer } from '../../core/special-offer.models';
 export class PricelistListComponent implements OnInit {
   private readonly service = inject(PricelistService);
   private readonly offerService = inject(SpecialOfferService);
+  private readonly catalogService = inject(CatalogService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   loading = false;
@@ -30,8 +33,12 @@ export class PricelistListComponent implements OnInit {
   offerForms: Record<number, OfferForm> = {};
   loadingOffersId: number | null = null;
   changingOfferId: number | null = null;
+  replacingItemId: number | null = null;
+  replacementVariantIds: Record<number, number | null> = {};
+  activeVariants: CatalogVariant[] = [];
 
   ngOnInit(): void {
+    this.loadActiveVariants();
     this.load();
   }
 
@@ -78,6 +85,32 @@ export class PricelistListComponent implements OnInit {
     this.changeStatus(pricelist, 'ARCHIVED');
   }
 
+  replaceVariant(pricelist: Pricelist, item: PricelistItem): void {
+    if (!item.id) {
+      return;
+    }
+    const replacementVariantId = this.replacementVariantIds[item.id];
+    if (!replacementVariantId) {
+      this.errorMessage = 'Variant could not be replaced.';
+      return;
+    }
+    this.replacingItemId = item.id;
+    this.successMessage = '';
+    this.errorMessage = '';
+    this.service.replaceVariant(pricelist.id, item.id, Number(replacementVariantId)).subscribe({
+      next: () => {
+        this.replacingItemId = null;
+        this.successMessage = 'Variant was replaced.';
+        this.load();
+      },
+      error: (error) => {
+        this.replacingItemId = null;
+        this.errorMessage = this.replaceVariantErrorMessage(error);
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
   createNewVersion(pricelist: Pricelist): void {
     this.creatingVersionId = pricelist.id;
     this.successMessage = '';
@@ -121,6 +154,14 @@ export class PricelistListComponent implements OnInit {
     return pricelist.canManageOffers ?? this.canCollaborate(pricelist);
   }
 
+  canReplaceVariants(pricelist: Pricelist): boolean {
+    return pricelist.status === 'DRAFT' && this.canCollaborate(pricelist);
+  }
+
+  requiresReplacement(pricelist: Pricelist): boolean {
+    return pricelist.items.some((item) => item.replacementRequired);
+  }
+
   isOwner(pricelist: Pricelist): boolean {
     return pricelist.owner === true;
   }
@@ -139,6 +180,10 @@ export class PricelistListComponent implements OnInit {
 
   isCreatingVersion(pricelist: Pricelist): boolean {
     return this.creatingVersionId === pricelist.id;
+  }
+
+  isReplacing(item: PricelistItem): boolean {
+    return item.id != null && this.replacingItemId === item.id;
   }
 
   toggleOffers(pricelist: Pricelist): void {
@@ -220,6 +265,9 @@ export class PricelistListComponent implements OnInit {
         if (backend.includes('Only the owner')) {
           return 'Only the owner can change this pricelist status.';
         }
+        if (backend.includes('inactive catalog variants')) {
+          return 'Pricelist contains inactive catalog variants. Replace them before continuing.';
+        }
         return 'This status change is not allowed.';
       }
       if (error.status === 409) {
@@ -261,6 +309,35 @@ export class PricelistListComponent implements OnInit {
         this.cdr.detectChanges();
       },
     });
+  }
+
+  private loadActiveVariants(): void {
+    this.catalogService.listVariants().subscribe({
+      next: (variants) => {
+        this.activeVariants = variants;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.activeVariants = [];
+      },
+    });
+  }
+
+  private replaceVariantErrorMessage(error: unknown): string {
+    const backend = error instanceof HttpErrorResponse ? String(error.error?.error ?? '') : '';
+    if (backend.includes('Only draft')) {
+      return 'Only draft pricelists can replace withdrawn variants.';
+    }
+    if (backend.includes('not active')) {
+      return 'Selected replacement variant is not active.';
+    }
+    if (backend.includes('already exists')) {
+      return 'Selected replacement variant already exists in this pricelist.';
+    }
+    if (backend.includes('access')) {
+      return 'You do not have access to this pricelist.';
+    }
+    return 'Variant could not be replaced.';
   }
 
   private changeOfferStatus(offer: SpecialOffer, action: 'activate' | 'archive'): void {

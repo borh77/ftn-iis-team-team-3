@@ -7,6 +7,7 @@ import com.example.iisdrugcrm.domain.pricelist.QuantityThreshold;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 public class PricelistResponseDTO {
 
@@ -165,6 +166,10 @@ public class PricelistResponseDTO {
     }
 
     public static PricelistResponseDTO fromEntity(Pricelist pricelist) {
+        return fromEntity(pricelist, Map.of());
+    }
+
+    public static PricelistResponseDTO fromEntity(Pricelist pricelist, Map<Long, CatalogVariantDTO> activeVariantsById) {
         PricelistResponseDTO dto = new PricelistResponseDTO();
         dto.setId(pricelist.getId());
         dto.setRegionId(pricelist.getRegion().getId());
@@ -179,12 +184,12 @@ public class PricelistResponseDTO {
         dto.setCanCreateNewVersion(pricelist.getStatus() == PricelistStatus.IN_REVIEW || pricelist.getStatus() == PricelistStatus.ACTIVE);
         dto.setPeriodStart(pricelist.getPeriodStart());
         dto.setPeriodEnd(pricelist.getPeriodEnd());
-        dto.setItems(pricelist.getItems().stream().map(PricelistItemResponseDTO::fromEntity).toList());
+        dto.setItems(pricelist.getItems().stream().map(item -> PricelistItemResponseDTO.fromEntity(item, activeVariantsById)).toList());
         return dto;
     }
 
-    public static PricelistResponseDTO fromEntity(Pricelist pricelist, Long currentUserId, boolean canCollaborate) {
-        PricelistResponseDTO dto = fromEntity(pricelist);
+    public static PricelistResponseDTO fromEntity(Pricelist pricelist, Long currentUserId, boolean canCollaborate, Map<Long, CatalogVariantDTO> activeVariantsById) {
+        PricelistResponseDTO dto = fromEntity(pricelist, activeVariantsById);
         boolean owner = currentUserId != null
                 && pricelist.getCreatedBy() != null
                 && pricelist.getCreatedBy().equals(currentUserId);
@@ -199,6 +204,9 @@ public class PricelistResponseDTO {
         private Long id;
         private Long variantId;
         private String variantName;
+        private boolean activeVariant;
+        private boolean replacementRequired;
+        private boolean catalogAvailable;
         private List<QuantityThresholdResponseDTO> thresholds;
 
         public Long getId() {
@@ -225,6 +233,30 @@ public class PricelistResponseDTO {
             this.variantName = variantName;
         }
 
+        public boolean isActiveVariant() {
+            return activeVariant;
+        }
+
+        public void setActiveVariant(boolean activeVariant) {
+            this.activeVariant = activeVariant;
+        }
+
+        public boolean isReplacementRequired() {
+            return replacementRequired;
+        }
+
+        public void setReplacementRequired(boolean replacementRequired) {
+            this.replacementRequired = replacementRequired;
+        }
+
+        public boolean isCatalogAvailable() {
+            return catalogAvailable;
+        }
+
+        public void setCatalogAvailable(boolean catalogAvailable) {
+            this.catalogAvailable = catalogAvailable;
+        }
+
         public List<QuantityThresholdResponseDTO> getThresholds() {
             return thresholds;
         }
@@ -234,10 +266,18 @@ public class PricelistResponseDTO {
         }
 
         public static PricelistItemResponseDTO fromEntity(PricelistItem item) {
+            return fromEntity(item, Map.of());
+        }
+
+        public static PricelistItemResponseDTO fromEntity(PricelistItem item, Map<Long, CatalogVariantDTO> activeVariantsById) {
             PricelistItemResponseDTO dto = new PricelistItemResponseDTO();
             dto.setId(item.getId());
             dto.setVariantId(item.getVariantId());
             dto.setVariantName(item.getVariantName());
+            boolean active = activeVariantsById.containsKey(item.getVariantId());
+            dto.setActiveVariant(active);
+            dto.setCatalogAvailable(active);
+            dto.setReplacementRequired(!active);
             dto.setThresholds(item.getThresholds().stream().map(QuantityThresholdResponseDTO::fromEntity).toList());
             return dto;
         }

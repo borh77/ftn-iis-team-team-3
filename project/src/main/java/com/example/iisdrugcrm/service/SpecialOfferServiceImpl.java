@@ -26,11 +26,13 @@ public class SpecialOfferServiceImpl implements SpecialOfferService {
     private final SpecialOfferRepository specialOfferRepository;
     private final PricelistRepository pricelistRepository;
     private final PricelistAccessService accessService;
+    private final CatalogService catalogService;
 
-    public SpecialOfferServiceImpl(SpecialOfferRepository specialOfferRepository, PricelistRepository pricelistRepository, PricelistAccessService accessService) {
+    public SpecialOfferServiceImpl(SpecialOfferRepository specialOfferRepository, PricelistRepository pricelistRepository, PricelistAccessService accessService, CatalogService catalogService) {
         this.specialOfferRepository = specialOfferRepository;
         this.pricelistRepository = pricelistRepository;
         this.accessService = accessService;
+        this.catalogService = catalogService;
     }
 
     @Override
@@ -105,6 +107,9 @@ public class SpecialOfferServiceImpl implements SpecialOfferService {
         }
         validateDiscount(offer.getDiscountType(), offer.getDiscountValue());
         validateOfferPeriod(offer.getPricelist(), offer.getStartDate(), offer.getEndDate());
+        if (!catalogService.findActiveVariantsByIds(List.of(offer.getVariantId())).containsKey(offer.getVariantId())) {
+            throw new IllegalArgumentException("Special offer variant is no longer active.");
+        }
         PricelistItem item = findPricelistItemOrThrow(offer.getPricelist(), offer.getVariantId());
         BigDecimal basePrice = findBasePriceOrThrow(item);
         if (offer.getDiscountType() == DiscountType.FIXED_AMOUNT && offer.getDiscountValue().compareTo(basePrice) > 0) {

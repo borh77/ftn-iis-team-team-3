@@ -3,6 +3,7 @@ package com.example.iisdrugcrm.controller;
 import com.example.iisdrugcrm.dto.pricelist.ChangePricelistStatusDTO;
 import com.example.iisdrugcrm.dto.pricelist.CreatePricelistDTO;
 import com.example.iisdrugcrm.dto.pricelist.PricelistResponseDTO;
+import com.example.iisdrugcrm.dto.pricelist.ReplacePricelistItemVariantDTO;
 import com.example.iisdrugcrm.service.PricelistService;
 import com.example.iisdrugcrm.service.UserService;
 import org.springframework.security.core.Authentication;
@@ -65,5 +66,16 @@ public class PricelistController {
     public ResponseEntity<PricelistResponseDTO> createNewVersion(@PathVariable Long id, Authentication authentication) {
         Long currentUserId = userService.getUserIdByUsername(authentication.getName());
         return ResponseEntity.status(HttpStatus.CREATED).body(pricelistService.createNewVersion(id, currentUserId));
+    }
+
+    @PutMapping("/{pricelistId}/items/{itemId}/replace-variant")
+    public ResponseEntity<PricelistResponseDTO> replaceItemVariant(
+            @PathVariable Long pricelistId,
+            @PathVariable Long itemId,
+            @Valid @RequestBody ReplacePricelistItemVariantDTO dto,
+            Authentication authentication
+    ) {
+        Long currentUserId = userService.getUserIdByUsername(authentication.getName());
+        return ResponseEntity.ok(pricelistService.replaceItemVariant(pricelistId, itemId, dto.getReplacementVariantId(), currentUserId));
     }
 }

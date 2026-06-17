@@ -20,4 +20,6 @@ public interface PricelistService {
     PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto, Long currentUserId);
 
     PricelistResponseDTO createNewVersion(Long sourcePricelistId, Long currentUserId);
+
+    PricelistResponseDTO replaceItemVariant(Long pricelistId, Long itemId, Long replacementVariantId, Long currentUserId);
 }
