@@ -5,7 +5,6 @@ import com.example.iisdrugcrm.dto.portfolio.MarketLicenseHistoryResponseDTO;
 import com.example.iisdrugcrm.dto.portfolio.MarketLicenseRequestDTO;
 import com.example.iisdrugcrm.dto.portfolio.MarketLicenseResponseDTO;
 import com.example.iisdrugcrm.dto.portfolio.MarketLicenseStatusRequestDTO;
-import com.example.iisdrugcrm.dto.portfolio.MarketLicenseHistoryResponseDTO;
 
 import java.time.LocalDate;
 import java.util.List;

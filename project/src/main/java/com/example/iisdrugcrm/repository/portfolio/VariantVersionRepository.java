@@ -5,6 +5,8 @@ import com.example.iisdrugcrm.domain.portfolio.VariantVersionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import com.example.iisdrugcrm.dto.portfolio.VariantVersionStatusCountDTO;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -51,4 +53,14 @@ public interface VariantVersionRepository extends JpaRepository<VariantVersion, 
            OR LOWER(v.dosage) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
     """)
     List<VariantVersion> searchByTextWithRelations(String search);
+
+    @Query("""
+        SELECT new com.example.iisdrugcrm.dto.portfolio.VariantVersionStatusCountDTO(
+            vv.status,
+            COUNT(vv)
+        )
+        FROM VariantVersion vv
+        GROUP BY vv.status
+    """)
+    List<VariantVersionStatusCountDTO> countByStatus();
 }
