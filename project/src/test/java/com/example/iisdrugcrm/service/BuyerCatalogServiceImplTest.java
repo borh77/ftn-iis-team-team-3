@@ -7,8 +7,12 @@ import com.example.iisdrugcrm.domain.PricelistStatus;
 import com.example.iisdrugcrm.domain.pricelist.Pricelist;
 import com.example.iisdrugcrm.domain.pricelist.PricelistItem;
 import com.example.iisdrugcrm.domain.pricelist.QuantityThreshold;
+import com.example.iisdrugcrm.domain.pricelist.DiscountType;
+import com.example.iisdrugcrm.domain.pricelist.SpecialOffer;
+import com.example.iisdrugcrm.domain.pricelist.SpecialOfferStatus;
 import com.example.iisdrugcrm.dto.pricelist.BuyerCatalogDTO;
 import com.example.iisdrugcrm.repository.PricelistRepository;
+import com.example.iisdrugcrm.repository.SpecialOfferRepository;
 import com.example.iisdrugcrm.repository.UserRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -29,6 +33,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class BuyerCatalogServiceImplTest {
@@ -39,13 +44,17 @@ class BuyerCatalogServiceImplTest {
     @Mock
     private PricelistRepository pricelistRepository;
 
+    @Mock
+    private SpecialOfferRepository specialOfferRepository;
+
     private BuyerCatalogServiceImpl service;
     private Region serbia;
 
     @BeforeEach
     void setUp() {
-        service = new BuyerCatalogServiceImpl(userRepository, pricelistRepository);
+        service = new BuyerCatalogServiceImpl(userRepository, pricelistRepository, specialOfferRepository);
         serbia = region(1L, "Srbija", "RS");
+        lenient().when(specialOfferRepository.findActiveOffersForPricelist(any(), any())).thenReturn(List.of());
     }
 
     @Test
@@ -151,6 +160,48 @@ class BuyerCatalogServiceImplTest {
         assertEquals(3, item.getThresholds().size());
     }
 
+    @Test
+    void activePercentageOfferAppliesDiscountedPrice() {
+        User buyer = buyer("buyer", serbia, "Pharmacy chains");
+        Pricelist pricelist = pricelist(10L, PricelistStatus.ACTIVE, serbia, "Pharmacy chains");
+        when(userRepository.findByUsername("buyer")).thenReturn(Optional.of(buyer));
+        when(pricelistRepository.findActiveBuyerPricelists(eq(1L), eq("Pharmacy chains"), any())).thenReturn(List.of(pricelist));
+        when(specialOfferRepository.findActiveOffersForPricelist(eq(10L), any())).thenReturn(List.of(offer(pricelist, DiscountType.PERCENTAGE, "10.00", SpecialOfferStatus.ACTIVE)));
+
+        BuyerCatalogDTO.BuyerCatalogItemDTO item = service.getCatalogForBuyer("buyer").getItems().get(0);
+
+        assertEquals(new BigDecimal("90.00"), item.getDiscountedPrice());
+        assertEquals(true, item.isHasActiveOffer());
+    }
+
+    @Test
+    void activeFixedOfferAppliesDiscountedPriceAndDoesNotGoBelowZero() {
+        User buyer = buyer("buyer", serbia, "Pharmacy chains");
+        Pricelist pricelist = pricelist(10L, PricelistStatus.ACTIVE, serbia, "Pharmacy chains");
+        when(userRepository.findByUsername("buyer")).thenReturn(Optional.of(buyer));
+        when(pricelistRepository.findActiveBuyerPricelists(eq(1L), eq("Pharmacy chains"), any())).thenReturn(List.of(pricelist));
+        when(specialOfferRepository.findActiveOffersForPricelist(eq(10L), any())).thenReturn(List.of(offer(pricelist, DiscountType.FIXED_AMOUNT, "500.00", SpecialOfferStatus.ACTIVE)));
+
+        BuyerCatalogDTO.BuyerCatalogItemDTO item = service.getCatalogForBuyer("buyer").getItems().get(0);
+
+        assertEquals(new BigDecimal("0.00"), item.getDiscountedPrice());
+        assertEquals(true, item.isHasActiveOffer());
+    }
+
+    @Test
+    void draftExpiredAndArchivedOffersAreIgnoredByRepositoryLookup() {
+        User buyer = buyer("buyer", serbia, "Pharmacy chains");
+        Pricelist pricelist = pricelist(10L, PricelistStatus.ACTIVE, serbia, "Pharmacy chains");
+        when(userRepository.findByUsername("buyer")).thenReturn(Optional.of(buyer));
+        when(pricelistRepository.findActiveBuyerPricelists(eq(1L), eq("Pharmacy chains"), any())).thenReturn(List.of(pricelist));
+        when(specialOfferRepository.findActiveOffersForPricelist(eq(10L), any())).thenReturn(List.of());
+
+        BuyerCatalogDTO.BuyerCatalogItemDTO item = service.getCatalogForBuyer("buyer").getItems().get(0);
+
+        assertEquals(false, item.isHasActiveOffer());
+        assertNull(item.getDiscountedPrice());
+    }
+
     private User buyer(String username, Region region, String customerSegment) {
         User user = new User();
         user.setUsername(username);
@@ -188,6 +239,17 @@ class BuyerCatalogServiceImplTest {
         threshold.setQuantityTo(quantityTo);
         threshold.setPrice(new BigDecimal(price));
         return threshold;
+    }
+
+    private SpecialOffer offer(Pricelist pricelist, DiscountType type, String value, SpecialOfferStatus status) {
+        SpecialOffer offer = new SpecialOffer();
+        offer.setPricelist(pricelist);
+        offer.setVariantId(101L);
+        offer.setVariantName("Medicine A 10mg");
+        offer.setDiscountType(type);
+        offer.setDiscountValue(new BigDecimal(value));
+        offer.setStatus(status);
+        return offer;
     }
 
     private Region region(Long id, String name, String code) {
