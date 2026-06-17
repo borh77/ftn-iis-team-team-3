@@ -14,6 +14,7 @@ import { LeadsListComponent } from './features/sales/pages/leads-list/leads-list
 import { CustomersListComponent } from './features/sales/pages/customers-list/customers-list.component';
 import { ProcessesListComponent } from './features/sales/pages/processes-list/processes-list.component';
 import { CommunicationsListComponent } from './features/sales/pages/communications-list/communications-list.component';
+import { OffersListComponent } from './features/sales/pages/offers-list/offers-list.component';
 
 export const routes: Routes = [
 	{ path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -147,6 +148,19 @@ export const routes: Routes = [
 		  ],
 		},
 		title: 'IIS Drug CRM | Communications',
+	},
+	{
+		path: 'sales/offers',
+		component: OffersListComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: {
+			roles: [
+			'ROLE_SALES_REPRESENTATIVE',
+			'ROLE_ACCOUNT_MANAGER',
+			'ROLE_SALES_MANAGER',
+			],
+		},
+		title: 'IIS Drug CRM | Offers',
 	},
 	{ path: '**', redirectTo: 'login' },
 ];
