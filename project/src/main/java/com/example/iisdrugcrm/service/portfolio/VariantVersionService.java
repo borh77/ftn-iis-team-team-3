@@ -5,6 +5,8 @@ import com.example.iisdrugcrm.dto.portfolio.VariantVersionRequestDTO;
 import com.example.iisdrugcrm.dto.portfolio.VariantVersionResponseDTO;
 import com.example.iisdrugcrm.dto.portfolio.VariantVersionStatusRequestDTO;
 
+import com.example.iisdrugcrm.dto.portfolio.VariantVersionLifecycleHistoryResponseDTO;
+
 import java.util.List;
 
 public interface VariantVersionService {
@@ -20,4 +22,6 @@ public interface VariantVersionService {
     VariantVersionResponseDTO update(Long id, VariantVersionRequestDTO dto);
 
     VariantVersionResponseDTO changeStatus(Long id, VariantVersionStatusRequestDTO dto);
+
+    List<VariantVersionLifecycleHistoryResponseDTO> getHistory(Long variantVersionId);
 }

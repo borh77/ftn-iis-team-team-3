@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.example.iisdrugcrm.dto.portfolio.VariantVersionLifecycleHistoryResponseDTO;
+
 import java.util.List;
 
 @RestController
@@ -56,5 +58,10 @@ public class VariantVersionController {
             @Valid @RequestBody VariantVersionStatusRequestDTO dto
     ) {
         return variantVersionService.changeStatus(id, dto);
+    }
+
+    @GetMapping("/{id}/history")
+    public List<VariantVersionLifecycleHistoryResponseDTO> getHistory(@PathVariable Long id) {
+        return variantVersionService.getHistory(id);
     }
 }

@@ -5,6 +5,8 @@ import com.example.iisdrugcrm.domain.portfolio.Product;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import com.example.iisdrugcrm.dto.portfolio.ProductCountByTherapeuticAreaDTO;
+
 import java.util.List;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
@@ -67,4 +69,19 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         JOIN FETCH p.therapeuticArea ta
     """)
     List<Product> findAllWithRelations();
+
+    @Query("""
+        SELECT new com.example.iisdrugcrm.dto.portfolio.ProductCountByTherapeuticAreaDTO(
+            ta.id,
+            ta.name,
+            COUNT(p)
+        )
+        FROM Product p
+        JOIN p.therapeuticArea ta
+        WHERE p.status = com.example.iisdrugcrm.domain.portfolio.EntityStatus.ACTIVE
+        GROUP BY ta.id, ta.name
+        ORDER BY COUNT(p) DESC
+    """)
+    List<ProductCountByTherapeuticAreaDTO> countActiveProductsByTherapeuticArea();
+
 }
