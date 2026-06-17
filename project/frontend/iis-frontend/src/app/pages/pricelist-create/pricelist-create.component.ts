@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AbstractControl, FormArray, ReactiveFormsModule, UntypedFormArray, UntypedFormBuilder, UntypedFormControl, UntypedFormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Region } from '../../core/region.model';
@@ -180,7 +181,7 @@ export class PricelistCreateComponent implements OnInit {
     this.pricelistService.create(payload).subscribe({
       next: () => {
         this.saving = false;
-        this.successMessage = 'Cenovnik je uspešno kreiran u DRAFT statusu.';
+        this.successMessage = 'Pricelist was successfully created in DRAFT status.';
         this.form.reset({
           regionId: null,
           customerSegment: '',
@@ -196,10 +197,34 @@ export class PricelistCreateComponent implements OnInit {
       },
       error: (error) => {
         this.saving = false;
-        const message = error?.error?.error ?? 'Kreiranje cenovnika nije uspelo.';
-        this.errorMessage = message;
+        if (error instanceof HttpErrorResponse) {
+          this.errorMessage = this.createErrorMessage(error);
+        } else {
+          this.errorMessage = 'Pricelist creation failed.';
+        }
       },
     });
+  }
+
+  private createErrorMessage(error: HttpErrorResponse): string {
+    if (error.status === 409) {
+      const backendMessage = typeof error.error?.error === 'string' ? error.error.error.trim() : '';
+      return this.isEnglishMessage(backendMessage)
+        ? backendMessage
+        : 'A conflict exists with an already existing pricelist.';
+    }
+    if (error.status === 400) {
+      return 'Invalid quantity thresholds. Check gaps, overlaps, and discount prices.';
+    }
+    if (error.status === 422) {
+      return 'Some selected medicine variants do not exist or are not active.';
+    }
+    return 'Pricelist creation failed.';
+  }
+
+  private isEnglishMessage(message: string): boolean {
+    const serbianTerms = /\b(cenovnik|postoji|pokusajte|izabrani|vec|već|periodu|pragovi|varijantu)\b/i;
+    return message.length > 0 && !serbianTerms.test(message);
   }
 
   private loadRegions(): void {
@@ -283,7 +308,7 @@ export class PricelistCreateComponent implements OnInit {
       return '';
     }
     if (control.hasError('required')) {
-      return 'Polje je obavezno.';
+      return 'This field is required.';
     }
     return '';
   }
@@ -294,10 +319,10 @@ export class PricelistCreateComponent implements OnInit {
       return '';
     }
     if (control.hasError('required')) {
-      return 'Polje je obavezno.';
+      return 'This field is required.';
     }
     if (control.hasError('min')) {
-      return controlName === 'price' ? 'Cena mora biti veća od nule.' : 'Vrednost mora biti veća od nule.';
+      return controlName === 'price' ? 'Price must be greater than zero.' : 'Value must be greater than zero.';
     }
     return '';
   }
@@ -308,7 +333,7 @@ export class PricelistCreateComponent implements OnInit {
     }
 
     if (this.form.hasError('periodOrder')) {
-      return 'Period od mora biti strogo manji od perioda do.';
+      return 'Start period must be strictly before end period.';
     }
 
     return '';

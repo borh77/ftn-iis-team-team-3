@@ -20,7 +20,7 @@
           }
         </select>
         @if (form.controls['regionId'].touched && form.controls['regionId'].hasError('required')) {
-          <small class="field-error">Region is required.</small>
+          <small class="field-error">This field is required.</small>
         }
       </label>
 
@@ -28,7 +28,7 @@
         <span>Customer segment</span>
         <input type="text" formControlName="customerSegment" placeholder="Pharmacy chains" />
         @if (form.controls['customerSegment'].touched && form.controls['customerSegment'].hasError('required')) {
-          <small class="field-error">Customer segment is required.</small>
+          <small class="field-error">This field is required.</small>
         }
       </label>
 
@@ -36,7 +36,7 @@
         <span>Currency</span>
         <input type="text" formControlName="currency" placeholder="RSD" maxlength="3" />
         @if (form.controls['currency'].touched && form.controls['currency'].hasError('required')) {
-          <small class="field-error">Currency is required.</small>
+          <small class="field-error">This field is required.</small>
         }
         @if (form.controls['currency'].touched && form.controls['currency'].hasError('pattern')) {
           <small class="field-error">Currency must use ISO 4217 format, for example RSD or EUR.</small>

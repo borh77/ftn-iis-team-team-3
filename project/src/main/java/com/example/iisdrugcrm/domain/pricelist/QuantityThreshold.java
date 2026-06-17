@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 public class QuantityThreshold {
 
     @Column(name = "quantity_from", nullable = false)
-    private int quantityFrom;
+    private Integer quantityFrom;
 
     @Column(name = "quantity_to")
     private Integer quantityTo;
@@ -16,11 +16,11 @@ public class QuantityThreshold {
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal price;
 
-    public int getQuantityFrom() {
+    public Integer getQuantityFrom() {
         return quantityFrom;
     }
 
-    public void setQuantityFrom(int quantityFrom) {
+    public void setQuantityFrom(Integer quantityFrom) {
         this.quantityFrom = quantityFrom;
     }
 

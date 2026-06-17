@@ -133,4 +133,10 @@ public class Pricelist {
         item.setPricelist(this);
         this.items.add(item);
     }
+
+    public void validateThresholds() {
+        for (PricelistItem item : items) {
+            item.validateThresholds();
+        }
+    }
 }
