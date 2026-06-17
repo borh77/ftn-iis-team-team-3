@@ -128,7 +128,7 @@ export class PricelistListComponent implements OnInit {
         this.loadOffers(pricelist.id);
       },
       error: (error) => {
-        this.errorMessage = this.offerErrorMessage(error);
+        this.errorMessage = this.offerErrorMessage(error, 'create');
       },
     });
   }
@@ -211,12 +211,12 @@ export class PricelistListComponent implements OnInit {
       },
       error: (error) => {
         this.changingOfferId = null;
-        this.errorMessage = this.offerErrorMessage(error);
+        this.errorMessage = this.offerErrorMessage(error, action);
       },
     });
   }
 
-  private offerErrorMessage(error: unknown): string {
+  private offerErrorMessage(error: unknown, action: 'create' | 'activate' | 'archive'): string {
     const backend = error instanceof HttpErrorResponse ? String(error.error?.error ?? '') : '';
     if (backend.includes('Discount value')) {
       return 'Discount value is invalid.';
@@ -226,6 +226,15 @@ export class PricelistListComponent implements OnInit {
     }
     if (backend.includes('variant')) {
       return 'Selected variant is not part of this pricelist.';
+    }
+    if (backend.includes('reduce price below zero')) {
+      return 'Discount cannot reduce price below zero.';
+    }
+    if (backend.includes('Base price')) {
+      return 'Base price could not be determined.';
+    }
+    if (action === 'activate') {
+      return 'Offer could not be activated.';
     }
     return 'Offer could not be created.';
   }

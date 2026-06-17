@@ -5,6 +5,7 @@ import com.example.iisdrugcrm.domain.Region;
 import com.example.iisdrugcrm.domain.pricelist.DiscountType;
 import com.example.iisdrugcrm.domain.pricelist.Pricelist;
 import com.example.iisdrugcrm.domain.pricelist.PricelistItem;
+import com.example.iisdrugcrm.domain.pricelist.QuantityThreshold;
 import com.example.iisdrugcrm.domain.pricelist.SpecialOffer;
 import com.example.iisdrugcrm.domain.pricelist.SpecialOfferStatus;
 import com.example.iisdrugcrm.dto.pricelist.CreateSpecialOfferDTO;
@@ -13,6 +14,7 @@ import com.example.iisdrugcrm.repository.SpecialOfferRepository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -96,8 +98,20 @@ class SpecialOfferServiceImplTest {
     }
 
     @Test
-    void draftToActiveOfferSucceeds() {
+    void validPercentageOfferActivates() {
         SpecialOffer offer = offer(SpecialOfferStatus.DRAFT);
+        when(specialOfferRepository.findById(5L)).thenReturn(Optional.of(offer));
+
+        service.activateOffer(5L, 99L);
+
+        assertEquals(SpecialOfferStatus.ACTIVE, offer.getStatus());
+    }
+
+    @Test
+    void validFixedAmountOfferActivates() {
+        SpecialOffer offer = offer(SpecialOfferStatus.DRAFT);
+        offer.setDiscountType(DiscountType.FIXED_AMOUNT);
+        offer.setDiscountValue(new BigDecimal("50.00"));
         when(specialOfferRepository.findById(5L)).thenReturn(Optional.of(offer));
 
         service.activateOffer(5L, 99L);
@@ -126,12 +140,82 @@ class SpecialOfferServiceImplTest {
     }
 
     @Test
+    void activationFailsIfPercentageDiscountIsGreaterThan100() {
+        SpecialOffer offer = offer(SpecialOfferStatus.DRAFT);
+        offer.setDiscountValue(new BigDecimal("101.00"));
+        when(specialOfferRepository.findById(5L)).thenReturn(Optional.of(offer));
+
+        assertThrows(IllegalArgumentException.class, () -> service.activateOffer(5L, 99L));
+        assertEquals(SpecialOfferStatus.DRAFT, offer.getStatus());
+    }
+
+    @Test
+    void activationFailsIfDiscountValueIsNotPositive() {
+        SpecialOffer offer = offer(SpecialOfferStatus.DRAFT);
+        offer.setDiscountValue(BigDecimal.ZERO);
+        when(specialOfferRepository.findById(5L)).thenReturn(Optional.of(offer));
+
+        assertThrows(IllegalArgumentException.class, () -> service.activateOffer(5L, 99L));
+        assertEquals(SpecialOfferStatus.DRAFT, offer.getStatus());
+    }
+
+    @Test
+    void activationFailsIfFixedDiscountIsGreaterThanBasePrice() {
+        SpecialOffer offer = offer(SpecialOfferStatus.DRAFT);
+        offer.setDiscountType(DiscountType.FIXED_AMOUNT);
+        offer.setDiscountValue(new BigDecimal("150.00"));
+        when(specialOfferRepository.findById(5L)).thenReturn(Optional.of(offer));
+
+        assertThrows(IllegalArgumentException.class, () -> service.activateOffer(5L, 99L));
+        assertEquals(SpecialOfferStatus.DRAFT, offer.getStatus());
+    }
+
+    @Test
+    void activationFailsIfSelectedItemHasNoThresholds() {
+        pricelist.getItems().get(0).setThresholds(List.of());
+        SpecialOffer offer = offer(SpecialOfferStatus.DRAFT);
+        when(specialOfferRepository.findById(5L)).thenReturn(Optional.of(offer));
+
+        assertThrows(IllegalArgumentException.class, () -> service.activateOffer(5L, 99L));
+        assertEquals(SpecialOfferStatus.DRAFT, offer.getStatus());
+    }
+
+    @Test
+    void activationFailsIfSelectedVariantNoLongerExistsInPricelist() {
+        pricelist.setItems(List.of());
+        SpecialOffer offer = offer(SpecialOfferStatus.DRAFT);
+        when(specialOfferRepository.findById(5L)).thenReturn(Optional.of(offer));
+
+        assertThrows(IllegalArgumentException.class, () -> service.activateOffer(5L, 99L));
+        assertEquals(SpecialOfferStatus.DRAFT, offer.getStatus());
+    }
+
+    @Test
+    void activationFailsIfOfferPeriodIsOutsidePricelistPeriod() {
+        SpecialOffer offer = offer(SpecialOfferStatus.DRAFT);
+        offer.setStartDate(OffsetDateTime.of(2026, 6, 1, 0, 0, 0, 0, ZoneOffset.UTC));
+        when(specialOfferRepository.findById(5L)).thenReturn(Optional.of(offer));
+
+        assertThrows(IllegalArgumentException.class, () -> service.activateOffer(5L, 99L));
+        assertEquals(SpecialOfferStatus.DRAFT, offer.getStatus());
+    }
+
+    @Test
     void archivedOfferCannotBeActivatedOrArchivedAgain() {
         SpecialOffer offer = offer(SpecialOfferStatus.ARCHIVED);
         when(specialOfferRepository.findById(5L)).thenReturn(Optional.of(offer));
 
         assertThrows(IllegalArgumentException.class, () -> service.activateOffer(5L, 99L));
         assertThrows(IllegalArgumentException.class, () -> service.archiveOffer(5L, 99L));
+    }
+
+    @Test
+    void activeOfferCannotBeActivatedAgain() {
+        SpecialOffer offer = offer(SpecialOfferStatus.ACTIVE);
+        when(specialOfferRepository.findById(5L)).thenReturn(Optional.of(offer));
+
+        assertThrows(IllegalArgumentException.class, () -> service.activateOffer(5L, 99L));
+        assertEquals(SpecialOfferStatus.ACTIVE, offer.getStatus());
     }
 
     @Test
@@ -203,7 +287,19 @@ class SpecialOfferServiceImplTest {
         PricelistItem item = new PricelistItem();
         item.setVariantId(101L);
         item.setVariantName("Medicine A");
+        item.setThresholds(List.of(
+                threshold(11, 50, "95.00"),
+                threshold(1, 10, "100.00")
+        ));
         pricelist.addItem(item);
         return pricelist;
+    }
+
+    private QuantityThreshold threshold(Integer quantityFrom, Integer quantityTo, String price) {
+        QuantityThreshold threshold = new QuantityThreshold();
+        threshold.setQuantityFrom(quantityFrom);
+        threshold.setQuantityTo(quantityTo);
+        threshold.setPrice(new BigDecimal(price));
+        return threshold;
     }
 }
