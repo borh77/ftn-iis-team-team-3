@@ -3,6 +3,8 @@ package com.example.iisdrugcrm.service;
 import com.example.iisdrugcrm.domain.PricelistStatus;
 import com.example.iisdrugcrm.domain.Region;
 import com.example.iisdrugcrm.domain.pricelist.Pricelist;
+import com.example.iisdrugcrm.domain.pricelist.PricelistItem;
+import com.example.iisdrugcrm.domain.pricelist.QuantityThreshold;
 import com.example.iisdrugcrm.dto.pricelist.CatalogVariantDTO;
 import com.example.iisdrugcrm.dto.pricelist.ChangePricelistStatusDTO;
 import com.example.iisdrugcrm.dto.pricelist.CreatePricelistDTO;
@@ -26,6 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
@@ -373,6 +376,100 @@ class PricelistServiceImplTest {
         );
     }
 
+    @Test
+    void creatingNewVersionFromActiveSucceeds() {
+        Pricelist source = pricelistWithItem(100L, PricelistStatus.ACTIVE, serbia, "Lanci apoteka");
+        source.setVersionNumber(1);
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(source));
+        when(pricelistRepository.findMaxVersionNumberForRoot(100L)).thenReturn(1);
+
+        service.createNewVersion(100L, 99L);
+
+        ArgumentCaptor<Pricelist> captor = ArgumentCaptor.forClass(Pricelist.class);
+        verify(pricelistRepository).save(captor.capture());
+        Pricelist version = captor.getValue();
+        assertEquals(PricelistStatus.DRAFT, version.getStatus());
+        assertEquals(serbia, version.getRegion());
+        assertEquals("Lanci apoteka", version.getCustomerSegment());
+        assertEquals("RSD", version.getCurrency());
+        assertEquals(source.getPeriodStart(), version.getPeriodStart());
+        assertEquals(source.getPeriodEnd(), version.getPeriodEnd());
+        assertEquals(100L, version.getParentPricelistId());
+        assertEquals(100L, version.getRootPricelistId());
+        assertEquals(2, version.getVersionNumber());
+        assertEquals(PricelistStatus.ACTIVE, source.getStatus());
+    }
+
+    @Test
+    void creatingNewVersionFromInReviewSucceeds() {
+        Pricelist source = pricelistWithItem(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
+        source.setVersionNumber(3);
+        source.setRootPricelistId(50L);
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(source));
+        when(pricelistRepository.findMaxVersionNumberForRoot(50L)).thenReturn(3);
+
+        service.createNewVersion(100L, 99L);
+
+        ArgumentCaptor<Pricelist> captor = ArgumentCaptor.forClass(Pricelist.class);
+        verify(pricelistRepository).save(captor.capture());
+        Pricelist version = captor.getValue();
+        assertEquals(PricelistStatus.DRAFT, version.getStatus());
+        assertEquals(100L, version.getParentPricelistId());
+        assertEquals(50L, version.getRootPricelistId());
+        assertEquals(4, version.getVersionNumber());
+    }
+
+    @Test
+    void newVersionDeepCopiesItemsAndThresholds() {
+        Pricelist source = pricelistWithItem(100L, PricelistStatus.ACTIVE, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(source));
+        when(pricelistRepository.findMaxVersionNumberForRoot(100L)).thenReturn(1);
+
+        service.createNewVersion(100L, 99L);
+
+        ArgumentCaptor<Pricelist> captor = ArgumentCaptor.forClass(Pricelist.class);
+        verify(pricelistRepository).save(captor.capture());
+        PricelistItem sourceItem = source.getItems().get(0);
+        PricelistItem copiedItem = captor.getValue().getItems().get(0);
+        assertNotSame(sourceItem, copiedItem);
+        assertEquals(sourceItem.getVariantId(), copiedItem.getVariantId());
+        assertEquals(sourceItem.getVariantName(), copiedItem.getVariantName());
+        assertNotSame(sourceItem.getThresholds().get(0), copiedItem.getThresholds().get(0));
+        assertEquals(sourceItem.getThresholds().get(0).getQuantityFrom(), copiedItem.getThresholds().get(0).getQuantityFrom());
+        assertEquals(sourceItem.getThresholds().get(0).getQuantityTo(), copiedItem.getThresholds().get(0).getQuantityTo());
+        assertEquals(sourceItem.getThresholds().get(0).getPrice(), copiedItem.getThresholds().get(0).getPrice());
+    }
+
+    @Test
+    void archivedPricelistCannotBeVersioned() {
+        Pricelist source = pricelistWithItem(100L, PricelistStatus.ARCHIVED, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(source));
+
+        assertThrows(IllegalArgumentException.class, () -> service.createNewVersion(100L, 99L));
+
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
+    }
+
+    @Test
+    void draftPricelistCannotBeVersioned() {
+        Pricelist source = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(source));
+
+        assertThrows(IllegalArgumentException.class, () -> service.createNewVersion(100L, 99L));
+
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
+    }
+
+    @Test
+    void anotherCreatorCannotVersionPricelist() {
+        Pricelist source = pricelistWithItem(100L, PricelistStatus.ACTIVE, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(source));
+
+        assertThrows(IllegalArgumentException.class, () -> service.createNewVersion(100L, 7L));
+
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
+    }
+
     private void noBlockingConflict() {
         when(pricelistRepository.findOverlappingBlockingPricelists(any(), any(), any(), any(), anyList()))
                 .thenReturn(List.of());
@@ -431,7 +528,26 @@ class PricelistServiceImplTest {
         pricelist.setStatus(status);
         pricelist.setPeriodStart(OffsetDateTime.of(2026, 7, 1, 0, 0, 0, 0, ZoneOffset.UTC));
         pricelist.setPeriodEnd(OffsetDateTime.of(2026, 9, 30, 0, 0, 0, 0, ZoneOffset.UTC));
+        pricelist.setCreatedBy(99L);
         return pricelist;
+    }
+
+    private Pricelist pricelistWithItem(Long id, PricelistStatus status, Region region, String customerSegment) {
+        Pricelist pricelist = pricelist(id, status, region, customerSegment);
+        PricelistItem item = new PricelistItem();
+        item.setVariantId(10L);
+        item.setVariantName("Variant A");
+        item.setThresholds(List.of(quantityThreshold(1, 10, "100.00"), quantityThreshold(11, null, "95.00")));
+        pricelist.addItem(item);
+        return pricelist;
+    }
+
+    private QuantityThreshold quantityThreshold(Integer quantityFrom, Integer quantityTo, String price) {
+        QuantityThreshold threshold = new QuantityThreshold();
+        threshold.setQuantityFrom(quantityFrom);
+        threshold.setQuantityTo(quantityTo);
+        threshold.setPrice(new BigDecimal(price));
+        return threshold;
     }
 
     private Region region(Long id, String name, String code) {
