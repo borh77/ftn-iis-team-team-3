@@ -8,6 +8,7 @@ import com.example.iisdrugcrm.domain.pricelist.PricelistItem;
 import com.example.iisdrugcrm.domain.pricelist.QuantityThreshold;
 import com.example.iisdrugcrm.domain.pricelist.SpecialOffer;
 import com.example.iisdrugcrm.domain.pricelist.SpecialOfferStatus;
+import com.example.iisdrugcrm.dto.pricelist.CatalogVariantDTO;
 import com.example.iisdrugcrm.dto.pricelist.CreateSpecialOfferDTO;
 import com.example.iisdrugcrm.repository.PricelistRepository;
 import com.example.iisdrugcrm.repository.SpecialOfferRepository;
@@ -25,6 +26,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
@@ -38,16 +40,20 @@ class SpecialOfferServiceImplTest {
     private PricelistRepository pricelistRepository;
     @Mock
     private PricelistAccessService accessService;
+    @Mock
+    private CatalogService catalogService;
 
     private SpecialOfferServiceImpl service;
     private Pricelist pricelist;
 
     @BeforeEach
     void setUp() {
-        service = new SpecialOfferServiceImpl(specialOfferRepository, pricelistRepository, accessService);
+        service = new SpecialOfferServiceImpl(specialOfferRepository, pricelistRepository, accessService, catalogService);
         pricelist = pricelist(PricelistStatus.ACTIVE);
         lenient().when(specialOfferRepository.save(any(SpecialOffer.class))).thenAnswer(invocation -> invocation.getArgument(0));
         lenient().when(specialOfferRepository.findAllByPricelistIdOrderByIdDesc(any())).thenReturn(List.of());
+        lenient().when(catalogService.findActiveVariantsByIds(anyCollection()))
+                .thenReturn(java.util.Map.of(101L, new CatalogVariantDTO(101L, "Medicine A", true)));
     }
 
     @Test
@@ -199,6 +205,16 @@ class SpecialOfferServiceImplTest {
         SpecialOffer offer = offer(SpecialOfferStatus.DRAFT);
         offer.setStartDate(OffsetDateTime.of(2026, 6, 1, 0, 0, 0, 0, ZoneOffset.UTC));
         when(specialOfferRepository.findById(5L)).thenReturn(Optional.of(offer));
+
+        assertThrows(IllegalArgumentException.class, () -> service.activateOffer(5L, 99L));
+        assertEquals(SpecialOfferStatus.DRAFT, offer.getStatus());
+    }
+
+    @Test
+    void activationFailsIfOfferVariantIsInactive() {
+        SpecialOffer offer = offer(SpecialOfferStatus.DRAFT);
+        when(specialOfferRepository.findById(5L)).thenReturn(Optional.of(offer));
+        when(catalogService.findActiveVariantsByIds(anyCollection())).thenReturn(java.util.Map.of());
 
         assertThrows(IllegalArgumentException.class, () -> service.activateOffer(5L, 99L));
         assertEquals(SpecialOfferStatus.DRAFT, offer.getStatus());

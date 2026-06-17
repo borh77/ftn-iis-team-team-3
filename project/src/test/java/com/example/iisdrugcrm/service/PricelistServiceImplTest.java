@@ -524,6 +524,57 @@ class PricelistServiceImplTest {
         verify(pricelistRepository, never()).save(any(Pricelist.class));
     }
 
+    @Test
+    void ownerCanReplaceInactiveVariantOnDraftPricelistAndThresholdsArePreserved() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        PricelistItem item = pricelist.getItems().get(0);
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        when(catalogService.findActiveVariantsByIds(List.of(11L)))
+                .thenReturn(Map.of(11L, new CatalogVariantDTO(11L, "Variant B", true)));
+
+        service.replaceItemVariant(100L, 500L, 11L, 99L);
+
+        assertEquals(11L, item.getVariantId());
+        assertEquals("Variant B", item.getVariantName());
+        assertEquals(new BigDecimal("100.00"), item.getThresholds().get(0).getPrice());
+        verify(pricelistRepository).save(pricelist);
+    }
+
+    @Test
+    void cannotReplaceVariantOnActivePricelist() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.ACTIVE, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+
+        assertThrows(IllegalArgumentException.class, () -> service.replaceItemVariant(100L, 500L, 11L, 99L));
+    }
+
+    @Test
+    void replacementVariantMustBeActive() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        when(catalogService.findActiveVariantsByIds(List.of(11L))).thenReturn(Map.of());
+
+        assertThrows(IllegalArgumentException.class, () -> service.replaceItemVariant(100L, 500L, 11L, 99L));
+    }
+
+    @Test
+    void draftToInReviewFailsIfVariantIsInactive() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        when(catalogService.findActiveVariantsByIds(List.of(10L))).thenReturn(Map.of());
+
+        assertThrows(IllegalArgumentException.class, () -> service.changeStatus(100L, statusDto(PricelistStatus.IN_REVIEW, null)));
+    }
+
+    @Test
+    void inReviewToActiveFailsIfVariantIsInactive() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        when(catalogService.findActiveVariantsByIds(List.of(10L))).thenReturn(Map.of());
+
+        assertThrows(IllegalArgumentException.class, () -> service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null)));
+    }
+
     private void noBlockingConflict() {
         when(pricelistRepository.findOverlappingBlockingPricelists(any(), any(), any(), any(), anyList()))
                 .thenReturn(List.of());
@@ -589,6 +640,7 @@ class PricelistServiceImplTest {
     private Pricelist pricelistWithItem(Long id, PricelistStatus status, Region region, String customerSegment) {
         Pricelist pricelist = pricelist(id, status, region, customerSegment);
         PricelistItem item = new PricelistItem();
+        item.setId(500L);
         item.setVariantId(10L);
         item.setVariantName("Variant A");
         item.setThresholds(List.of(quantityThreshold(1, 10, "100.00"), quantityThreshold(11, null, "95.00")));
