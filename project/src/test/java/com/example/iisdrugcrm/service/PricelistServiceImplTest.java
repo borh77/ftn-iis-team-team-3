@@ -19,6 +19,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,6 +37,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.lenient;
 
@@ -51,17 +53,22 @@ class PricelistServiceImplTest {
     @Mock
     private CatalogService catalogService;
 
+    @Mock
+    private PricelistAccessService accessService;
+
     private PricelistServiceImpl service;
     private Region serbia;
 
     @BeforeEach
     void setUp() {
-        service = new PricelistServiceImpl(pricelistRepository, regionRepository, catalogService);
+        service = new PricelistServiceImpl(pricelistRepository, regionRepository, catalogService, accessService);
         serbia = region(1L, "Srbija", "RS");
         lenient().when(regionRepository.findById(1L)).thenReturn(Optional.of(serbia));
         lenient().when(catalogService.findActiveVariantsByIds(anyCollection()))
                 .thenReturn(Map.of(10L, new CatalogVariantDTO(10L, "Variant A", true)));
         lenient().when(pricelistRepository.save(any(Pricelist.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(accessService.accessibleCreatorIds(99L)).thenReturn(Set.of(99L));
+        lenient().when(accessService.canCollaborate(any(Pricelist.class), eq(99L))).thenReturn(true);
     }
 
     @Test
@@ -377,6 +384,36 @@ class PricelistServiceImplTest {
     }
 
     @Test
+    void teamListIncludesOwnAndTeammatePricelists() {
+        Pricelist own = pricelist(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        Pricelist teammate = pricelist(101L, PricelistStatus.ACTIVE, serbia, "Lanci apoteka");
+        teammate.setCreatedBy(7L);
+        when(accessService.accessibleCreatorIds(99L)).thenReturn(Set.of(99L, 7L));
+        when(accessService.canCollaborate(own, 99L)).thenReturn(true);
+        when(accessService.canCollaborate(teammate, 99L)).thenReturn(true);
+        when(pricelistRepository.findAllByCreatedByInOrderByIdDesc(Set.of(99L, 7L))).thenReturn(List.of(teammate, own));
+
+        List<?> result = service.listTeamCenovniciForUser(99L);
+
+        assertEquals(2, result.size());
+        verify(pricelistRepository).findAllByCreatedByInOrderByIdDesc(Set.of(99L, 7L));
+    }
+
+    @Test
+    void teammateCannotChangeStatusWhenOwnerOnlyRuleIsKept() {
+        Pricelist pricelist = pricelist(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        doThrow(new IllegalArgumentException("Only the owner can change this pricelist status."))
+                .when(accessService).validateOwnerOnly(pricelist, 7L);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service.changeStatus(100L, statusDto(PricelistStatus.IN_REVIEW, null), 7L));
+
+        assertEquals(PricelistStatus.DRAFT, pricelist.getStatus());
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
+    }
+
+    @Test
     void creatingNewVersionFromActiveSucceeds() {
         Pricelist source = pricelistWithItem(100L, PricelistStatus.ACTIVE, serbia, "Lanci apoteka");
         source.setVersionNumber(1);
@@ -398,6 +435,21 @@ class PricelistServiceImplTest {
         assertEquals(100L, version.getRootPricelistId());
         assertEquals(2, version.getVersionNumber());
         assertEquals(PricelistStatus.ACTIVE, source.getStatus());
+    }
+
+    @Test
+    void teammateCanCreateNewVersionAndOwnsNewDraft() {
+        Pricelist source = pricelistWithItem(100L, PricelistStatus.ACTIVE, serbia, "Lanci apoteka");
+        source.setCreatedBy(99L);
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(source));
+        when(pricelistRepository.findMaxVersionNumberForRoot(100L)).thenReturn(1);
+
+        service.createNewVersion(100L, 7L);
+
+        ArgumentCaptor<Pricelist> captor = ArgumentCaptor.forClass(Pricelist.class);
+        verify(pricelistRepository).save(captor.capture());
+        assertEquals(7L, captor.getValue().getCreatedBy());
+        assertEquals(PricelistStatus.DRAFT, captor.getValue().getStatus());
     }
 
     @Test
@@ -464,6 +516,8 @@ class PricelistServiceImplTest {
     void anotherCreatorCannotVersionPricelist() {
         Pricelist source = pricelistWithItem(100L, PricelistStatus.ACTIVE, serbia, "Lanci apoteka");
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(source));
+        doThrow(new IllegalArgumentException("You do not have access to this pricelist."))
+                .when(accessService).validateOwnerOrTeamMember(source, 7L);
 
         assertThrows(IllegalArgumentException.class, () -> service.createNewVersion(100L, 7L));
 

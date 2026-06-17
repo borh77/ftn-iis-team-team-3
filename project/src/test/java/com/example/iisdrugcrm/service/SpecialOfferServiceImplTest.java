@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,15 +36,18 @@ class SpecialOfferServiceImplTest {
     private SpecialOfferRepository specialOfferRepository;
     @Mock
     private PricelistRepository pricelistRepository;
+    @Mock
+    private PricelistAccessService accessService;
 
     private SpecialOfferServiceImpl service;
     private Pricelist pricelist;
 
     @BeforeEach
     void setUp() {
-        service = new SpecialOfferServiceImpl(specialOfferRepository, pricelistRepository);
+        service = new SpecialOfferServiceImpl(specialOfferRepository, pricelistRepository, accessService);
         pricelist = pricelist(PricelistStatus.ACTIVE);
         lenient().when(specialOfferRepository.save(any(SpecialOffer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(specialOfferRepository.findAllByPricelistIdOrderByIdDesc(any())).thenReturn(List.of());
     }
 
     @Test
@@ -219,31 +223,53 @@ class SpecialOfferServiceImplTest {
     }
 
     @Test
-    void userCannotCreateOfferForAnotherCreatorsPricelist() {
+    void teammateCanCreateOfferForTeamPricelist() {
         when(pricelistRepository.findById(1L)).thenReturn(Optional.of(pricelist));
+
+        service.createOffer(dto(DiscountType.PERCENTAGE, "10.00", 101L), 7L);
+    }
+
+    @Test
+    void teammateCanListOffersForTeamPricelist() {
+        when(pricelistRepository.findById(1L)).thenReturn(Optional.of(pricelist));
+
+        service.listOffersForPricelist(1L, 7L);
+    }
+
+    @Test
+    void unrelatedCreatorCannotCreateOffer() {
+        when(pricelistRepository.findById(1L)).thenReturn(Optional.of(pricelist));
+        doThrow(new IllegalArgumentException("You do not have access to this pricelist."))
+                .when(accessService).validateOwnerOrTeamMember(pricelist, 7L);
 
         assertThrows(IllegalArgumentException.class, () -> service.createOffer(dto(DiscountType.PERCENTAGE, "10.00", 101L), 7L));
     }
 
     @Test
-    void userCannotListAnotherCreatorsOffers() {
+    void unrelatedCreatorCannotListOffers() {
         when(pricelistRepository.findById(1L)).thenReturn(Optional.of(pricelist));
+        doThrow(new IllegalArgumentException("You do not have access to this pricelist."))
+                .when(accessService).validateOwnerOrTeamMember(pricelist, 7L);
 
         assertThrows(IllegalArgumentException.class, () -> service.listOffersForPricelist(1L, 7L));
     }
 
     @Test
-    void userCannotActivateAnotherCreatorsOffer() {
+    void teammateCannotActivateAnotherCreatorsOffer() {
         SpecialOffer offer = offer(SpecialOfferStatus.DRAFT);
         when(specialOfferRepository.findById(5L)).thenReturn(Optional.of(offer));
+        doThrow(new IllegalArgumentException("Only the owner can change this pricelist status."))
+                .when(accessService).validateOwnerOnly(pricelist, 7L);
 
         assertThrows(IllegalArgumentException.class, () -> service.activateOffer(5L, 7L));
     }
 
     @Test
-    void userCannotArchiveAnotherCreatorsOffer() {
+    void teammateCannotArchiveAnotherCreatorsOffer() {
         SpecialOffer offer = offer(SpecialOfferStatus.ACTIVE);
         when(specialOfferRepository.findById(5L)).thenReturn(Optional.of(offer));
+        doThrow(new IllegalArgumentException("Only the owner can change this pricelist status."))
+                .when(accessService).validateOwnerOnly(pricelist, 7L);
 
         assertThrows(IllegalArgumentException.class, () -> service.archiveOffer(5L, 7L));
     }
