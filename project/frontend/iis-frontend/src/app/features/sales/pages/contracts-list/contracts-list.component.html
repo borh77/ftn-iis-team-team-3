@@ -1,0 +1,70 @@
+<main class="page">
+  <section class="page-header">
+    <div>
+      <p class="eyebrow">Sales workspace</p>
+      <h1>Contracts</h1>
+      <p>Review and manage generated contracts.</p>
+    </div>
+  </section>
+
+  <section class="table-card">
+
+    <div *ngIf="loading" class="loading">
+      Loading contracts...
+    </div>
+
+    <table *ngIf="!loading && contracts.length > 0">
+      <thead>
+        <tr>
+          <th>Contract No.</th>
+          <th>Customer</th>
+          <th>Sales Process</th>
+          <th>Status</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+          <th>Total Value</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngFor="let contract of contracts">
+          <td>{{ contract.contractNumber }}</td>
+          <td>{{ contract.customerName }}</td>
+          <td>{{ contract.salesProcessTitle }}</td>
+
+          <td>
+            <span class="status">
+              {{ contract.status }}
+            </span>
+          </td>
+
+          <td>{{ contract.startDate }}</td>
+          <td>{{ contract.endDate }}</td>
+          <td>{{ contract.totalValue }}</td>
+
+          <td>
+            <button
+              *ngIf="contract.status === 'PENDING'"
+              type="button"
+              class="primary-button"
+              (click)="signContract(contract)">
+              Sign
+            </button>
+
+            <span
+              *ngIf="contract.status === 'SIGNED'"
+              class="signed-text">
+              Signed
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="!loading && contracts.length === 0" class="loading">
+      No contracts found.
+    </div>
+
+  </section>
+</main>

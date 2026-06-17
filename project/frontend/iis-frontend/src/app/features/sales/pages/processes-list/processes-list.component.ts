@@ -9,6 +9,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { CreateCustomerNeedRequest } from '../../models/customer-need.model';
 import { CreateOfferRequest } from '../../models/offer.model';
 import { CreateContractRequest } from '../../models/contract.model';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-processes-list',
@@ -21,6 +22,7 @@ export class ProcessesListComponent implements OnInit {
   private readonly salesApiService = inject(SalesApiService);
   private readonly authService = inject(AuthService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly router = inject(Router);
 
   processes: SalesProcess[] = [];
   customers: Customer[] = [];
@@ -185,5 +187,9 @@ export class ProcessesListComponent implements OnInit {
       },
       error: (error) => console.error('Failed to create offer:', error),
     });
+  }
+
+  viewDetails(process: SalesProcess): void {
+    this.router.navigate(['/sales/processes', process.id]);
   }
 }

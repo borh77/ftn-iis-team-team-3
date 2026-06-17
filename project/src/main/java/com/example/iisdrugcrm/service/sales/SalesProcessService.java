@@ -3,6 +3,7 @@ package com.example.iisdrugcrm.service.sales;
 import com.example.iisdrugcrm.domain.sales.Customer;
 import com.example.iisdrugcrm.domain.sales.SalesProcess;
 import com.example.iisdrugcrm.dto.sales.process.CreateSalesProcessRequestDTO;
+import com.example.iisdrugcrm.dto.sales.process.SalesProcessHistoryResponseDTO;
 import com.example.iisdrugcrm.dto.sales.process.SalesProcessResponseDTO;
 import com.example.iisdrugcrm.dto.sales.process.StageUpdateRequestDTO;
 import com.example.iisdrugcrm.repository.sales.CustomerRepository;
@@ -60,6 +61,28 @@ public class SalesProcessService {
         );
 
         return mapToDto(process);
+    }
+
+    @Transactional(readOnly = true)
+    public SalesProcessResponseDTO getById(Long id) {
+        SalesProcess process = salesProcessRepository.findWithCustomerById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Sales process not found."));
+
+        return mapToDto(process);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SalesProcessHistoryResponseDTO> getHistory(Long id) {
+        return salesProcessHistoryRepository.findBySalesProcessIdOrderByChangedAtDesc(id)
+                .stream()
+                .map(history -> new SalesProcessHistoryResponseDTO(
+                        history.getId(),
+                        history.getSalesProcess().getId(),
+                        history.getPreviousStage(),
+                        history.getNewStage(),
+                        history.getChangedAt()
+                ))
+                .toList();
     }
 
     private SalesProcessResponseDTO mapToDto(SalesProcess salesProcess) {

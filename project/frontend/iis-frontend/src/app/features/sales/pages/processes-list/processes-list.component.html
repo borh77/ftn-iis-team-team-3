@@ -85,19 +85,25 @@
             </td>
 
             <td>
-              <div class="action-buttons" *ngIf="process.status === 'ACTIVE'; else closedProcess">
-                <button type="button" class="secondary-button" (click)="openNeedForm(process)">
-                  Add Need
+              <div class="action-buttons">
+                <button type="button" class="secondary-button" (click)="viewDetails(process)">
+                  View Details
                 </button>
 
-                <button type="button" class="secondary-button" (click)="openOfferForm(process)">
-                  Create Offer
-                </button>
+                <ng-container *ngIf="process.status === 'ACTIVE'; else closedProcess">
+                  <button type="button" class="secondary-button" (click)="openNeedForm(process)">
+                    Add Need
+                  </button>
+
+                  <button type="button" class="secondary-button" (click)="openOfferForm(process)">
+                    Create Offer
+                  </button>
+                </ng-container>
+
+                <ng-template #closedProcess>
+                  <span class="muted-text">Closed</span>
+                </ng-template>
               </div>
-
-              <ng-template #closedProcess>
-                <span class="muted-text">Closed</span>
-              </ng-template>
             </td>
           </tr>
 

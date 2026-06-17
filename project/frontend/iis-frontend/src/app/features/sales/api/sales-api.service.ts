@@ -10,6 +10,7 @@ import { CustomerCommunication, CustomerCommunicationRequest } from '../models/c
 import { CustomerNeed, CreateCustomerNeedRequest } from '../models/customer-need.model';
 import { Offer, CreateOfferRequest } from '../models/offer.model';
 import { Contract, CreateContractRequest } from '../models/contract.model';
+import { SalesProcessHistory } from '../models/sales-process-history.model';
 
 @Injectable({
   providedIn: 'root',
@@ -150,6 +151,18 @@ export class SalesApiService {
     return this.http.patch<Contract>(
       `${this.apiBaseUrl}/api/contracts/${id}/sign`,
       {},
+    );
+  }
+
+  getSalesProcessById(id: number): Observable<SalesProcess> {
+    return this.http.get<SalesProcess>(
+      `${this.apiBaseUrl}/api/sales/processes/${id}`,
+    );
+  }
+
+  getSalesProcessHistory(id: number): Observable<SalesProcessHistory[]> {
+    return this.http.get<SalesProcessHistory[]>(
+      `${this.apiBaseUrl}/api/sales/processes/${id}/history`,
     );
   }
 }

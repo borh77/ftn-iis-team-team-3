@@ -15,6 +15,9 @@ import { CustomersListComponent } from './features/sales/pages/customers-list/cu
 import { ProcessesListComponent } from './features/sales/pages/processes-list/processes-list.component';
 import { CommunicationsListComponent } from './features/sales/pages/communications-list/communications-list.component';
 import { OffersListComponent } from './features/sales/pages/offers-list/offers-list.component';
+import { ContractsListComponent } from './features/sales/pages/contracts-list/contracts-list.component';
+import { ProcessDetailsComponent } from './features/sales/pages/process-details/process-details.component';
+
 
 export const routes: Routes = [
 	{ path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -162,5 +165,31 @@ export const routes: Routes = [
 		},
 		title: 'IIS Drug CRM | Offers',
 	},
+	{
+		path: 'sales/contracts',
+		component: ContractsListComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: {
+			roles: [
+			'ROLE_SALES_REPRESENTATIVE',
+			'ROLE_ACCOUNT_MANAGER',
+			'ROLE_SALES_MANAGER',
+			],
+		},
+		title: 'IIS Drug CRM | Contracts',
+	},
+	{
+		path: 'sales/processes/:id',
+		component: ProcessDetailsComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: {
+			roles: [
+			'ROLE_SALES_REPRESENTATIVE',
+			'ROLE_ACCOUNT_MANAGER',
+			'ROLE_SALES_MANAGER',
+			],
+		},
+		title: 'IIS Drug CRM | Process Details',
+		},
 	{ path: '**', redirectTo: 'login' },
 ];
