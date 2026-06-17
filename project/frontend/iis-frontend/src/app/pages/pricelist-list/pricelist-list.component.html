@@ -34,6 +34,9 @@
               <p class="kicker">Pricelist</p>
               <h3>#{{ p.id }} - {{ p.regionName }}</h3>
               <p class="muted">Version {{ p.versionNumber || 1 }}</p>
+              @if (isTeamPricelist(p)) {
+                <p class="muted">Team pricelist</p>
+              }
             </div>
             <span class="status-badge">{{ statusLabel(p.status) }}</span>
           </div>
@@ -112,9 +115,11 @@
               </button>
             }
 
-            <button type="button" class="secondary" (click)="toggleOffers(p)">
-              {{ expandedOffers[p.id] ? 'Hide offers' : 'Manage offers' }}
-            </button>
+            @if (canManageOffers(p)) {
+              <button type="button" class="secondary" (click)="toggleOffers(p)">
+                {{ expandedOffers[p.id] ? 'Hide offers' : 'Manage offers' }}
+              </button>
+            }
           </div>
 
           @if (expandedOffers[p.id]) {

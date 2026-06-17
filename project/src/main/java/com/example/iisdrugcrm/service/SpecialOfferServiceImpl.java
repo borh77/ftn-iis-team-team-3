@@ -25,10 +25,12 @@ public class SpecialOfferServiceImpl implements SpecialOfferService {
 
     private final SpecialOfferRepository specialOfferRepository;
     private final PricelistRepository pricelistRepository;
+    private final PricelistAccessService accessService;
 
-    public SpecialOfferServiceImpl(SpecialOfferRepository specialOfferRepository, PricelistRepository pricelistRepository) {
+    public SpecialOfferServiceImpl(SpecialOfferRepository specialOfferRepository, PricelistRepository pricelistRepository, PricelistAccessService accessService) {
         this.specialOfferRepository = specialOfferRepository;
         this.pricelistRepository = pricelistRepository;
+        this.accessService = accessService;
     }
 
     @Override
@@ -36,7 +38,7 @@ public class SpecialOfferServiceImpl implements SpecialOfferService {
     public SpecialOfferResponseDTO createOffer(CreateSpecialOfferDTO dto, Long currentUserId) {
         Pricelist pricelist = pricelistRepository.findById(dto.getPricelistId())
                 .orElseThrow(() -> new PricelistNotFoundException("Pricelist not found"));
-        validateOwnership(pricelist, currentUserId);
+        accessService.validateOwnerOrTeamMember(pricelist, currentUserId);
         if (pricelist.getStatus() == PricelistStatus.ARCHIVED) {
             throw new IllegalArgumentException("Archived pricelists cannot receive offers.");
         }
@@ -67,7 +69,7 @@ public class SpecialOfferServiceImpl implements SpecialOfferService {
     public List<SpecialOfferResponseDTO> listOffersForPricelist(Long pricelistId, Long currentUserId) {
         Pricelist pricelist = pricelistRepository.findById(pricelistId)
                 .orElseThrow(() -> new PricelistNotFoundException("Pricelist not found"));
-        validateOwnership(pricelist, currentUserId);
+        accessService.validateOwnerOrTeamMember(pricelist, currentUserId);
         return specialOfferRepository.findAllByPricelistIdOrderByIdDesc(pricelistId).stream()
                 .map(SpecialOfferResponseDTO::fromEntity)
                 .toList();
@@ -78,7 +80,7 @@ public class SpecialOfferServiceImpl implements SpecialOfferService {
     public SpecialOfferResponseDTO activateOffer(Long id, Long currentUserId) {
         SpecialOffer offer = specialOfferRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Special offer not found"));
-        validateOwnership(offer.getPricelist(), currentUserId);
+        accessService.validateOwnerOnly(offer.getPricelist(), currentUserId);
         validateOfferCanBeActivated(offer);
         offer.activate();
         return SpecialOfferResponseDTO.fromEntity(specialOfferRepository.save(offer));
@@ -89,15 +91,9 @@ public class SpecialOfferServiceImpl implements SpecialOfferService {
     public SpecialOfferResponseDTO archiveOffer(Long id, Long currentUserId) {
         SpecialOffer offer = specialOfferRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Special offer not found"));
-        validateOwnership(offer.getPricelist(), currentUserId);
+        accessService.validateOwnerOnly(offer.getPricelist(), currentUserId);
         offer.archive();
         return SpecialOfferResponseDTO.fromEntity(specialOfferRepository.save(offer));
-    }
-
-    private void validateOwnership(Pricelist pricelist, Long currentUserId) {
-        if (pricelist.getCreatedBy() != null && !pricelist.getCreatedBy().equals(currentUserId)) {
-            throw new IllegalArgumentException("Pricelist does not belong to current user.");
-        }
     }
 
     private void validateOfferCanBeActivated(SpecialOffer offer) {

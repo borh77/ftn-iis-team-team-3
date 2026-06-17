@@ -22,6 +22,9 @@ export interface Pricelist {
   parentPricelistId: number | null;
   rootPricelistId: number | null;
   canCreateNewVersion: boolean;
+  owner: boolean;
+  canCollaborate: boolean;
+  canManageOffers: boolean;
   periodStart: string;
   periodEnd: string;
   items: PricelistItem[];

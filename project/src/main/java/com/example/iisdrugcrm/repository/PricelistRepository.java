@@ -5,6 +5,7 @@ import com.example.iisdrugcrm.domain.pricelist.Pricelist;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.QueryHint;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,6 +19,8 @@ public interface PricelistRepository extends JpaRepository<Pricelist, Long> {
     List<Pricelist> findAllByOrderByIdDesc();
 
     List<Pricelist> findAllByCreatedByOrderByIdDesc(Long createdBy);
+
+    List<Pricelist> findAllByCreatedByInOrderByIdDesc(Collection<Long> createdBy);
 
     List<Pricelist> findAllByRootPricelistIdOrderByVersionNumberDesc(Long rootPricelistId);
 

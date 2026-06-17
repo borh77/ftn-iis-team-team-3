@@ -13,7 +13,11 @@ public interface PricelistService {
 
     List<PricelistResponseDTO> listCenovniciForUser(Long currentUserId);
 
+    List<PricelistResponseDTO> listTeamCenovniciForUser(Long currentUserId);
+
     PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto);
+
+    PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto, Long currentUserId);
 
     PricelistResponseDTO createNewVersion(Long sourcePricelistId, Long currentUserId);
 }

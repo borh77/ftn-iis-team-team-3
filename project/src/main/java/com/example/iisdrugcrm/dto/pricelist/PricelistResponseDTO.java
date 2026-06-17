@@ -21,6 +21,9 @@ public class PricelistResponseDTO {
     private Long parentPricelistId;
     private Long rootPricelistId;
     private boolean canCreateNewVersion;
+    private boolean owner;
+    private boolean canCollaborate;
+    private boolean canManageOffers;
     private OffsetDateTime periodStart;
     private OffsetDateTime periodEnd;
     private List<PricelistItemResponseDTO> items;
@@ -125,6 +128,30 @@ public class PricelistResponseDTO {
         this.canCreateNewVersion = canCreateNewVersion;
     }
 
+    public boolean isOwner() {
+        return owner;
+    }
+
+    public void setOwner(boolean owner) {
+        this.owner = owner;
+    }
+
+    public boolean isCanCollaborate() {
+        return canCollaborate;
+    }
+
+    public void setCanCollaborate(boolean canCollaborate) {
+        this.canCollaborate = canCollaborate;
+    }
+
+    public boolean isCanManageOffers() {
+        return canManageOffers;
+    }
+
+    public void setCanManageOffers(boolean canManageOffers) {
+        this.canManageOffers = canManageOffers;
+    }
+
     public void setPeriodEnd(OffsetDateTime periodEnd) {
         this.periodEnd = periodEnd;
     }
@@ -153,6 +180,18 @@ public class PricelistResponseDTO {
         dto.setPeriodStart(pricelist.getPeriodStart());
         dto.setPeriodEnd(pricelist.getPeriodEnd());
         dto.setItems(pricelist.getItems().stream().map(PricelistItemResponseDTO::fromEntity).toList());
+        return dto;
+    }
+
+    public static PricelistResponseDTO fromEntity(Pricelist pricelist, Long currentUserId, boolean canCollaborate) {
+        PricelistResponseDTO dto = fromEntity(pricelist);
+        boolean owner = currentUserId != null
+                && pricelist.getCreatedBy() != null
+                && pricelist.getCreatedBy().equals(currentUserId);
+        dto.setOwner(owner);
+        dto.setCanCollaborate(canCollaborate);
+        dto.setCanManageOffers(canCollaborate);
+        dto.setCanCreateNewVersion(canCollaborate && (pricelist.getStatus() == PricelistStatus.IN_REVIEW || pricelist.getStatus() == PricelistStatus.ACTIVE));
         return dto;
     }
 

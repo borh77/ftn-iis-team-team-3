@@ -21,6 +21,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.PessimisticLockingFailureException;
@@ -36,11 +37,13 @@ public class PricelistServiceImpl implements PricelistService {
     private final PricelistRepository pricelistRepository;
     private final RegionRepository regionRepository;
     private final CatalogService catalogService;
+    private final PricelistAccessService accessService;
 
-    public PricelistServiceImpl(PricelistRepository pricelistRepository, RegionRepository regionRepository, CatalogService catalogService) {
+    public PricelistServiceImpl(PricelistRepository pricelistRepository, RegionRepository regionRepository, CatalogService catalogService, PricelistAccessService accessService) {
         this.pricelistRepository = pricelistRepository;
         this.regionRepository = regionRepository;
         this.catalogService = catalogService;
+        this.accessService = accessService;
     }
 
     @Override
@@ -111,7 +114,7 @@ public class PricelistServiceImpl implements PricelistService {
     public PricelistResponseDTO createNewVersion(Long sourcePricelistId, Long currentUserId) {
         Pricelist source = pricelistRepository.findById(sourcePricelistId)
                 .orElseThrow(() -> new PricelistNotFoundException("Pricelist not found"));
-        validateOwnership(source, currentUserId);
+        accessService.validateOwnerOrTeamMember(source, currentUserId);
 
         if (source.getStatus() == PricelistStatus.ARCHIVED) {
             throw new IllegalArgumentException("Archived pricelists cannot be versioned.");
@@ -172,7 +175,16 @@ public class PricelistServiceImpl implements PricelistService {
     @Transactional(readOnly = true)
     public List<PricelistResponseDTO> listCenovniciForUser(Long currentUserId) {
         return pricelistRepository.findAllByCreatedByOrderByIdDesc(currentUserId).stream()
-                .map(PricelistResponseDTO::fromEntity)
+                .map(pricelist -> PricelistResponseDTO.fromEntity(pricelist, currentUserId, true))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PricelistResponseDTO> listTeamCenovniciForUser(Long currentUserId) {
+        Set<Long> accessibleCreatorIds = accessService.accessibleCreatorIds(currentUserId);
+        return pricelistRepository.findAllByCreatedByInOrderByIdDesc(accessibleCreatorIds).stream()
+                .map(pricelist -> PricelistResponseDTO.fromEntity(pricelist, currentUserId, accessService.canCollaborate(pricelist, currentUserId)))
                 .toList();
     }
 
@@ -181,7 +193,19 @@ public class PricelistServiceImpl implements PricelistService {
     public PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto) {
         Pricelist pricelist = pricelistRepository.findById(id)
                 .orElseThrow(() -> new PricelistNotFoundException("Pricelist not found"));
+        return changeStatus(pricelist, dto);
+    }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto, Long currentUserId) {
+        Pricelist pricelist = pricelistRepository.findById(id)
+                .orElseThrow(() -> new PricelistNotFoundException("Pricelist not found"));
+        accessService.validateOwnerOnly(pricelist, currentUserId);
+        return changeStatus(pricelist, dto);
+    }
+
+    private PricelistResponseDTO changeStatus(Pricelist pricelist, ChangePricelistStatusDTO dto) {
         if (pricelist.getStatus() == PricelistStatus.IN_REVIEW && dto.getTargetStatus() == PricelistStatus.ACTIVE) {
             lockExistingPricelists(pricelist.getRegion().getId(), pricelist.getCustomerSegment());
             validateNoBlockingOverlapExcludingCurrent(pricelist);
@@ -206,12 +230,6 @@ public class PricelistServiceImpl implements PricelistService {
                  | LockTimeoutException
                  | PessimisticLockException exception) {
             throw new PricelistLockedException("Cenovnici za izabrani region i segment se trenutno menjaju. Pokusajte ponovo.");
-        }
-    }
-
-    private void validateOwnership(Pricelist pricelist, Long currentUserId) {
-        if (pricelist.getCreatedBy() != null && !pricelist.getCreatedBy().equals(currentUserId)) {
-            throw new IllegalArgumentException("Pricelist does not belong to current user.");
         }
     }
 

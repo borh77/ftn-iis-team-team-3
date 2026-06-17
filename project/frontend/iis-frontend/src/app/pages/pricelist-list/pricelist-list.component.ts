@@ -38,7 +38,7 @@ export class PricelistListComponent implements OnInit {
   load(): void {
     this.loading = true;
     this.errorMessage = '';
-    this.service.mine().subscribe({
+    this.service.team().subscribe({
       next: (list) => {
         this.loading = false;
         this.pricelists = [...list];
@@ -47,6 +47,7 @@ export class PricelistListComponent implements OnInit {
       error: () => {
         this.loading = false;
         this.pricelists = [];
+        this.errorMessage = 'Team pricelists could not be loaded.';
         this.cdr.detectChanges();
       },
     });
@@ -97,23 +98,39 @@ export class PricelistListComponent implements OnInit {
   }
 
   canSubmitForReview(pricelist: Pricelist): boolean {
-    return pricelist.status === 'DRAFT';
+    return this.isOwner(pricelist) && pricelist.status === 'DRAFT';
   }
 
   canActivate(pricelist: Pricelist): boolean {
-    return pricelist.status === 'IN_REVIEW';
+    return this.isOwner(pricelist) && pricelist.status === 'IN_REVIEW';
   }
 
   canReturnToDraft(pricelist: Pricelist): boolean {
-    return pricelist.status === 'IN_REVIEW';
+    return this.isOwner(pricelist) && pricelist.status === 'IN_REVIEW';
   }
 
   canArchive(pricelist: Pricelist): boolean {
-    return pricelist.status === 'ACTIVE';
+    return this.isOwner(pricelist) && pricelist.status === 'ACTIVE';
   }
 
   canCreateNewVersion(pricelist: Pricelist): boolean {
-    return pricelist.status === 'IN_REVIEW' || pricelist.status === 'ACTIVE' || pricelist.canCreateNewVersion;
+    return pricelist.canCreateNewVersion || ((pricelist.status === 'IN_REVIEW' || pricelist.status === 'ACTIVE') && this.canCollaborate(pricelist));
+  }
+
+  canManageOffers(pricelist: Pricelist): boolean {
+    return pricelist.canManageOffers ?? this.canCollaborate(pricelist);
+  }
+
+  isOwner(pricelist: Pricelist): boolean {
+    return pricelist.owner === true;
+  }
+
+  isTeamPricelist(pricelist: Pricelist): boolean {
+    return !this.isOwner(pricelist) && this.canCollaborate(pricelist);
+  }
+
+  private canCollaborate(pricelist: Pricelist): boolean {
+    return pricelist.canCollaborate === true;
   }
 
   isChanging(pricelist: Pricelist): boolean {
@@ -199,6 +216,10 @@ export class PricelistListComponent implements OnInit {
   private statusChangeErrorMessage(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
       if (error.status === 400) {
+        const backend = String(error.error?.error ?? '');
+        if (backend.includes('Only the owner')) {
+          return 'Only the owner can change this pricelist status.';
+        }
         return 'This status change is not allowed.';
       }
       if (error.status === 409) {
@@ -218,6 +239,9 @@ export class PricelistListComponent implements OnInit {
     }
     if (backend.includes('Draft pricelists')) {
       return 'Draft pricelists can be edited directly.';
+    }
+    if (backend.includes('access')) {
+      return 'You do not have access to this pricelist.';
     }
     return 'New version could not be created.';
   }
@@ -271,6 +295,9 @@ export class PricelistListComponent implements OnInit {
     }
     if (backend.includes('Base price')) {
       return 'Base price could not be determined.';
+    }
+    if (backend.includes('access')) {
+      return 'You do not have access to this pricelist.';
     }
     if (action === 'activate') {
       return 'Offer could not be activated.';

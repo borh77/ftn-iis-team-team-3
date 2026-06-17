@@ -49,9 +49,16 @@ public class PricelistController {
         return ResponseEntity.ok(pricelistService.listCenovniciForUser(currentUserId));
     }
 
+    @GetMapping("/team")
+    public ResponseEntity<List<PricelistResponseDTO>> team(Authentication authentication) {
+        Long currentUserId = userService.getUserIdByUsername(authentication.getName());
+        return ResponseEntity.ok(pricelistService.listTeamCenovniciForUser(currentUserId));
+    }
+
     @PutMapping("/{id}/status")
-    public ResponseEntity<PricelistResponseDTO> changeStatus(@PathVariable Long id, @Valid @RequestBody ChangePricelistStatusDTO dto) {
-        return ResponseEntity.ok(pricelistService.changeStatus(id, dto));
+    public ResponseEntity<PricelistResponseDTO> changeStatus(@PathVariable Long id, @Valid @RequestBody ChangePricelistStatusDTO dto, Authentication authentication) {
+        Long currentUserId = userService.getUserIdByUsername(authentication.getName());
+        return ResponseEntity.ok(pricelistService.changeStatus(id, dto, currentUserId));
     }
 
     @PostMapping("/{id}/versions")
