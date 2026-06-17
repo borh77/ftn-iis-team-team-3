@@ -60,29 +60,129 @@
           <th>Status</th>
           <th>Outcome</th>
           <th *ngIf="canManageProcesses">Change Stage</th>
+          <th>Actions</th>
         </tr>
       </thead>
 
       <tbody>
-        <tr *ngFor="let process of processes">
-          <td>{{ process.title }}</td>
-          <td>{{ process.customerName }}</td>
-          <td>
-            <span class="status">{{ process.stage }}</span>
-          </td>
-          <td>{{ process.status }}</td>
-          <td>{{ process.outcome }}</td>
-          <td *ngIf="canManageProcesses">
-            <select
-              [ngModel]="process.stage"
-              (ngModelChange)="updateStage(process, $event)"
-              name="stage-{{ process.id }}">
-              <option *ngFor="let stage of stages" [ngValue]="stage">
-                {{ stage }}
-              </option>
-            </select>
-          </td>
-        </tr>
+        <ng-container *ngFor="let process of processes">
+          <tr>
+            <td>{{ process.title }}</td>
+            <td>{{ process.customerName }}</td>
+            <td><span class="status">{{ process.stage }}</span></td>
+            <td>{{ process.status }}</td>
+            <td>{{ process.outcome }}</td>
+
+            <td *ngIf="canManageProcesses">
+              <select
+                [ngModel]="process.stage"
+                (ngModelChange)="updateStage(process, $event)"
+                name="stage-{{ process.id }}">
+                <option *ngFor="let stage of stages" [ngValue]="stage">
+                  {{ stage }}
+                </option>
+              </select>
+            </td>
+
+            <td>
+              <div class="action-buttons" *ngIf="process.status === 'ACTIVE'; else closedProcess">
+                <button type="button" class="secondary-button" (click)="openNeedForm(process)">
+                  Add Need
+                </button>
+
+                <button type="button" class="secondary-button" (click)="openOfferForm(process)">
+                  Create Offer
+                </button>
+              </div>
+
+              <ng-template #closedProcess>
+                <span class="muted-text">Closed</span>
+              </ng-template>
+            </td>
+          </tr>
+
+          <tr *ngIf="showNeedFormForProcessId === process.id">
+            <td colspan="7">
+              <form (ngSubmit)="createNeed(process)" class="process-form">
+                <label>
+                  Customer Need
+                  <input
+                    name="need-description-{{ process.id }}"
+                    [(ngModel)]="newNeed.description"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Priority
+                  <select name="need-priority-{{ process.id }}" [(ngModel)]="newNeed.priority">
+                    <option value="HIGH">HIGH</option>
+                    <option value="MEDIUM">MEDIUM</option>
+                    <option value="LOW">LOW</option>
+                  </select>
+                </label>
+
+                <button type="submit" class="primary-button">Save Need</button>
+              </form>
+            </td>
+          </tr>
+
+          <tr *ngIf="showOfferFormForProcessId === process.id">
+            <td colspan="7">
+              <form (ngSubmit)="createOffer()" class="process-form">
+                <label>
+                  Valid Until
+                  <input
+                    type="date"
+                    name="offer-valid-until-{{ process.id }}"
+                    [(ngModel)]="newOffer.validUntil"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Product ID
+                  <input
+                    type="number"
+                    name="offer-product-{{ process.id }}"
+                    [(ngModel)]="newOffer.items[0].productId"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Quantity
+                  <input
+                    type="number"
+                    name="offer-quantity-{{ process.id }}"
+                    [(ngModel)]="newOffer.items[0].quantity"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Unit Price
+                  <input
+                    type="number"
+                    name="offer-price-{{ process.id }}"
+                    [(ngModel)]="newOffer.items[0].unitPrice"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Notes
+                  <input
+                    name="offer-notes-{{ process.id }}"
+                    [(ngModel)]="newOffer.notes"
+                  />
+                </label>
+
+                <button type="submit" class="primary-button">Save Offer</button>
+              </form>
+            </td>
+          </tr>
+        </ng-container>
       </tbody>
     </table>
 

@@ -4,12 +4,11 @@ import { FormsModule } from '@angular/forms';
 
 import { SalesApiService } from '../../api/sales-api.service';
 import { Customer } from '../../models/customer.model';
-import {
-  SalesProcess,
-  SalesProcessRequest,
-  SalesStage,
-} from '../../models/sales-process.model';
+import { SalesProcess, SalesProcessRequest, SalesStage, } from '../../models/sales-process.model';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { CreateCustomerNeedRequest } from '../../models/customer-need.model';
+import { CreateOfferRequest } from '../../models/offer.model';
+import { CreateContractRequest } from '../../models/contract.model';
 
 @Component({
   selector: 'app-processes-list',
@@ -32,6 +31,37 @@ export class ProcessesListComponent implements OnInit {
 
   canManageProcesses = false;
   canCreateProcess = false;
+
+  showNeedFormForProcessId: number | null = null;
+  showOfferFormForProcessId: number | null = null;
+  showContractFormForProcessId: number | null = null;
+
+  newNeed: CreateCustomerNeedRequest = {
+    salesProcessId: 0,
+    description: '',
+    priority: 'HIGH',
+  };
+
+  newOffer: CreateOfferRequest = {
+    customerId: 0,
+    salesProcessId: 0,
+    validUntil: '',
+    notes: '',
+    items: [
+      {
+        productId: 1,
+        quantity: 1,
+        unitPrice: 1000,
+      },
+    ],
+  };
+
+  newContract: CreateContractRequest = {
+    offerId: 0,
+    startDate: '',
+    endDate: '',
+    terms: '',
+  };
 
   stages: SalesStage[] = [
     'NEW',
@@ -108,6 +138,52 @@ export class ProcessesListComponent implements OnInit {
     this.salesApiService.updateSalesProcessStage(process.id, { stage }).subscribe({
       next: () => this.loadData(),
       error: (error) => console.error('Failed to update stage:', error),
+    });
+  }
+
+  openNeedForm(process: SalesProcess): void {
+    this.showNeedFormForProcessId = process.id;
+    this.newNeed = {
+      salesProcessId: process.id,
+      description: '',
+      priority: 'HIGH',
+    };
+  }
+
+  createNeed(process: SalesProcess): void {
+    this.salesApiService.createCustomerNeed(process.customerId, this.newNeed).subscribe({
+      next: () => {
+        this.showNeedFormForProcessId = null;
+        this.loadData();
+      },
+      error: (error) => console.error('Failed to create customer need:', error),
+    });
+  }
+
+  openOfferForm(process: SalesProcess): void {
+    this.showOfferFormForProcessId = process.id;
+    this.newOffer = {
+      customerId: process.customerId,
+      salesProcessId: process.id,
+      validUntil: '',
+      notes: '',
+      items: [
+        {
+          productId: 1,
+          quantity: 1,
+          unitPrice: 1000,
+        },
+      ],
+    };
+  }
+
+  createOffer(): void {
+    this.salesApiService.createOffer(this.newOffer).subscribe({
+      next: () => {
+        this.showOfferFormForProcessId = null;
+        this.loadData();
+      },
+      error: (error) => console.error('Failed to create offer:', error),
     });
   }
 }
