@@ -40,20 +40,32 @@ public class ProductServiceImpl implements ProductService {
         Long therapeuticAreaId,
         boolean includeArchived
     ) {
-        String normalizedSearch = search == null || search.isBlank()
-            ? null
-            : search.trim();
+    List<Product> products;
 
-            return productRepository.searchProducts(
-                normalizedSearch,
-                subcategoryId,
-                therapeuticAreaId,
-                includeArchived,
+    if (search != null && !search.isBlank()) {
+        products = productRepository.searchByNameWithRelations(
+                search.trim(),
                 EntityStatus.ACTIVE
-        )
-        .stream()
-        .map(ProductResponseDTO::fromEntity)
-        .toList();
+        );
+    } else if (subcategoryId != null) {
+        products = productRepository.findBySubcategoryIdWithRelations(
+                subcategoryId,
+                EntityStatus.ACTIVE
+        );
+    } else if (therapeuticAreaId != null) {
+        products = productRepository.findByTherapeuticAreaIdWithRelations(
+                therapeuticAreaId,
+                EntityStatus.ACTIVE
+        );
+    } else if (includeArchived) {
+        products = productRepository.findAllWithRelations();
+    } else {
+        products = productRepository.findByStatusWithRelations(EntityStatus.ACTIVE);
+    }
+
+    return products.stream()
+            .map(ProductResponseDTO::fromEntity)
+            .toList();
     }
 
     @Override

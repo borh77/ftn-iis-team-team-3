@@ -44,11 +44,4 @@ public class VariantVersionIngredientsController {
     ) {
         return service.update(id, dto);
     }
-
-    @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasRole('PORTFOLIO_MANAGER')")
-    public void delete(@PathVariable Long id) {
-        service.delete(id);
-    }
 }

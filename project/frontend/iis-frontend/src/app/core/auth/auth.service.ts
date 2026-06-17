@@ -103,6 +103,10 @@ export class AuthService {
       return '/content';
     }
 
+    if (session.roles.includes('ROLE_PORTFOLIO_MANAGER')) {
+      return '/portfolio';
+    }
+
     if (session.roles.includes('ROLE_BUYER')) {
       return '/published-pricelists';
     }

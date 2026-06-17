@@ -8,6 +8,7 @@ import { AdminRegionsPageComponent } from './pages/admin-regions/admin-regions-p
 import { RoleLandingComponent } from './pages/role-landing/role-landing.component';
 import { ForcePasswordChangeComponent } from './pages/force-password-change/force-password-change.component';
 import { ProfileComponent } from './pages/profile/profile.component';
+import { PortfolioPageComponent } from './pages/portfolio/portfolio-page.component';
 
 export const routes: Routes = [
 	{ path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -66,6 +67,13 @@ export const routes: Routes = [
 			subtitle: 'Buyer landing page.',
 		},
 		title: 'IIS Drug CRM | Pricelists',
+	},
+	{
+  		path: 'portfolio',
+  		component: PortfolioPageComponent,
+  		canActivate: [authGuard, passwordChangeGuard],
+  		data: { roles: ['ROLE_PORTFOLIO_MANAGER'] },
+  		title: 'IIS Drug CRM | Product Portfolio',
 	},
 	{ path: '**', redirectTo: 'login' },
 ];
