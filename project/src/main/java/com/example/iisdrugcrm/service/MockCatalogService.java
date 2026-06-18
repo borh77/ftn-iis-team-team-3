@@ -28,7 +28,15 @@ public class MockCatalogService implements CatalogService {
         Set<Long> requestedIds = new LinkedHashSet<>(variantIds);
         Map<Long, CatalogVariantDTO> matches = new LinkedHashMap<>();
 
-        for (Variant variant : variantRepository.searchVariants(null, null, false, EntityStatus.ACTIVE)) {
+        // ISPRAVLJENO: Pravo ime metode i ispravan redosled parametara
+        List<Variant> activeVariants = variantRepository.findByStatusWithRelations(
+                EntityStatus.ACTIVE, // activeStatus
+                false,               // includeArchived
+                null,                // productId
+                null                 // search
+        );
+
+        for (Variant variant : activeVariants) {
             if (requestedIds.contains(variant.getId())) {
                 matches.put(variant.getId(), toCatalogVariantDTO(variant));
             }
@@ -40,7 +48,13 @@ public class MockCatalogService implements CatalogService {
     @Override
     @Transactional(readOnly = true)
     public List<CatalogVariantDTO> getActiveVariants() {
-        return variantRepository.searchVariants(null, null, false, EntityStatus.ACTIVE).stream()
+        // ISPRAVLJENO: Pravo ime metode i ispravan redosled parametara
+        return variantRepository.findByStatusWithRelations(
+                EntityStatus.ACTIVE, // activeStatus
+                false,               // includeArchived
+                null,                // productId
+                null                 // search
+        ).stream()
                 .map(this::toCatalogVariantDTO)
                 .toList();
     }

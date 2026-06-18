@@ -4,7 +4,6 @@ import com.example.iisdrugcrm.domain.portfolio.EntityStatus;
 import com.example.iisdrugcrm.domain.portfolio.Variant;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -36,10 +35,36 @@ public interface VariantRepository extends JpaRepository<Variant, Long> {
             OR LOWER(v.dosage) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
       )
     """)
-    List<Variant> searchVariants(
-        @Param("search") String search,
-        @Param("productId") Long productId,
-        @Param("includeArchived") boolean includeArchived,
-        @Param("activeStatus") EntityStatus activeStatus
+    List<Variant> findByStatusWithRelations(
+        EntityStatus activeStatus, 
+        boolean includeArchived, 
+        Long productId, 
+        String search
     );
+
+    @Query("""
+        SELECT v
+        FROM Variant v
+        JOIN FETCH v.product p
+        WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%'))
+           OR LOWER(v.form) LIKE LOWER(CONCAT('%', :search, '%'))
+           OR LOWER(v.dosage) LIKE LOWER(CONCAT('%', :search, '%'))
+    """)
+    List<Variant> searchByTextWithRelations(String search);
+
+    @Query("""
+        SELECT v
+        FROM Variant v
+        JOIN FETCH v.product p
+        WHERE p.id = :productId
+          AND v.status = :status
+    """)
+    List<Variant> findByProductIdWithRelations(Long productId, EntityStatus status);
+
+    @Query("""
+        SELECT v
+        FROM Variant v
+        JOIN FETCH v.product p
+    """)
+    List<Variant> findAllWithRelations();
 }
