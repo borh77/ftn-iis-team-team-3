@@ -6,8 +6,8 @@
       <p class="lede">Browse active medicine prices available for your region and customer segment.</p>
     </div>
 
-    <button type="button" class="secondary" (click)="loadCatalog()" [disabled]="loading">
-      {{ loading ? 'Refreshing...' : 'Refresh' }}
+    <button type="button" class="secondary" (click)="refreshCatalog()" [disabled]="loading || refreshing">
+      {{ refreshing ? 'Refreshing...' : 'Refresh' }}
     </button>
   </div>
 </section>
@@ -15,11 +15,13 @@
 <section class="panel">
   @if (loading) {
     <p class="muted">Loading catalog...</p>
-  } @else if (errorMessage) {
-    <p class="error-box">{{ errorMessage }}</p>
-  } @else if (!hasItems()) {
-    <p class="muted">No active pricelist is available for your region and customer segment.</p>
-  } @else if (catalog) {
+  }
+
+  @if (!loading && errorMessage) {
+    <div class="error-box" role="alert">{{ errorMessage }}</div>
+  }
+
+  @if (!loading && catalog) {
     <div class="catalog-context">
       <div>
         <span>Region</span>
@@ -39,7 +41,8 @@
       </div>
     </div>
 
-    <div class="catalog-table-wrap">
+    @if (catalog.items.length) {
+      <div class="catalog-table-wrap">
       <table class="catalog-table">
         <thead>
           <tr>
@@ -80,6 +83,13 @@
           }
         </tbody>
       </table>
-    </div>
+      </div>
+    } @else {
+      <p class="muted">No catalog items are available in the active pricelist.</p>
+    }
+  }
+
+  @if (!loading && !catalog && !errorMessage) {
+    <p class="muted">No active medicine catalog is available for your region and customer segment.</p>
   }
 </section>
