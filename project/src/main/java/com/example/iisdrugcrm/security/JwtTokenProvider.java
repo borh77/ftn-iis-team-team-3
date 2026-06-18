@@ -11,7 +11,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
@@ -73,7 +72,6 @@ public class JwtTokenProvider {
         return getClaims(token).getSubject();
     }
 
-    @SuppressWarnings("unchecked")
     public List<UserRole> getRoles(String token) {
         Object rolesClaim = getClaims(token).get("roles");
         if (rolesClaim instanceof List<?> roles) {

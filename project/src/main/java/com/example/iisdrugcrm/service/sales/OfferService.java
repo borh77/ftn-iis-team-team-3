@@ -110,11 +110,14 @@ public class OfferService {
         SalesStage previousStage = salesProcess.getStage();
 
         offer.markAsAccepted();
-        salesProcess.changeStage(SalesStage.WON);
 
-        salesProcessHistoryRepository.save(
+        if (previousStage != SalesStage.WON) {
+            salesProcess.changeStage(SalesStage.WON);
+
+            salesProcessHistoryRepository.save(
                 new SalesProcessHistory(salesProcess, previousStage, SalesStage.WON)
-        );
+            );
+        }
 
         return mapToDto(offer);
     }

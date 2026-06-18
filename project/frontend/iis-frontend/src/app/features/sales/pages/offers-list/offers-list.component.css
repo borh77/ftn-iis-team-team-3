@@ -1,0 +1,110 @@
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.status {
+  font-weight: 600;
+}
+
+.loading {
+  padding: 1rem;
+  color: #64748b;
+}
+
+.page {
+  padding: 2rem;
+}
+
+.page-header,
+.table-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.eyebrow {
+  color: #2563eb;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.status {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.secondary-button,
+.primary-button {
+  border-radius: 0.75rem;
+  padding: 0.65rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.secondary-button {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+}
+
+.primary-button {
+  border: none;
+  background: #2563eb;
+  color: white;
+}
+
+.process-form {
+  display: flex;
+  gap: 1rem;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.process-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.process-form input {
+  border: 1px solid #cbd5e1;
+  border-radius: 0.65rem;
+  padding: 0.65rem;
+}
+
+.loading {
+  padding: 1rem;
+  color: #64748b;
+}
+
+.muted-text {
+  color: #64748b;
+  font-weight: 600;
+}

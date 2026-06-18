@@ -70,6 +70,7 @@
           <th>Website</th>
           <th>Address</th>
           <th>Status</th>
+          <th>Actions</th>
         </tr>
       </thead>
 
@@ -84,6 +85,15 @@
             <span class="status">
               {{ customer.status }}
             </span>
+          </td>
+
+           <td>
+            <button
+              type="button"
+              class="secondary-button"
+              (click)="viewDetails(customer)">
+              View Details
+            </button>
           </td>
         </tr>
       </tbody>

@@ -1,0 +1,173 @@
+<main class="page">
+  <div *ngIf="loading" class="loading">Loading process details...</div>
+
+  <ng-container *ngIf="!loading && process">
+    <section class="page-header">
+      <button type="button" class="back-button" (click)="goBack()">← Back</button>
+
+      <div>
+        <p class="eyebrow">Sales process details</p>
+        <h1>{{ process.title }}</h1>
+        <p>{{ process.customerName }}</p>
+      </div>
+
+      <span class="status">{{ process.status }}</span>
+    </section>
+
+    <section class="stage-card">
+      <div class="stage-track">
+        <div
+          *ngFor="let stage of stages"
+          class="stage-step"
+          [class.reached]="isStageReached(stage)"
+          [class.current]="process.stage === stage">
+          <div class="stage-dot"></div>
+          <span>{{ stage }}</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="info-card">
+        <h2>Process Information</h2>
+        <p><strong>Current stage:</strong> {{ process.stage }}</p>
+        <p><strong>Status:</strong> {{ process.status }}</p>
+        <p><strong>Outcome:</strong> {{ process.outcome }}</p>
+        <p><strong>Created:</strong> {{ process.createdAt }}</p>
+        <p><strong>Updated:</strong> {{ process.updatedAt }}</p>
+      </article>
+
+      <article class="info-card">
+        <h2>Sales Process History</h2>
+
+        <div *ngIf="history.length === 0" class="muted-text">
+          No stage changes recorded.
+        </div>
+
+        <div class="history-timeline">
+            <div *ngFor="let item of history" class="history-item">
+                <div class="history-dot"></div>
+
+                <div class="history-content">
+                    <div class="history-title">
+                        {{ item.previousStage }} → {{ item.newStage }}
+                    </div>
+
+                    <div class="history-date">
+                        {{ item.changedAt }}
+                    </div>
+                </div>
+            </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="info-card">
+        <h2>Customer Needs</h2>
+
+        <div *ngIf="needs.length === 0" class="muted-text">No needs recorded.</div>
+
+        <div *ngFor="let need of needs" class="list-item">
+          <strong>{{ need.priority }}</strong>
+          <p>{{ need.description }}</p>
+        </div>
+      </article>
+
+      <article class="info-card">
+        <h2>Offers</h2>
+
+        <div *ngIf="offers.length === 0" class="muted-text">No offers created.</div>
+
+        <div *ngFor="let offer of offers" class="list-item">
+          <strong>{{ offer.offerNumber }}</strong>
+          <p>Status: {{ offer.status }}</p>
+          <p>Total: {{ offer.totalAmount }}</p>
+          <p>Valid until: {{ offer.validUntil }}</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="info-card">
+        <h2>Contracts</h2>
+
+        <div *ngIf="contracts.length === 0" class="muted-text">No contracts generated.</div>
+
+        <div *ngFor="let contract of contracts" class="list-item">
+          <strong>{{ contract.contractNumber }}</strong>
+          <p>Status: {{ contract.status }}</p>
+          <p>Period: {{ contract.startDate }} - {{ contract.endDate }}</p>
+          <p>Total value: {{ contract.totalValue }}</p>
+        </div>
+      </article>
+
+      <article class="info-card">
+        <h2>Communications</h2>
+
+        <button
+          *ngIf="canManageCommunications"
+          type="button"
+          class="secondary-button"
+          (click)="showCommunicationForm = !showCommunicationForm">
+          + Add Communication
+        </button>
+
+        <form
+            *ngIf="showCommunicationForm && canManageCommunications"
+            (ngSubmit)="addCommunication()"
+            class="communication-form">
+
+            <label>
+                Type
+                <select name="communication-type" [(ngModel)]="newCommunication.type" required>
+                <option value="EMAIL">EMAIL</option>
+                <option value="PHONE_CALL">PHONE_CALL</option>
+                <option value="MEETING">MEETING</option>
+                <option value="VIDEO_CALL">VIDEO_CALL</option>
+                </select>
+            </label>
+
+            <label>
+                Date
+                <input
+                type="datetime-local"
+                name="communication-date"
+                [(ngModel)]="newCommunication.communicationDate"
+                required
+                />
+            </label>
+
+            <label class="full-width">
+                Summary
+                <textarea
+                name="communication-summary"
+                [(ngModel)]="newCommunication.summary"
+                required>
+                </textarea>
+            </label>
+
+            <div class="form-actions full-width">
+                <button type="button" class="secondary-button" (click)="showCommunicationForm = false">
+                Cancel
+                </button>
+
+                <button type="submit" class="primary-button">
+                Save Communication
+                </button>
+            </div>
+        </form>
+
+        <div *ngIf="communications.length === 0" class="muted-text">
+          No customer communications.
+        </div>
+
+        <div *ngFor="let communication of communications" class="list-item">
+          <strong>{{ communication.type }}</strong>
+          <p>{{ communication.communicationDate }}</p>
+          <p>{{ communication.summary }}</p>
+        </div>
+      </article>
+    </section>
+  </ng-container>
+</main>

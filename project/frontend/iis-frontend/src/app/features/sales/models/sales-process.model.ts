@@ -7,8 +7,8 @@ export type SalesStage =
   | 'WON'
   | 'LOST';
 
-export type SalesProcessStatus = 'ACTIVE' | 'CLOSED';
-export type SalesProcessOutcome = 'OPEN' | 'WON' | 'LOST';
+export type SalesProcessStatus = 'ACTIVE' | 'SUCCESSFUL' | 'UNSUCCESSFUL';
+export type SalesProcessOutcome = 'OPEN' | 'CLOSED_WON' | 'CLOSED_LOST';
 
 export interface SalesProcess {
   id: number;
