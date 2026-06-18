@@ -2,6 +2,8 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../../../core/auth/auth.service';
 
 import { SalesApiService } from '../../api/sales-api.service';
 import { SalesProcess } from '../../models/sales-process.model';
@@ -10,11 +12,12 @@ import { CustomerCommunication } from '../../models/customer-communication.model
 import { Offer } from '../../models/offer.model';
 import { Contract } from '../../models/contract.model';
 import { SalesProcessHistory } from '../../models/sales-process-history.model';
+import { CustomerCommunicationRequest } from '../../models/customer-communication.model';
 
 @Component({
   selector: 'app-process-details',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './process-details.component.html',
   styleUrl: './process-details.component.css',
 })
@@ -23,6 +26,7 @@ export class ProcessDetailsComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly salesApiService = inject(SalesApiService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly authService = inject(AuthService);
 
   process?: SalesProcess;
   needs: CustomerNeed[] = [];
@@ -32,11 +36,16 @@ export class ProcessDetailsComponent implements OnInit {
   history: SalesProcessHistory[] = [];
 
   loading = true;
+  showCommunicationForm = false;
+  canManageCommunications = false;
 
   stages = ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL_SENT', 'NEGOTIATION', 'WON', 'LOST'];
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
+
+    this.canManageCommunications =
+     this.authService.hasRole('ROLE_ACCOUNT_MANAGER');
 
     this.salesApiService.getSalesProcessById(id).subscribe({
       next: (process) => {
@@ -73,6 +82,34 @@ export class ProcessDetailsComponent implements OnInit {
       },
     });
   }
+
+  newCommunication: CustomerCommunicationRequest = {
+    type: 'MEETING',
+    communicationDate: '',
+    summary: '',
+  };
+
+  addCommunication(): void {
+    if (!this.canManageCommunications || !this.process) {
+        return;
+    }
+
+    this.salesApiService
+        .createCustomerCommunication(this.process.customerId, this.newCommunication)
+        .subscribe({
+        next: () => {
+            this.showCommunicationForm = false;
+            this.newCommunication = {
+            type: 'MEETING',
+            communicationDate: '',
+            summary: '',
+            };
+
+            this.ngOnInit();
+        },
+        error: (error) => console.error('Failed to add communication:', error),
+        });
+    }
 
   goBack(): void {
     this.router.navigate(['/sales/processes']);

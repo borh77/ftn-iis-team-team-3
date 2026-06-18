@@ -33,6 +33,7 @@ export class ProcessesListComponent implements OnInit {
 
   canManageProcesses = false;
   canCreateProcess = false;
+  canCreateNeedsAndOffers = false;
 
   showNeedFormForProcessId: number | null = null;
   showOfferFormForProcessId: number | null = null;
@@ -85,6 +86,7 @@ export class ProcessesListComponent implements OnInit {
         this.authService.hasRole('ROLE_SALES_REPRESENTATIVE') ||
         this.authService.hasRole('ROLE_SALES_MANAGER');
     this.canCreateProcess = this.authService.hasRole('ROLE_SALES_REPRESENTATIVE');
+    this.canCreateNeedsAndOffers = this.authService.hasRole('ROLE_SALES_REPRESENTATIVE');
     this.loadData();
   }
 

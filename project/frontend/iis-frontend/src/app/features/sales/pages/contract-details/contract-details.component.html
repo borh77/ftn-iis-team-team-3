@@ -1,0 +1,59 @@
+<main class="page">
+  <div *ngIf="loading" class="loading">Loading contract details...</div>
+
+  <ng-container *ngIf="!loading && contract">
+    <section class="page-header">
+      <button type="button" class="back-button" (click)="goBack()">← Back</button>
+
+      <div>
+        <p class="eyebrow">Contract details</p>
+        <h1>{{ contract.contractNumber }}</h1>
+        <p>{{ contract.customerName }}</p>
+      </div>
+
+      <span class="status">{{ contract.status }}</span>
+    </section>
+
+    <section class="summary-grid">
+      <article class="summary-card">
+        <span class="summary-label">Contract Value</span>
+        <h2>{{ contract.totalValue }} $</h2>
+      </article>
+
+      <article class="summary-card">
+        <span class="summary-label">Offer</span>
+        <h2>{{ contract.offerNumber }}</h2>
+      </article>
+
+      <article class="summary-card">
+        <span class="summary-label">Status</span>
+        <h2>{{ contract.status }}</h2>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="info-card">
+        <h2>Contract Information</h2>
+
+        <p><strong>Customer:</strong> {{ contract.customerName }}</p>
+        <p><strong>Start Date:</strong> {{ contract.startDate }}</p>
+        <p><strong>End Date:</strong> {{ contract.endDate }}</p>
+        <p><strong>Signed At:</strong> {{ contract.signedAt || '-' }}</p>
+        <p><strong>Terms:</strong> {{ contract.terms || '-' }}</p>
+      </article>
+
+      <article class="info-card">
+        <h2>Related Sales Process</h2>
+
+        <p><strong>Process:</strong> {{ contract.salesProcessTitle }}</p>
+
+        <button
+          type="button"
+          class="secondary-button"
+          (click)="openProcess()">
+          View Process
+        </button>
+      </article>
+    </section>
+  </ng-container>
+</main>

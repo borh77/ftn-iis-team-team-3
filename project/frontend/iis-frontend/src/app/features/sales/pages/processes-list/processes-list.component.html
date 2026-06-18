@@ -90,8 +90,7 @@
                   View Details
                 </button>
 
-                <ng-container *ngIf="process.status === 'ACTIVE'; else closedProcess">
-                  <button type="button" class="secondary-button" (click)="openNeedForm(process)">
+                  <ng-container *ngIf="process.status === 'ACTIVE' && canCreateNeedsAndOffers; else closedProcess">                  <button type="button" class="secondary-button" (click)="openNeedForm(process)">
                     Add Need
                   </button>
 

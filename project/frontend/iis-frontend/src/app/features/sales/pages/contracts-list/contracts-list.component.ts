@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { Router } from '@angular/router';
 
 import { SalesApiService } from '../../api/sales-api.service';
 import { Contract } from '../../models/contract.model';
@@ -14,6 +15,7 @@ import { Contract } from '../../models/contract.model';
 export class ContractsListComponent implements OnInit {
   private readonly salesApiService = inject(SalesApiService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly router = inject(Router);
 
   contracts: Contract[] = [];
   loading = true;
@@ -44,5 +46,9 @@ export class ContractsListComponent implements OnInit {
       next: () => this.loadContracts(),
       error: (error) => console.error('Failed to sign contract:', error),
     });
+  }
+
+  viewDetails(contract: Contract): void {
+    this.router.navigate(['/sales/contracts', contract.id]);
   }
 }

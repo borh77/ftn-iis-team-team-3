@@ -165,4 +165,10 @@ export class SalesApiService {
       `${this.apiBaseUrl}/api/sales/processes/${id}/history`,
     );
   }
+
+  getContractById(id: number): Observable<Contract> {
+    return this.http.get<Contract>(
+      `${this.apiBaseUrl}/api/contracts/${id}`,
+    );
+  }
 }

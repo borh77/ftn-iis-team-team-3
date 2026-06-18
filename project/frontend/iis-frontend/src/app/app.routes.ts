@@ -18,6 +18,8 @@ import { OffersListComponent } from './features/sales/pages/offers-list/offers-l
 import { ContractsListComponent } from './features/sales/pages/contracts-list/contracts-list.component';
 import { ProcessDetailsComponent } from './features/sales/pages/process-details/process-details.component';
 import { CustomerDetailsComponent } from './features/sales/pages/customer-details/customer-details.component';
+import { ContractDetailsComponent } from './features/sales/pages/contract-details/contract-details.component';
+
 
 export const routes: Routes = [
 	{ path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -203,6 +205,19 @@ export const routes: Routes = [
 			],
 		},
 		title: 'IIS Drug CRM | Process Details',
+	},
+	{
+		path: 'sales/contracts/:id',
+		component: ContractDetailsComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: {
+			roles: [
+			'ROLE_SALES_REPRESENTATIVE',
+			'ROLE_ACCOUNT_MANAGER',
+			'ROLE_SALES_MANAGER',
+			],
 		},
+		title: 'IIS Drug CRM | Contract Details',
+	},
 	{ path: '**', redirectTo: 'login' },
 ];

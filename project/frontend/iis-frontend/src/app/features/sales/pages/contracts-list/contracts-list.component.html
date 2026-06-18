@@ -43,19 +43,26 @@
           <td>{{ contract.endDate }}</td>
           <td>{{ contract.totalValue }}</td>
 
-          <td>
+          <td class="actions-cell">
             <button
-              *ngIf="contract.status === 'PENDING'"
-              type="button"
-              class="primary-button"
-              (click)="signContract(contract)">
-              Sign
+                type="button"
+                class="secondary-button"
+                (click)="viewDetails(contract)">
+                View Details
+            </button>
+
+            <button
+                *ngIf="contract.status === 'PENDING'"
+                type="button"
+                class="primary-button"
+                (click)="signContract(contract)">
+                Sign
             </button>
 
             <span
-              *ngIf="contract.status === 'SIGNED'"
-              class="signed-text">
-              Signed
+                *ngIf="contract.status === 'SIGNED'"
+                class="signed-text">
+                Signed
             </span>
           </td>
         </tr>
