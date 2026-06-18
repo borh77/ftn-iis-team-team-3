@@ -2,14 +2,18 @@
   <header class="page-hero">
     <div>
       <p class="kicker">Pricelist Creator</p>
-      <h2>Create Pricelist</h2>
-      <p>Define the region, customer segment, currency, period, and items with multiple quantity thresholds.</p>
+      <h2>{{ isEditMode ? 'Edit Pricelist' : 'Create Pricelist' }}</h2>
+      <p>{{ isEditMode ? 'Update draft pricelist data, items, and quantity thresholds.' : 'Define the region, customer segment, currency, period, and items with multiple quantity thresholds.' }}</p>
     </div>
 
     <a class="ghost hero-action" routerLink="/content">Back to workspace</a>
   </header>
 
   <form class="panel pricelist-form" [formGroup]="form" (ngSubmit)="submit()">
+    @if (loadingPricelist) {
+      <p class="muted">Loading pricelist...</p>
+    }
+
     <div class="form-grid header-grid">
       <label>
         <span>Region</span>
@@ -121,6 +125,11 @@
               <span>Variant</span>
               <select formControlName="variantId">
                 <option [ngValue]="null">Select variant</option>
+                @if (itemGroup(itemIndex).controls['existingVariantName'].value) {
+                  <option [ngValue]="itemGroup(itemIndex).controls['variantId'].value">
+                    {{ itemGroup(itemIndex).controls['existingVariantName'].value }}
+                  </option>
+                }
                 @for (variant of (variantsByItem[itemIndex] ?? []); track variant.id) {
                   <option [ngValue]="variant.id">{{ variant.productName }} - {{ variant.form }} / {{ variant.dosage }}</option>
                 }
@@ -183,7 +192,7 @@
 
     <div class="actions-row">
       <button type="button" class="ghost" routerLink="/content">Cancel</button>
-      <button type="submit" class="primary" [disabled]="saving">{{ saving ? 'Saving...' : 'Create pricelist' }}</button>
+      <button type="submit" class="primary" [disabled]="saving || loadingPricelist">{{ saving ? 'Saving...' : (isEditMode ? 'Save changes' : 'Create pricelist') }}</button>
     </div>
   </form>
 </section>

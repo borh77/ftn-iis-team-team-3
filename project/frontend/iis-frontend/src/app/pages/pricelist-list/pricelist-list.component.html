@@ -111,6 +111,12 @@
           </div>
 
           <div class="status-actions">
+            @if (canEdit(p)) {
+              <button type="button" class="primary" (click)="editPricelist(p)">
+                Edit
+              </button>
+            }
+
             @if (canSubmitForReview(p)) {
               <button type="button" class="secondary" (click)="submitForReview(p)" [disabled]="isChanging(p)">
                 {{ isChanging(p) ? 'Updating...' : 'Submit for review' }}

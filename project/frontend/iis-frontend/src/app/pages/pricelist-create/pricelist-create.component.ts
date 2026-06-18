@@ -2,13 +2,13 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AbstractControl, FormArray, ReactiveFormsModule, UntypedFormArray, UntypedFormBuilder, UntypedFormControl, UntypedFormGroup, ValidationErrors, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Region } from '../../core/region.model';
 import { RegionService } from '../../core/region.service';
 import { PortfolioService } from '../../core/portfolio.service';
 import { Category, Product, Subcategory, Variant } from '../../core/portfolio.models';
 import { PricelistService } from '../../core/pricelist.service';
-import { CreatePricelistPayload } from '../../core/pricelist.models';
+import { CreatePricelistPayload, Pricelist, PricelistItem, QuantityThreshold } from '../../core/pricelist.models';
 
 type ThresholdGroup = UntypedFormGroup;
 type ItemGroup = UntypedFormGroup;
@@ -27,12 +27,16 @@ export class PricelistCreateComponent implements OnInit {
   private readonly portfolioService = inject(PortfolioService);
   private readonly pricelistService = inject(PricelistService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   loadingRegions = false;
   loadingLookup = false;
+  loadingPricelist = false;
   saving = false;
   errorMessage = '';
   successMessage = '';
+  isEditMode = false;
+  private editingPricelistId: number | null = null;
 
   regions: Region[] = [];
   categories: Category[] = [];
@@ -53,8 +57,14 @@ export class PricelistCreateComponent implements OnInit {
   );
 
   ngOnInit(): void {
+    const idParam = this.route.snapshot.paramMap.get('id');
+    this.editingPricelistId = idParam ? Number(idParam) : null;
+    this.isEditMode = this.editingPricelistId !== null && Number.isFinite(this.editingPricelistId);
     this.loadRegions();
     this.loadCategories();
+    if (this.isEditMode && this.editingPricelistId != null) {
+      this.loadPricelist(this.editingPricelistId);
+    }
   }
 
   get items(): FormArray<ItemGroup> {
@@ -178,9 +188,17 @@ export class PricelistCreateComponent implements OnInit {
     this.errorMessage = '';
     this.successMessage = '';
 
-    this.pricelistService.create(payload).subscribe({
+    const request = this.isEditMode && this.editingPricelistId != null
+      ? this.pricelistService.update(this.editingPricelistId, payload)
+      : this.pricelistService.create(payload);
+
+    request.subscribe({
       next: () => {
         this.saving = false;
+        if (this.isEditMode) {
+          this.router.navigate(['/content/mine']);
+          return;
+        }
         this.successMessage = 'Pricelist was successfully created in DRAFT status.';
         this.form.reset({
           regionId: null,
@@ -282,21 +300,70 @@ export class PricelistCreateComponent implements OnInit {
     });
   }
 
-  private createItemGroup() {
-    return this.fb.group({
-      categoryId: new UntypedFormControl(null, [Validators.required]),
-      subcategoryId: new UntypedFormControl(null, [Validators.required]),
-      productId: new UntypedFormControl(null, [Validators.required]),
-      variantId: new UntypedFormControl(null, [Validators.required]),
-      thresholds: this.fb.array([this.createThresholdGroup()]),
+  private loadPricelist(id: number): void {
+    this.loadingPricelist = true;
+    this.errorMessage = '';
+
+    this.pricelistService.getById(id).subscribe({
+      next: (pricelist) => {
+        this.loadingPricelist = false;
+        if (pricelist.status !== 'DRAFT') {
+          this.errorMessage = 'Only draft pricelists can be edited.';
+          return;
+        }
+        this.populateForm(pricelist);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.loadingPricelist = false;
+        this.errorMessage = this.createErrorMessage(err);
+      },
     });
   }
 
-  private createThresholdGroup() {
+  private populateForm(pricelist: Pricelist): void {
+    this.form.patchValue({
+      regionId: pricelist.regionId,
+      customerSegment: pricelist.customerSegment,
+      currency: pricelist.currency,
+      periodStart: this.toDatetimeLocal(pricelist.periodStart),
+      periodEnd: this.toDatetimeLocal(pricelist.periodEnd),
+    });
+
+    this.items.clear();
+    for (const item of pricelist.items) {
+      this.items.push(this.createItemGroup(item));
+    }
+    if (this.items.length === 0) {
+      this.items.push(this.createItemGroup());
+    }
+    this.subcategoriesByItem = {};
+    this.productsByItem = {};
+    this.variantsByItem = {};
+  }
+
+  private toDatetimeLocal(value: string): string {
+    const date = new Date(value);
+    const offsetMs = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+  }
+
+  private createItemGroup(item?: PricelistItem) {
+    const lookupValidators = item ? [] : [Validators.required];
     return this.fb.group({
-      quantityFrom: new UntypedFormControl(1, [Validators.required, Validators.min(1)]),
-      quantityTo: new UntypedFormControl(null, [Validators.min(1)]),
-      price: new UntypedFormControl(null, [Validators.required, Validators.min(0.01)]),
+      categoryId: new UntypedFormControl(null, lookupValidators),
+      subcategoryId: new UntypedFormControl(null, lookupValidators),
+      productId: new UntypedFormControl(null, lookupValidators),
+      variantId: new UntypedFormControl(item?.variantId ?? null, [Validators.required]),
+      existingVariantName: new UntypedFormControl(item?.variantName ?? ''),
+      thresholds: this.fb.array((item?.thresholds?.length ? item.thresholds : [undefined]).map((threshold) => this.createThresholdGroup(threshold))),
+    });
+  }
+
+  private createThresholdGroup(threshold?: QuantityThreshold) {
+    return this.fb.group({
+      quantityFrom: new UntypedFormControl(threshold?.quantityFrom ?? 1, [Validators.required, Validators.min(1)]),
+      quantityTo: new UntypedFormControl(threshold?.quantityTo ?? null, [Validators.min(1)]),
+      price: new UntypedFormControl(threshold?.price ?? null, [Validators.required, Validators.min(0.01)]),
     });
   }
 
@@ -312,7 +379,7 @@ export class PricelistCreateComponent implements OnInit {
       items: raw.items.map((item: any) => ({
         id: undefined,
         variantId: item.variantId as number,
-        variantName: this.resolveVariantName(item.variantId as number),
+        variantName: item.existingVariantName || this.resolveVariantName(item.variantId as number),
         thresholds: item.thresholds.map((threshold: any) => ({
           quantityFrom: threshold.quantityFrom,
           quantityTo: threshold.quantityTo,

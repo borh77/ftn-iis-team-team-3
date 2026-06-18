@@ -26,6 +26,7 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,28 +51,11 @@ public class PricelistServiceImpl implements PricelistService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PricelistResponseDTO createCenovnik(CreatePricelistDTO dto, Long currentUserId) {
-        Region region = regionRepository.findById(dto.getRegionId())
-                .orElseThrow(() -> new IllegalArgumentException("Region not found"));
-
-        OffsetDateTime periodStart = dto.getPeriodStart().withOffsetSameInstant(ZoneOffset.UTC);
-        OffsetDateTime periodEnd = dto.getPeriodEnd().withOffsetSameInstant(ZoneOffset.UTC);
-        if (!periodStart.isBefore(periodEnd)) {
-            throw new IllegalArgumentException("Period od mora biti strogo manji od perioda do.");
-        }
-
-        List<Long> requestedVariantIds = dto.getItems().stream()
-                .map(CreatePricelistDTO.PricelistItemDTO::getVariantId)
-                .distinct()
-                .toList();
-
-        Map<Long, ?> resolvedVariants = catalogService.findActiveVariantsByIds(requestedVariantIds);
-        List<Long> missingVariantIds = requestedVariantIds.stream()
-                .filter(variantId -> !resolvedVariants.containsKey(variantId))
-                .toList();
-
-        if (!missingVariantIds.isEmpty()) {
-            throw new VariantNotFoundException("Varijante " + missingVariantIds + " ne postoje ili nisu aktivne u katalogu");
-        }
+        Region region = resolveRegion(dto);
+        OffsetDateTime periodStart = utcPeriodStart(dto);
+        OffsetDateTime periodEnd = utcPeriodEnd(dto);
+        validatePeriod(periodStart, periodEnd);
+        validateRequestedVariantsActive(dto);
 
         Pricelist pricelist = new Pricelist();
         pricelist.setRegion(region);
@@ -82,22 +66,7 @@ public class PricelistServiceImpl implements PricelistService {
         pricelist.setPeriodEnd(periodEnd);
         pricelist.setVersionNumber(1);
 
-        for (CreatePricelistDTO.PricelistItemDTO itemDTO : dto.getItems()) {
-            PricelistItem item = new PricelistItem();
-            item.setVariantId(itemDTO.getVariantId());
-            item.setVariantName(itemDTO.getVariantName().trim());
-
-            List<QuantityThreshold> thresholds = new ArrayList<>();
-            for (CreatePricelistDTO.QuantityThresholdDTO thresholdDTO : itemDTO.getThresholds()) {
-                QuantityThreshold threshold = new QuantityThreshold();
-                threshold.setQuantityFrom(thresholdDTO.getQuantityFrom());
-                threshold.setQuantityTo(thresholdDTO.getQuantityTo());
-                threshold.setPrice(thresholdDTO.getPrice());
-                thresholds.add(threshold);
-            }
-            item.setThresholds(thresholds);
-            pricelist.addItem(item);
-        }
+        replaceItems(pricelist, dto);
 
         pricelist.setCreatedBy(currentUserId);
         pricelist.validateThresholds();
@@ -108,6 +77,52 @@ public class PricelistServiceImpl implements PricelistService {
         Pricelist saved = pricelistRepository.save(pricelist);
         LOGGER.info("Created pricelist {} for region {} and customer segment {}", saved.getId(), region.getId(), saved.getCustomerSegment());
         return toResponse(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PricelistResponseDTO getById(Long id, Long currentUserId) {
+        Pricelist pricelist = pricelistRepository.findById(id)
+                .orElseThrow(() -> new PricelistNotFoundException("Pricelist not found"));
+        boolean canCollaborate = accessService.canCollaborate(pricelist, currentUserId);
+        if (!canCollaborate) {
+            throw new AccessDeniedException("You do not have access to this pricelist.");
+        }
+        return toResponse(pricelist, currentUserId, true);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PricelistResponseDTO update(Long id, CreatePricelistDTO dto, Long currentUserId) {
+        Pricelist pricelist = pricelistRepository.findById(id)
+                .orElseThrow(() -> new PricelistNotFoundException("Pricelist not found"));
+        if (!accessService.canCollaborate(pricelist, currentUserId)) {
+            throw new AccessDeniedException("You do not have access to this pricelist.");
+        }
+        if (pricelist.getStatus() != PricelistStatus.DRAFT) {
+            throw new IllegalArgumentException("Only draft pricelists can be edited.");
+        }
+
+        Region region = resolveRegion(dto);
+        OffsetDateTime periodStart = utcPeriodStart(dto);
+        OffsetDateTime periodEnd = utcPeriodEnd(dto);
+        validatePeriod(periodStart, periodEnd);
+        validateRequestedVariantsActive(dto);
+
+        pricelist.setRegion(region);
+        pricelist.setCustomerSegment(dto.getCustomerSegment().trim());
+        pricelist.setCurrency(dto.getCurrency().trim().toUpperCase());
+        pricelist.setPeriodStart(periodStart);
+        pricelist.setPeriodEnd(periodEnd);
+        replaceItems(pricelist, dto);
+        pricelist.validateThresholds();
+
+        lockExistingPricelists(region.getId(), pricelist.getCustomerSegment());
+        validateNoBlockingOverlapExcludingCurrent(pricelist);
+
+        Pricelist saved = pricelistRepository.save(pricelist);
+        LOGGER.info("Updated draft pricelist {}", saved.getId());
+        return toResponse(saved, currentUserId, true);
     }
 
     @Override
@@ -268,6 +283,64 @@ public class PricelistServiceImpl implements PricelistService {
                  | PessimisticLockException exception) {
             throw new PricelistLockedException("Cenovnici za izabrani region i segment se trenutno menjaju. Pokusajte ponovo.");
         }
+    }
+
+    private Region resolveRegion(CreatePricelistDTO dto) {
+        return regionRepository.findById(dto.getRegionId())
+                .orElseThrow(() -> new IllegalArgumentException("Region not found"));
+    }
+
+    private OffsetDateTime utcPeriodStart(CreatePricelistDTO dto) {
+        return dto.getPeriodStart().withOffsetSameInstant(ZoneOffset.UTC);
+    }
+
+    private OffsetDateTime utcPeriodEnd(CreatePricelistDTO dto) {
+        return dto.getPeriodEnd().withOffsetSameInstant(ZoneOffset.UTC);
+    }
+
+    private void validatePeriod(OffsetDateTime periodStart, OffsetDateTime periodEnd) {
+        if (!periodStart.isBefore(periodEnd)) {
+            throw new IllegalArgumentException("Period od mora biti strogo manji od perioda do.");
+        }
+    }
+
+    private void validateRequestedVariantsActive(CreatePricelistDTO dto) {
+        List<Long> requestedVariantIds = dto.getItems().stream()
+                .map(CreatePricelistDTO.PricelistItemDTO::getVariantId)
+                .distinct()
+                .toList();
+
+        Map<Long, ?> resolvedVariants = catalogService.findActiveVariantsByIds(requestedVariantIds);
+        List<Long> missingVariantIds = requestedVariantIds.stream()
+                .filter(variantId -> !resolvedVariants.containsKey(variantId))
+                .toList();
+
+        if (!missingVariantIds.isEmpty()) {
+            throw new VariantNotFoundException("Varijante " + missingVariantIds + " ne postoje ili nisu aktivne u katalogu");
+        }
+    }
+
+    private void replaceItems(Pricelist pricelist, CreatePricelistDTO dto) {
+        pricelist.getItems().clear();
+        for (CreatePricelistDTO.PricelistItemDTO itemDTO : dto.getItems()) {
+            PricelistItem item = new PricelistItem();
+            item.setVariantId(itemDTO.getVariantId());
+            item.setVariantName(itemDTO.getVariantName().trim());
+            item.setThresholds(toThresholds(itemDTO.getThresholds()));
+            pricelist.addItem(item);
+        }
+    }
+
+    private List<QuantityThreshold> toThresholds(List<CreatePricelistDTO.QuantityThresholdDTO> thresholdDTOs) {
+        List<QuantityThreshold> thresholds = new ArrayList<>();
+        for (CreatePricelistDTO.QuantityThresholdDTO thresholdDTO : thresholdDTOs) {
+            QuantityThreshold threshold = new QuantityThreshold();
+            threshold.setQuantityFrom(thresholdDTO.getQuantityFrom());
+            threshold.setQuantityTo(thresholdDTO.getQuantityTo());
+            threshold.setPrice(thresholdDTO.getPrice());
+            thresholds.add(threshold);
+        }
+        return thresholds;
     }
 
     private void validateNoBlockingOverlap(Region region, String customerSegment, OffsetDateTime periodStart, OffsetDateTime periodEnd) {

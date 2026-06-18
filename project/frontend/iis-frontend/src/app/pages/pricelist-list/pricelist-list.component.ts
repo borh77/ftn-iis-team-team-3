@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { PricelistService } from '../../core/pricelist.service';
 import { Pricelist, PricelistItem } from '../../core/pricelist.models';
 import { SpecialOfferService } from '../../core/special-offer.service';
@@ -21,6 +22,7 @@ export class PricelistListComponent implements OnInit {
   private readonly offerService = inject(SpecialOfferService);
   private readonly catalogService = inject(CatalogService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly router = inject(Router);
 
   loading = false;
   changingStatusId: number | null = null;
@@ -66,6 +68,10 @@ export class PricelistListComponent implements OnInit {
 
   submitForReview(pricelist: Pricelist): void {
     this.changeStatus(pricelist, 'IN_REVIEW');
+  }
+
+  editPricelist(pricelist: Pricelist): void {
+    this.router.navigate(['/pricelists', pricelist.id, 'edit']);
   }
 
   activate(pricelist: Pricelist): void {
@@ -132,6 +138,10 @@ export class PricelistListComponent implements OnInit {
 
   canSubmitForReview(pricelist: Pricelist): boolean {
     return this.isOwner(pricelist) && pricelist.status === 'DRAFT';
+  }
+
+  canEdit(pricelist: Pricelist): boolean {
+    return pricelist.status === 'DRAFT' && this.canCollaborate(pricelist);
   }
 
   canActivate(pricelist: Pricelist): boolean {

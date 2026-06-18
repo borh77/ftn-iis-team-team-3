@@ -101,6 +101,34 @@ class PricelistServiceImplTest {
     }
 
     @Test
+    void draftPricelistCanBeUpdated() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        noActivationConflict();
+
+        CreatePricelistDTO dto = validDto();
+        dto.setCustomerSegment("Bolnice");
+        dto.getItems().get(0).getThresholds().get(1).setPrice(new BigDecimal("90.00"));
+
+        service.update(100L, dto, 99L);
+
+        ArgumentCaptor<Pricelist> captor = ArgumentCaptor.forClass(Pricelist.class);
+        verify(pricelistRepository).save(captor.capture());
+        assertEquals("Bolnice", captor.getValue().getCustomerSegment());
+        assertEquals(new BigDecimal("90.00"), captor.getValue().getItems().get(0).getThresholds().get(1).getPrice());
+    }
+
+    @Test
+    void nonDraftPricelistCannotBeUpdated() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+
+        assertThrows(IllegalArgumentException.class, () -> service.update(100L, validDto(), 99L));
+
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
+    }
+
+    @Test
     void archivedPricelistDoesNotBlockWhenRepositoryReturnsNoBlockingConflict() {
         noBlockingConflict();
 

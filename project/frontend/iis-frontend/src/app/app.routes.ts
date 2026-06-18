@@ -79,6 +79,13 @@ export const routes: Routes = [
         title: 'IIS Drug CRM | New Pricelist',
     },
     {
+        path: 'pricelists/:id/edit',
+        component: PricelistCreateComponent,
+        canActivate: [authGuard, passwordChangeGuard],
+        data: { roles: ['ROLE_PRICELIST_CREATOR'] },
+        title: 'IIS Drug CRM | Edit Pricelist',
+    },
+    {
         path: 'published-pricelists',
         component: BuyerCatalogComponent,
         canActivate: [authGuard, passwordChangeGuard],

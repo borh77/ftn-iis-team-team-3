@@ -13,6 +13,14 @@ export class PricelistService {
     return this.http.post<Pricelist>(`${this.apiBaseUrl}/api/pricelists`, payload);
   }
 
+  getById(id: number): Observable<Pricelist> {
+    return this.http.get<Pricelist>(`${this.apiBaseUrl}/api/pricelists/${id}`);
+  }
+
+  update(id: number, payload: CreatePricelistPayload): Observable<Pricelist> {
+    return this.http.put<Pricelist>(`${this.apiBaseUrl}/api/pricelists/${id}`, payload);
+  }
+
   list(): Observable<Pricelist[]> {
     return this.http.get<Pricelist[]>(`${this.apiBaseUrl}/api/pricelists`);
   }

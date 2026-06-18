@@ -15,6 +15,10 @@ public interface PricelistService {
 
     List<PricelistResponseDTO> listTeamCenovniciForUser(Long currentUserId);
 
+    PricelistResponseDTO getById(Long id, Long currentUserId);
+
+    PricelistResponseDTO update(Long id, CreatePricelistDTO dto, Long currentUserId);
+
     PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto);
 
     PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto, Long currentUserId);
