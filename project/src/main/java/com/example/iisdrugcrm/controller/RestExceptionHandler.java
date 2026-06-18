@@ -75,7 +75,15 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidation(MethodArgumentNotValidException exception) {
-        return ResponseEntity.badRequest().body(Map.of("error", "Validation failed"));
+        String message = exception.getBindingResult()
+                .getAllErrors()
+                .stream()
+                .map(error -> error.getDefaultMessage())
+                .filter(errorMessage -> errorMessage != null && !errorMessage.isBlank())
+                .findFirst()
+                .orElse("Validation failed");
+
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", message));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

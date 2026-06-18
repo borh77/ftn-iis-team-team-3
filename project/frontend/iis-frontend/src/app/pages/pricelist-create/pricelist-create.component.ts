@@ -207,11 +207,14 @@ export class PricelistCreateComponent implements OnInit {
   }
 
   private createErrorMessage(error: HttpErrorResponse): string {
+    const backendMessage = this.backendErrorMessage(error);
     if (error.status === 409) {
-      const backendMessage = typeof error.error?.error === 'string' ? error.error.error.trim() : '';
       return this.isEnglishMessage(backendMessage)
         ? backendMessage
         : 'A conflict exists with an already existing pricelist.';
+    }
+    if (backendMessage) {
+      return backendMessage;
     }
     if (error.status === 400) {
       return 'Invalid quantity thresholds. Check gaps, overlaps, and discount prices.';
@@ -220,6 +223,15 @@ export class PricelistCreateComponent implements OnInit {
       return 'Some selected medicine variants do not exist or are not active.';
     }
     return 'Pricelist creation failed.';
+  }
+
+  private backendErrorMessage(error: HttpErrorResponse): string {
+    const backendError = typeof error.error?.error === 'string' ? error.error.error.trim() : '';
+    if (backendError) {
+      return backendError;
+    }
+
+    return typeof error.error?.message === 'string' ? error.error.message.trim() : '';
   }
 
   private isEnglishMessage(message: string): boolean {

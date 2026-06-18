@@ -127,6 +127,80 @@ public class CreatePricelistDTO {
         public void setThresholds(List<QuantityThresholdDTO> thresholds) {
             this.thresholds = thresholds;
         }
+
+        @AssertTrue(message = "Final quantity threshold must be open-ended")
+        public boolean isFinalThresholdOpenEnded() {
+            if (thresholds == null || thresholds.isEmpty()) {
+                return true;
+            }
+
+            QuantityThresholdDTO lastThreshold = thresholds.get(thresholds.size() - 1);
+            return lastThreshold.getQuantityTo() == null;
+        }
+
+        @AssertTrue(message = "First quantity threshold must start at 1")
+        public boolean isFirstThresholdStartingAtOne() {
+            if (thresholds == null || thresholds.isEmpty()) {
+                return true;
+            }
+
+            return thresholds.get(0).getQuantityFrom() == 1;
+        }
+
+        @AssertTrue(message = "Non-final quantity thresholds must have an upper bound")
+        public boolean isNonFinalThresholdsClosed() {
+            if (thresholds == null || thresholds.isEmpty()) {
+                return true;
+            }
+
+            for (int i = 0; i < thresholds.size() - 1; i++) {
+                if (thresholds.get(i).getQuantityTo() == null) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        @AssertTrue(message = "Quantity thresholds must be consecutive without gaps or overlaps")
+        public boolean isThresholdsConsecutive() {
+            if (thresholds == null || thresholds.size() < 2) {
+                return true;
+            }
+
+            for (int i = 1; i < thresholds.size(); i++) {
+                QuantityThresholdDTO previousThreshold = thresholds.get(i - 1);
+                QuantityThresholdDTO nextThreshold = thresholds.get(i);
+                Integer previousQuantityTo = previousThreshold.getQuantityTo();
+
+                if (previousQuantityTo == null) {
+                    continue;
+                }
+                if (nextThreshold.getQuantityFrom() != previousQuantityTo + 1) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        @AssertTrue(message = "Higher quantity thresholds cannot be more expensive")
+        public boolean isPricesNonIncreasing() {
+            if (thresholds == null || thresholds.size() < 2) {
+                return true;
+            }
+
+            for (int i = 1; i < thresholds.size(); i++) {
+                BigDecimal previousPrice = thresholds.get(i - 1).getPrice();
+                BigDecimal nextPrice = thresholds.get(i).getPrice();
+
+                if (previousPrice == null || nextPrice == null) {
+                    continue;
+                }
+                if (nextPrice.compareTo(previousPrice) > 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
     }
 
     public static class QuantityThresholdDTO {
