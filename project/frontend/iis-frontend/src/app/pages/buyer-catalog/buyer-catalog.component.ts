@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject } from '@angular/core';
-import { finalize } from 'rxjs';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { finalize, take } from 'rxjs';
 import { BuyerCatalogService } from '../../core/buyer-catalog.service';
 import { BuyerCatalog } from '../../core/buyer-catalog.models';
 
@@ -14,6 +14,7 @@ import { BuyerCatalog } from '../../core/buyer-catalog.models';
 })
 export class BuyerCatalogComponent implements OnInit {
   private readonly catalogService = inject(BuyerCatalogService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   loading = false;
   refreshing = false;
@@ -38,17 +39,24 @@ export class BuyerCatalogComponent implements OnInit {
     this.errorMessage = '';
 
     this.catalogService.getCatalog()
-      .pipe(finalize(() => {
-        this.loading = false;
-        this.refreshing = false;
-      }))
+      .pipe(
+        take(1),
+        finalize(() => {
+          this.loading = false;
+          this.refreshing = false;
+          this.cdr.detectChanges();
+        }),
+      )
       .subscribe({
         next: (catalog) => {
           this.catalog = catalog;
+          this.errorMessage = '';
+          this.cdr.detectChanges();
         },
         error: (err: HttpErrorResponse) => {
           this.catalog = null;
           this.errorMessage = this.createErrorMessage(err);
+          this.cdr.detectChanges();
         },
       });
   }
