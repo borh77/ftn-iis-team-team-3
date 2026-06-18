@@ -1,4 +1,10 @@
 <section class="page-hero">
+  @if (toastErrorMessage) {
+    <div class="error-toast" role="alert" aria-live="assertive">
+      {{ toastErrorMessage }}
+    </div>
+  }
+
   <div class="page-hero__head">
     <div>
       <p class="kicker">Pricelists</p>
@@ -224,6 +230,11 @@
                           <button type="button" class="ghost" (click)="archiveOffer(offer)" [disabled]="isOfferChanging(offer)">
                             {{ isOfferChanging(offer) ? 'Updating...' : 'Archive offer' }}
                           </button>
+                        }
+                        @if (activationErrorByOfferId[offer.id]) {
+                          <div class="inline-error" role="alert">
+                            {{ activationErrorByOfferId[offer.id] }}
+                          </div>
                         }
                       </div>
                     </div>

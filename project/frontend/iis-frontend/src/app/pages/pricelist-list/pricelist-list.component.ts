@@ -29,10 +29,12 @@ export class PricelistListComponent implements OnInit {
   creatingVersionId: number | null = null;
   successMessage = '';
   errorMessage = '';
+  toastErrorMessage = '';
   pricelists: Pricelist[] = [];
   expandedOffers: Record<number, boolean> = {};
   offersByPricelist: Record<number, SpecialOffer[]> = {};
   offerForms: Record<number, OfferForm> = {};
+  activationErrorByOfferId: Record<number, string> = {};
   loadingOffersId: number | null = null;
   changingOfferId: number | null = null;
   replacingItemId: number | null = null;
@@ -234,7 +236,34 @@ export class PricelistListComponent implements OnInit {
   }
 
   activateOffer(offer: SpecialOffer): void {
-    this.changeOfferStatus(offer, 'activate');
+    this.changingOfferId = offer.id;
+    this.toastErrorMessage = '';
+    this.activationErrorByOfferId[offer.id] = '';
+
+    this.offerService.activate(offer.id).subscribe({
+      next: () => {
+        this.changingOfferId = null;
+        this.toastErrorMessage = '';
+        this.activationErrorByOfferId[offer.id] = '';
+        this.successMessage = 'Offer was activated successfully.';
+        this.loadOffers(offer.pricelistId);
+      },
+      error: (err: HttpErrorResponse) => {
+        const message = this.createErrorMessage(err);
+
+        this.changingOfferId = null;
+        this.toastErrorMessage = message;
+        this.activationErrorByOfferId[offer.id] = message;
+        this.cdr.detectChanges();
+
+        setTimeout(() => {
+          if (this.toastErrorMessage === message) {
+            this.toastErrorMessage = '';
+            this.cdr.detectChanges();
+          }
+        }, 6000);
+      },
+    });
   }
 
   archiveOffer(offer: SpecialOffer): void {
@@ -390,6 +419,34 @@ export class PricelistListComponent implements OnInit {
       return 'Offer could not be activated.';
     }
     return 'Offer could not be created.';
+  }
+
+  private createErrorMessage(error: HttpErrorResponse): string {
+    if (typeof error.error?.error === 'string' && error.error.error.trim()) {
+      return error.error.error.trim();
+    }
+
+    if (typeof error.error?.message === 'string' && error.error.message.trim()) {
+      return error.error.message.trim();
+    }
+
+    if (typeof error.error?.detail === 'string' && error.error.detail.trim()) {
+      return error.error.detail.trim();
+    }
+
+    if (typeof error.error === 'string' && error.error.trim()) {
+      return error.error.trim();
+    }
+
+    if (error.status === 400 || error.status === 422) {
+      return 'Offer activation failed because the promotion validation rules were not satisfied.';
+    }
+
+    if (error.status === 403) {
+      return 'You are not allowed to activate this offer.';
+    }
+
+    return 'Offer activation failed.';
   }
 
   private ensureOfferForm(pricelist: Pricelist): OfferForm {
