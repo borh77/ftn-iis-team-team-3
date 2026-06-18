@@ -195,43 +195,61 @@ export class PricelistCreateComponent implements OnInit {
         this.productsByItem = {};
         this.variantsByItem = {};
       },
-      error: (error) => {
+      error: (err: HttpErrorResponse) => {
         this.saving = false;
-        if (error instanceof HttpErrorResponse) {
-          this.errorMessage = this.createErrorMessage(error);
-        } else {
-          this.errorMessage = 'Pricelist creation failed.';
-        }
+        this.errorMessage = this.createErrorMessage(err);
       },
     });
   }
 
   private createErrorMessage(error: HttpErrorResponse): string {
     const backendMessage = this.backendErrorMessage(error);
-    if (error.status === 409) {
-      return this.isEnglishMessage(backendMessage)
-        ? backendMessage
-        : 'A conflict exists with an already existing pricelist.';
-    }
+
     if (backendMessage) {
       return backendMessage;
     }
-    if (error.status === 400) {
-      return 'Invalid quantity thresholds. Check gaps, overlaps, and discount prices.';
+
+    if (error.status === 400 || error.status === 422) {
+      return 'Invalid quantity thresholds. Check gaps, overlaps, final open-ended threshold, and discount prices.';
     }
-    if (error.status === 422) {
-      return 'Some selected medicine variants do not exist or are not active.';
+
+    if (error.status === 409) {
+      return 'A conflict exists with an already existing pricelist.';
     }
+
     return 'Pricelist creation failed.';
   }
 
   private backendErrorMessage(error: HttpErrorResponse): string {
-    const backendError = typeof error.error?.error === 'string' ? error.error.error.trim() : '';
-    if (backendError) {
-      return backendError;
+    if (typeof error.error?.error === 'string' && error.error.error.trim()) {
+      return error.error.error.trim();
     }
 
-    return typeof error.error?.message === 'string' ? error.error.message.trim() : '';
+    if (typeof error.error?.message === 'string' && error.error.message.trim()) {
+      return error.error.message.trim();
+    }
+
+    if (typeof error.error?.detail === 'string' && error.error.detail.trim()) {
+      return error.error.detail.trim();
+    }
+
+    if (typeof error.error === 'string' && error.error.trim()) {
+      return error.error.trim();
+    }
+
+    if (error.error?.errors && typeof error.error.errors === 'object') {
+      const firstFieldErrors = Object.values(error.error.errors)[0];
+
+      if (Array.isArray(firstFieldErrors) && firstFieldErrors.length > 0) {
+        return String(firstFieldErrors[0]);
+      }
+
+      if (typeof firstFieldErrors === 'string') {
+        return firstFieldErrors;
+      }
+    }
+
+    return '';
   }
 
   private isEnglishMessage(message: string): boolean {

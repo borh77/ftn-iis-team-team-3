@@ -173,9 +173,9 @@
       }
     </div>
 
-    @if (errorMessage) {
-      <p class="error-box">{{ errorMessage }}</p>
-    }
+    <div *ngIf="errorMessage" class="error-message" role="alert">
+      {{ errorMessage }}
+    </div>
 
     @if (successMessage) {
       <p class="success-box">{{ successMessage }}</p>
