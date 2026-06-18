@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SalesProcessHistoryRepository extends JpaRepository<SalesProcessHistory, Long> {
 
-    List<SalesProcessHistory> findBySalesProcessIdOrderByChangedAtDesc(Long salesProcessId);
+    List<SalesProcessHistory> findBySalesProcess_IdOrderByChangedAtDesc(Long salesProcessId);
 }

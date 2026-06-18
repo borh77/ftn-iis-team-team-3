@@ -73,7 +73,7 @@ public class SalesProcessService {
 
     @Transactional(readOnly = true)
     public List<SalesProcessHistoryResponseDTO> getHistory(Long id) {
-        return salesProcessHistoryRepository.findBySalesProcessIdOrderByChangedAtDesc(id)
+        return salesProcessHistoryRepository.findBySalesProcess_IdOrderByChangedAtDesc(id)
                 .stream()
                 .map(history -> new SalesProcessHistoryResponseDTO(
                         history.getId(),
