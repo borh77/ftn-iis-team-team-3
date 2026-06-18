@@ -33,6 +33,11 @@ public class UserCreateDTO {
     @NotNull
     private UserRole role;
 
+    private Long regionId;
+
+    @Size(max = 120)
+    private String customerSegment;
+
     public String getUsername() {
         return username;
     }
@@ -79,5 +84,21 @@ public class UserCreateDTO {
 
     public void setRole(UserRole role) {
         this.role = role;
+    }
+
+    public Long getRegionId() {
+        return regionId;
+    }
+
+    public void setRegionId(Long regionId) {
+        this.regionId = regionId;
+    }
+
+    public String getCustomerSegment() {
+        return customerSegment;
+    }
+
+    public void setCustomerSegment(String customerSegment) {
+        this.customerSegment = customerSegment;
     }
 }

@@ -12,7 +12,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import com.example.iisdrugcrm.exception.InvalidPricelistThresholdException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Entity
@@ -79,5 +82,57 @@ public class PricelistItem {
 
     public void setThresholds(List<QuantityThreshold> thresholds) {
         this.thresholds = thresholds;
+    }
+
+    public void validateThresholds() {
+        if (thresholds == null || thresholds.isEmpty()) {
+            throw invalid("Pragovi za varijantu [" + variantName + "] ne smeju biti prazni.");
+        }
+
+        List<QuantityThreshold> sortedThresholds = new ArrayList<>(thresholds);
+        String prefix = "Neispravni pragovi za varijantu [" + variantName + "]: ";
+        for (QuantityThreshold threshold : sortedThresholds) {
+            if (threshold == null) {
+                throw invalid(prefix + "prag ne sme biti prazan.");
+            }
+            if (threshold.getQuantityFrom() == null || threshold.getQuantityFrom() <= 0) {
+                throw invalid(prefix + "quantityFrom mora biti veci od 0.");
+            }
+            if (threshold.getPrice() == null || threshold.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                throw invalid(prefix + "cena mora biti veca od 0.");
+            }
+        }
+        sortedThresholds.sort(Comparator.comparingInt(QuantityThreshold::getQuantityFrom));
+
+        QuantityThreshold previous = null;
+        for (int index = 0; index < sortedThresholds.size(); index++) {
+            QuantityThreshold current = sortedThresholds.get(index);
+            if (current.getQuantityTo() != null && current.getQuantityTo() < current.getQuantityFrom()) {
+                throw invalid(prefix + "quantityTo mora biti veci ili jednak quantityFrom.");
+            }
+            if (previous != null) {
+                if (previous.getQuantityTo() == null) {
+                    throw invalid(prefix + "nakon otvorenog praga ne sme postojati sledeci prag.");
+                }
+                int expectedFrom = previous.getQuantityTo() + 1;
+                if (current.getQuantityFrom() < expectedFrom) {
+                    throw invalid(prefix + "pragovi ne smeju da se preklapaju.");
+                }
+                if (current.getQuantityFrom() > expectedFrom) {
+                    throw invalid(prefix + "pragovi moraju biti kontinuirani bez praznina.");
+                }
+                if (current.getPrice().compareTo(previous.getPrice()) > 0) {
+                    throw invalid(prefix + "cena za visi kolicinski prag mora biti ista ili niza od prethodne.");
+                }
+            }
+            if (current.getQuantityTo() == null && index < sortedThresholds.size() - 1) {
+                throw invalid(prefix + "otvoreni prag mora biti poslednji.");
+            }
+            previous = current;
+        }
+    }
+
+    private InvalidPricelistThresholdException invalid(String message) {
+        return new InvalidPricelistThresholdException(message);
     }
 }

@@ -1,4 +1,10 @@
 <section class="page-hero">
+  @if (toastErrorMessage) {
+    <div class="error-toast" role="alert" aria-live="assertive">
+      {{ toastErrorMessage }}
+    </div>
+  }
+
   <div class="page-hero__head">
     <div>
       <p class="kicker">Pricelists</p>
@@ -13,6 +19,14 @@
 </section>
 
 <section class="panel">
+  @if (errorMessage) {
+    <p class="error-box">{{ errorMessage }}</p>
+  }
+
+  @if (successMessage) {
+    <p class="success-box">{{ successMessage }}</p>
+  }
+
   @if (loading) {
     <p class="muted">Loading pricelists...</p>
   } @else if (!pricelists.length) {
@@ -24,9 +38,13 @@
           <div class="pricelist-card__header">
             <div>
               <p class="kicker">Pricelist</p>
-              <h3>#{{ p.id }} · {{ p.regionName }}</h3>
+              <h3>#{{ p.id }} - {{ p.regionName }}</h3>
+              <p class="muted">Version {{ p.versionNumber || 1 }}</p>
+              @if (isTeamPricelist(p)) {
+                <p class="muted">Team pricelist</p>
+              }
             </div>
-            <span class="status-badge">{{ p.status }}</span>
+            <span class="status-badge">{{ statusLabel(p.status) }}</span>
           </div>
 
           <dl class="pricelist-meta">
@@ -50,12 +68,18 @@
 
           <div class="pricelist-items">
             <h4>Items</h4>
+            @if (requiresReplacement(p)) {
+              <p class="error-box">This pricelist contains inactive catalog variants.</p>
+            }
             @if (p.items && p.items.length) {
               @for (item of p.items; track item.variantId) {
                 <div class="pricelist-item">
                   <div class="pricelist-item__title">
                     <strong>{{ item.variantName }}</strong>
                     <span class="muted">Variant ID: {{ item.variantId }}</span>
+                    @if (item.replacementRequired) {
+                      <span class="status-badge">Inactive variant</span>
+                    }
                   </div>
                   <ul class="threshold-list">
                     @for (threshold of item.thresholds; track threshold.quantityFrom + '-' + (threshold.quantityTo ?? 'open')) {
@@ -65,12 +89,160 @@
                       </li>
                     }
                   </ul>
+                  @if (item.replacementRequired) {
+                    @if (canReplaceVariants(p)) {
+                      <div class="offer-form">
+                        <label>
+                          <span>Replacement variant</span>
+                          <select [(ngModel)]="replacementVariantIds[item.id!]" [ngModelOptions]="{standalone: true}">
+                            <option [ngValue]="null">Select active variant</option>
+                            @for (variant of activeVariants; track variant.id) {
+                              <option [ngValue]="variant.id">{{ variant.name }}</option>
+                            }
+                          </select>
+                        </label>
+                        <button type="button" class="secondary" (click)="replaceVariant(p, item)" [disabled]="isReplacing(item)">
+                          {{ isReplacing(item) ? 'Replacing...' : 'Replace variant' }}
+                        </button>
+                      </div>
+                    } @else {
+                      <p class="muted">Create a new draft version before replacing inactive variants.</p>
+                    }
+                  }
                 </div>
               }
             } @else {
               <p class="muted">This pricelist has no items yet.</p>
             }
           </div>
+
+          <div class="status-actions">
+            @if (canEdit(p)) {
+              <button type="button" class="primary" (click)="editPricelist(p)">
+                Edit
+              </button>
+            }
+
+            @if (canSubmitForReview(p)) {
+              <button type="button" class="secondary" (click)="submitForReview(p)" [disabled]="isChanging(p)">
+                {{ isChanging(p) ? 'Updating...' : 'Submit for review' }}
+              </button>
+            }
+
+            @if (canActivate(p)) {
+              <button type="button" class="primary" (click)="activate(p)" [disabled]="isChanging(p)">
+                {{ isChanging(p) ? 'Updating...' : 'Activate' }}
+              </button>
+            }
+
+            @if (canReturnToDraft(p)) {
+              <button type="button" class="secondary" (click)="returnToDraft(p)" [disabled]="isChanging(p)">
+                {{ isChanging(p) ? 'Updating...' : 'Return to draft' }}
+              </button>
+            }
+
+            @if (canArchive(p)) {
+              <button type="button" class="ghost" (click)="archive(p)" [disabled]="isChanging(p)">
+                {{ isChanging(p) ? 'Updating...' : 'Archive' }}
+              </button>
+            }
+
+            @if (canCreateNewVersion(p)) {
+              <button type="button" class="secondary" (click)="createNewVersion(p)" [disabled]="isCreatingVersion(p)">
+                {{ isCreatingVersion(p) ? 'Creating...' : 'Create new version' }}
+              </button>
+            }
+
+            @if (canManageOffers(p)) {
+              <button type="button" class="secondary" (click)="toggleOffers(p)">
+                {{ expandedOffers[p.id] ? 'Hide offers' : 'Manage offers' }}
+              </button>
+            }
+          </div>
+
+          @if (expandedOffers[p.id]) {
+            <section class="offers-panel">
+              <div class="panel-head compact">
+                <div>
+                  <h4>Special offers</h4>
+                  <p class="muted">Create variant-level discounts for this pricelist.</p>
+                </div>
+              </div>
+
+              <div class="offer-form">
+                <label>
+                  <span>Variant</span>
+                  <select [(ngModel)]="offerForms[p.id].variantId" [ngModelOptions]="{standalone: true}">
+                    @for (item of p.items; track item.variantId) {
+                      <option [ngValue]="item.variantId">{{ item.variantName }}</option>
+                    }
+                  </select>
+                </label>
+
+                <label>
+                  <span>Discount type</span>
+                  <select [(ngModel)]="offerForms[p.id].discountType" [ngModelOptions]="{standalone: true}">
+                    <option value="PERCENTAGE">Percentage</option>
+                    <option value="FIXED_AMOUNT">Fixed amount</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Discount value</span>
+                  <input type="number" min="0.01" step="0.01" [(ngModel)]="offerForms[p.id].discountValue" [ngModelOptions]="{standalone: true}" />
+                </label>
+
+                <label>
+                  <span>Start date</span>
+                  <input type="datetime-local" [(ngModel)]="offerForms[p.id].startDate" [ngModelOptions]="{standalone: true}" />
+                </label>
+
+                <label>
+                  <span>End date</span>
+                  <input type="datetime-local" [(ngModel)]="offerForms[p.id].endDate" [ngModelOptions]="{standalone: true}" />
+                </label>
+
+                <button type="button" class="primary" (click)="createOffer(p)">Create offer</button>
+              </div>
+
+              @if (loadingOffersId === p.id) {
+                <p class="muted">Loading offers...</p>
+              } @else if (!(offersByPricelist[p.id]?.length)) {
+                <p class="muted">No special offers yet.</p>
+              } @else {
+                <div class="offer-list">
+                  @for (offer of offersByPricelist[p.id]; track offer.id) {
+                    <div class="offer-row">
+                      <div>
+                        <strong>{{ offer.variantName }}</strong>
+                        <span class="muted">
+                          {{ offer.discountType === 'PERCENTAGE' ? offer.discountValue + '% off' : offer.discountValue + ' ' + p.currency + ' off' }}
+                          - {{ offer.status }}
+                        </span>
+                      </div>
+                      <div class="offer-actions">
+                        @if (offer.status === 'DRAFT') {
+                          <button type="button" class="secondary" (click)="activateOffer(offer)" [disabled]="isOfferChanging(offer)">
+                            {{ isOfferChanging(offer) ? 'Updating...' : 'Activate offer' }}
+                          </button>
+                        }
+                        @if (offer.status === 'ACTIVE') {
+                          <button type="button" class="ghost" (click)="archiveOffer(offer)" [disabled]="isOfferChanging(offer)">
+                            {{ isOfferChanging(offer) ? 'Updating...' : 'Archive offer' }}
+                          </button>
+                        }
+                        @if (activationErrorByOfferId[offer.id]) {
+                          <div class="inline-error" role="alert">
+                            {{ activationErrorByOfferId[offer.id] }}
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </section>
+          }
         </article>
       }
     </div>

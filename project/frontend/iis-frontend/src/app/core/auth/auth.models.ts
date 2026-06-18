@@ -57,6 +57,9 @@ export interface UserRow {
   role: UserRole;
   active: boolean;
   hasChangedPassword: boolean;
+  regionId?: number | null;
+  regionName?: string | null;
+  customerSegment?: string | null;
 }
 
 export interface CreateUserPayload {
@@ -66,6 +69,8 @@ export interface CreateUserPayload {
   lastName: string;
   password: string;
   role: UserRole;
+  regionId?: number | null;
+  customerSegment?: string | null;
 }
 
 export interface UpdateProfilePayload {

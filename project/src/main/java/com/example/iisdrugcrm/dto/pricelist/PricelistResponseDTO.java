@@ -7,6 +7,7 @@ import com.example.iisdrugcrm.domain.pricelist.QuantityThreshold;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 public class PricelistResponseDTO {
 
@@ -17,6 +18,13 @@ public class PricelistResponseDTO {
     private String currency;
     private PricelistStatus status;
     private Long createdBy;
+    private Integer versionNumber;
+    private Long parentPricelistId;
+    private Long rootPricelistId;
+    private boolean canCreateNewVersion;
+    private boolean owner;
+    private boolean canCollaborate;
+    private boolean canManageOffers;
     private OffsetDateTime periodStart;
     private OffsetDateTime periodEnd;
     private List<PricelistItemResponseDTO> items;
@@ -89,6 +97,62 @@ public class PricelistResponseDTO {
         this.createdBy = createdBy;
     }
 
+    public Integer getVersionNumber() {
+        return versionNumber;
+    }
+
+    public void setVersionNumber(Integer versionNumber) {
+        this.versionNumber = versionNumber;
+    }
+
+    public Long getParentPricelistId() {
+        return parentPricelistId;
+    }
+
+    public void setParentPricelistId(Long parentPricelistId) {
+        this.parentPricelistId = parentPricelistId;
+    }
+
+    public Long getRootPricelistId() {
+        return rootPricelistId;
+    }
+
+    public void setRootPricelistId(Long rootPricelistId) {
+        this.rootPricelistId = rootPricelistId;
+    }
+
+    public boolean isCanCreateNewVersion() {
+        return canCreateNewVersion;
+    }
+
+    public void setCanCreateNewVersion(boolean canCreateNewVersion) {
+        this.canCreateNewVersion = canCreateNewVersion;
+    }
+
+    public boolean isOwner() {
+        return owner;
+    }
+
+    public void setOwner(boolean owner) {
+        this.owner = owner;
+    }
+
+    public boolean isCanCollaborate() {
+        return canCollaborate;
+    }
+
+    public void setCanCollaborate(boolean canCollaborate) {
+        this.canCollaborate = canCollaborate;
+    }
+
+    public boolean isCanManageOffers() {
+        return canManageOffers;
+    }
+
+    public void setCanManageOffers(boolean canManageOffers) {
+        this.canManageOffers = canManageOffers;
+    }
+
     public void setPeriodEnd(OffsetDateTime periodEnd) {
         this.periodEnd = periodEnd;
     }
@@ -102,6 +166,10 @@ public class PricelistResponseDTO {
     }
 
     public static PricelistResponseDTO fromEntity(Pricelist pricelist) {
+        return fromEntity(pricelist, Map.of());
+    }
+
+    public static PricelistResponseDTO fromEntity(Pricelist pricelist, Map<Long, CatalogVariantDTO> activeVariantsById) {
         PricelistResponseDTO dto = new PricelistResponseDTO();
         dto.setId(pricelist.getId());
         dto.setRegionId(pricelist.getRegion().getId());
@@ -110,9 +178,25 @@ public class PricelistResponseDTO {
         dto.setCurrency(pricelist.getCurrency());
         dto.setStatus(pricelist.getStatus());
         dto.setCreatedBy(pricelist.getCreatedBy());
+        dto.setVersionNumber(pricelist.getVersionNumber());
+        dto.setParentPricelistId(pricelist.getParentPricelistId());
+        dto.setRootPricelistId(pricelist.getRootPricelistId());
+        dto.setCanCreateNewVersion(pricelist.getStatus() == PricelistStatus.IN_REVIEW || pricelist.getStatus() == PricelistStatus.ACTIVE);
         dto.setPeriodStart(pricelist.getPeriodStart());
         dto.setPeriodEnd(pricelist.getPeriodEnd());
-        dto.setItems(pricelist.getItems().stream().map(PricelistItemResponseDTO::fromEntity).toList());
+        dto.setItems(pricelist.getItems().stream().map(item -> PricelistItemResponseDTO.fromEntity(item, activeVariantsById)).toList());
+        return dto;
+    }
+
+    public static PricelistResponseDTO fromEntity(Pricelist pricelist, Long currentUserId, boolean canCollaborate, Map<Long, CatalogVariantDTO> activeVariantsById) {
+        PricelistResponseDTO dto = fromEntity(pricelist, activeVariantsById);
+        boolean owner = currentUserId != null
+                && pricelist.getCreatedBy() != null
+                && pricelist.getCreatedBy().equals(currentUserId);
+        dto.setOwner(owner);
+        dto.setCanCollaborate(canCollaborate);
+        dto.setCanManageOffers(canCollaborate);
+        dto.setCanCreateNewVersion(canCollaborate && (pricelist.getStatus() == PricelistStatus.IN_REVIEW || pricelist.getStatus() == PricelistStatus.ACTIVE));
         return dto;
     }
 
@@ -120,6 +204,9 @@ public class PricelistResponseDTO {
         private Long id;
         private Long variantId;
         private String variantName;
+        private boolean activeVariant;
+        private boolean replacementRequired;
+        private boolean catalogAvailable;
         private List<QuantityThresholdResponseDTO> thresholds;
 
         public Long getId() {
@@ -146,6 +233,30 @@ public class PricelistResponseDTO {
             this.variantName = variantName;
         }
 
+        public boolean isActiveVariant() {
+            return activeVariant;
+        }
+
+        public void setActiveVariant(boolean activeVariant) {
+            this.activeVariant = activeVariant;
+        }
+
+        public boolean isReplacementRequired() {
+            return replacementRequired;
+        }
+
+        public void setReplacementRequired(boolean replacementRequired) {
+            this.replacementRequired = replacementRequired;
+        }
+
+        public boolean isCatalogAvailable() {
+            return catalogAvailable;
+        }
+
+        public void setCatalogAvailable(boolean catalogAvailable) {
+            this.catalogAvailable = catalogAvailable;
+        }
+
         public List<QuantityThresholdResponseDTO> getThresholds() {
             return thresholds;
         }
@@ -155,10 +266,18 @@ public class PricelistResponseDTO {
         }
 
         public static PricelistItemResponseDTO fromEntity(PricelistItem item) {
+            return fromEntity(item, Map.of());
+        }
+
+        public static PricelistItemResponseDTO fromEntity(PricelistItem item, Map<Long, CatalogVariantDTO> activeVariantsById) {
             PricelistItemResponseDTO dto = new PricelistItemResponseDTO();
             dto.setId(item.getId());
             dto.setVariantId(item.getVariantId());
             dto.setVariantName(item.getVariantName());
+            boolean active = activeVariantsById.containsKey(item.getVariantId());
+            dto.setActiveVariant(active);
+            dto.setCatalogAvailable(active);
+            dto.setReplacementRequired(!active);
             dto.setThresholds(item.getThresholds().stream().map(QuantityThresholdResponseDTO::fromEntity).toList());
             return dto;
         }

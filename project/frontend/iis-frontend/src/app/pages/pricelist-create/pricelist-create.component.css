@@ -169,6 +169,15 @@ button:disabled {
   color: #b91c1c;
 }
 
+.error-message {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #fdecea;
+  color: #b71c1c;
+  font-weight: 500;
+}
+
 .error-box,
 .success-box {
   margin: 0;

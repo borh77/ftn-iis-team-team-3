@@ -1,7 +1,9 @@
 package com.example.iisdrugcrm.controller;
 
+import com.example.iisdrugcrm.dto.pricelist.ChangePricelistStatusDTO;
 import com.example.iisdrugcrm.dto.pricelist.CreatePricelistDTO;
 import com.example.iisdrugcrm.dto.pricelist.PricelistResponseDTO;
+import com.example.iisdrugcrm.dto.pricelist.ReplacePricelistItemVariantDTO;
 import com.example.iisdrugcrm.service.PricelistService;
 import com.example.iisdrugcrm.service.UserService;
 import org.springframework.security.core.Authentication;
@@ -11,7 +13,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -44,5 +48,46 @@ public class PricelistController {
     public ResponseEntity<List<PricelistResponseDTO>> mine(Authentication authentication) {
         Long currentUserId = userService.getUserIdByUsername(authentication.getName());
         return ResponseEntity.ok(pricelistService.listCenovniciForUser(currentUserId));
+    }
+
+    @GetMapping("/team")
+    public ResponseEntity<List<PricelistResponseDTO>> team(Authentication authentication) {
+        Long currentUserId = userService.getUserIdByUsername(authentication.getName());
+        return ResponseEntity.ok(pricelistService.listTeamCenovniciForUser(currentUserId));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<PricelistResponseDTO> getById(@PathVariable Long id, Authentication authentication) {
+        Long currentUserId = userService.getUserIdByUsername(authentication.getName());
+        return ResponseEntity.ok(pricelistService.getById(id, currentUserId));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<PricelistResponseDTO> update(@PathVariable Long id, @Valid @RequestBody CreatePricelistDTO dto, Authentication authentication) {
+        Long currentUserId = userService.getUserIdByUsername(authentication.getName());
+        return ResponseEntity.ok(pricelistService.update(id, dto, currentUserId));
+    }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<PricelistResponseDTO> changeStatus(@PathVariable Long id, @Valid @RequestBody ChangePricelistStatusDTO dto, Authentication authentication) {
+        Long currentUserId = userService.getUserIdByUsername(authentication.getName());
+        return ResponseEntity.ok(pricelistService.changeStatus(id, dto, currentUserId));
+    }
+
+    @PostMapping("/{id}/versions")
+    public ResponseEntity<PricelistResponseDTO> createNewVersion(@PathVariable Long id, Authentication authentication) {
+        Long currentUserId = userService.getUserIdByUsername(authentication.getName());
+        return ResponseEntity.status(HttpStatus.CREATED).body(pricelistService.createNewVersion(id, currentUserId));
+    }
+
+    @PutMapping("/{pricelistId}/items/{itemId}/replace-variant")
+    public ResponseEntity<PricelistResponseDTO> replaceItemVariant(
+            @PathVariable Long pricelistId,
+            @PathVariable Long itemId,
+            @Valid @RequestBody ReplacePricelistItemVariantDTO dto,
+            Authentication authentication
+    ) {
+        Long currentUserId = userService.getUserIdByUsername(authentication.getName());
+        return ResponseEntity.ok(pricelistService.replaceItemVariant(pricelistId, itemId, dto.getReplacementVariantId(), currentUserId));
     }
 }

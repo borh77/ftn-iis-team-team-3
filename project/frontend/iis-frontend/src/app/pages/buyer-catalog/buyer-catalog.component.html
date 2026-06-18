@@ -1,0 +1,95 @@
+<section class="page-hero">
+  <div class="page-hero__head">
+    <div>
+      <p class="kicker">Buyer Catalog</p>
+      <h2>Medicine Catalog</h2>
+      <p class="lede">Browse active medicine prices available for your region and customer segment.</p>
+    </div>
+
+    <button type="button" class="secondary" (click)="refreshCatalog()" [disabled]="loading || refreshing">
+      {{ refreshing ? 'Refreshing...' : 'Refresh' }}
+    </button>
+  </div>
+</section>
+
+<section class="panel">
+  @if (loading) {
+    <p class="muted">Loading catalog...</p>
+  }
+
+  @if (!loading && errorMessage) {
+    <div class="error-box" role="alert">{{ errorMessage }}</div>
+  }
+
+  @if (!loading && catalog) {
+    <div class="catalog-context">
+      <div>
+        <span>Region</span>
+        <strong>{{ catalog.regionName }}</strong>
+      </div>
+      <div>
+        <span>Customer segment</span>
+        <strong>{{ catalog.customerSegment }}</strong>
+      </div>
+      <div>
+        <span>Currency</span>
+        <strong>{{ catalog.currency }}</strong>
+      </div>
+      <div>
+        <span>Valid period</span>
+        <strong>{{ catalog.periodStart | date:'shortDate' }} - {{ catalog.periodEnd | date:'shortDate' }}</strong>
+      </div>
+    </div>
+
+    @if (catalog.items.length) {
+      <div class="catalog-table-wrap">
+      <table class="catalog-table">
+        <thead>
+          <tr>
+            <th>Medicine / Variant</th>
+            <th>Base price</th>
+            <th>Threshold prices</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of catalog.items; track item.variantId) {
+            <tr>
+              <td>
+                <strong>{{ item.variantName }}</strong>
+                <span class="muted">Variant ID: {{ item.variantId }}</span>
+              </td>
+              <td>
+                @if (item.hasActiveOffer) {
+                  <span class="old-price">{{ item.basePrice | number:'1.2-2' }} {{ item.currency }}</span>
+                  <strong class="discounted-price">{{ item.discountedPrice | number:'1.2-2' }} {{ item.currency }}</strong>
+                  <span class="discount-badge">
+                    {{ item.discountType === 'PERCENTAGE' ? item.discountValue + '% off' : item.discountValue + ' ' + item.currency + ' off' }}
+                  </span>
+                } @else {
+                  {{ item.basePrice | number:'1.2-2' }} {{ item.currency }}
+                }
+              </td>
+              <td>
+                <ul class="threshold-list">
+                  @for (threshold of item.thresholds; track threshold.quantityFrom + '-' + (threshold.quantityTo ?? 'open')) {
+                    <li>
+                      {{ threshold.quantityFrom }} - {{ threshold.quantityTo ?? 'open' }}:
+                      {{ threshold.price | number:'1.2-2' }} {{ item.currency }}
+                    </li>
+                  }
+                </ul>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      </div>
+    } @else {
+      <p class="muted">No catalog items are available in the active pricelist.</p>
+    }
+  }
+
+  @if (!loading && !catalog && !errorMessage) {
+    <p class="muted">No active medicine catalog is available for your region and customer segment.</p>
+  }
+</section>
