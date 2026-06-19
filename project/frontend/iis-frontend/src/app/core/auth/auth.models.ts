@@ -2,6 +2,7 @@ export type UserRole =
   | 'ROLE_ADMIN'
   | 'ROLE_PRICELIST_CREATOR'
   | 'ROLE_BUYER'
+  | 'ROLE_PORTFOLIO_MANAGER'
   | 'ROLE_SALES_REPRESENTATIVE'
   | 'ROLE_ACCOUNT_MANAGER'
   | 'ROLE_SALES_MANAGER'
@@ -9,7 +10,6 @@ export type UserRole =
   | 'ROLE_LEKAR'
   | 'ROLE_PACIJENT'
   | 'ROLE_FARMAKOVIGILANT';
-
 export interface JwtPayload {
   sub: string;
   roles: UserRole[];
@@ -61,6 +61,9 @@ export interface UserRow {
   role: UserRole;
   active: boolean;
   hasChangedPassword: boolean;
+  regionId?: number | null;
+  regionName?: string | null;
+  customerSegment?: string | null;
 }
 
 export interface CreateUserPayload {
@@ -70,6 +73,8 @@ export interface CreateUserPayload {
   lastName: string;
   password: string;
   role: UserRole;
+  regionId?: number | null;
+  customerSegment?: string | null;
 }
 
 export interface UpdateProfilePayload {

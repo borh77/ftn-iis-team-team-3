@@ -3,12 +3,16 @@ package com.example.iisdrugcrm.service.sales;
 import com.example.iisdrugcrm.domain.sales.Customer;
 import com.example.iisdrugcrm.domain.sales.SalesProcess;
 import com.example.iisdrugcrm.dto.sales.process.CreateSalesProcessRequestDTO;
+import com.example.iisdrugcrm.dto.sales.process.SalesProcessHistoryResponseDTO;
 import com.example.iisdrugcrm.dto.sales.process.SalesProcessResponseDTO;
 import com.example.iisdrugcrm.dto.sales.process.StageUpdateRequestDTO;
 import com.example.iisdrugcrm.repository.sales.CustomerRepository;
 import com.example.iisdrugcrm.repository.sales.SalesProcessRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.iisdrugcrm.domain.sales.SalesProcessHistory;
+import com.example.iisdrugcrm.domain.sales.SalesStage;
+import com.example.iisdrugcrm.repository.sales.SalesProcessHistoryRepository;
 
 import java.util.List;
 
@@ -17,11 +21,14 @@ public class SalesProcessService {
 
     private final SalesProcessRepository salesProcessRepository;
     private final CustomerRepository customerRepository;
+    private final SalesProcessHistoryRepository salesProcessHistoryRepository;
 
     public SalesProcessService(SalesProcessRepository salesProcessRepository,
-                               CustomerRepository customerRepository) {
+                            CustomerRepository customerRepository,
+                            SalesProcessHistoryRepository salesProcessHistoryRepository) {
         this.salesProcessRepository = salesProcessRepository;
         this.customerRepository = customerRepository;
+        this.salesProcessHistoryRepository = salesProcessHistoryRepository;
     }
 
     public List<SalesProcessResponseDTO> getAll() {
@@ -45,9 +52,37 @@ public class SalesProcessService {
         SalesProcess process = salesProcessRepository.findWithCustomerById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Sales process not found."));
 
+        SalesStage previousStage = process.getStage();
+
         process.changeStage(dto.getStage());
 
+        salesProcessHistoryRepository.save(
+                new SalesProcessHistory(process, previousStage, dto.getStage())
+        );
+
         return mapToDto(process);
+    }
+
+    @Transactional(readOnly = true)
+    public SalesProcessResponseDTO getById(Long id) {
+        SalesProcess process = salesProcessRepository.findWithCustomerById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Sales process not found."));
+
+        return mapToDto(process);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SalesProcessHistoryResponseDTO> getHistory(Long id) {
+        return salesProcessHistoryRepository.findBySalesProcess_IdOrderByChangedAtDesc(id)
+                .stream()
+                .map(history -> new SalesProcessHistoryResponseDTO(
+                        history.getId(),
+                        history.getSalesProcess().getId(),
+                        history.getPreviousStage(),
+                        history.getNewStage(),
+                        history.getChangedAt()
+                ))
+                .toList();
     }
 
     private SalesProcessResponseDTO mapToDto(SalesProcess salesProcess) {

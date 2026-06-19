@@ -77,6 +77,24 @@
             </a>
 
             <a
+              routerLink="/sales/offers"
+              routerLinkActive="active"
+              title="Offers">
+
+              <span class="icon">📄</span>
+              <span class="label">Offers</span>
+            </a>
+
+            <a
+              routerLink="/sales/contracts"
+              routerLinkActive="active"
+              title="Contracts">
+
+              <span class="icon">📝</span>
+              <span class="label">Contracts</span>
+            </a>
+
+            <a
               routerLink="/sales/communications"
               routerLinkActive="active"
               title="Communications">
@@ -93,17 +111,21 @@
           title="Pricelist Owner">
 
           <span class="icon">📄</span>
-          <span class="label">Pricelists</span>
+          <span class="label">Pricelist Workspace</span>
         </a>
 
-        <a
-          routerLink="/published-pricelists"
-          routerLinkActive="active"
-          title="Buyer View">
+          @if (authService.session$ | async; as buyerSession) {
+            @if (buyerSession.roles.includes('ROLE_BUYER')) {
+            <a
+              routerLink="/catalog"
+              routerLinkActive="active"
+              title="Medicine Catalog">
 
-          <span class="icon">🛒</span>
-          <span class="label">Buy</span>
-        </a>
+              <span class="icon">🛒</span>
+              <span class="label">Catalog</span>
+            </a>
+            }
+          }
 
         <a
           routerLink="/profile"

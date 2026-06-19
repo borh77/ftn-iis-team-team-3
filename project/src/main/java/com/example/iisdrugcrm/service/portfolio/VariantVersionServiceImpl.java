@@ -13,6 +13,10 @@ import com.example.iisdrugcrm.repository.portfolio.VariantVersionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.iisdrugcrm.domain.portfolio.VariantVersionLifecycleHistory;
+import com.example.iisdrugcrm.dto.portfolio.VariantVersionLifecycleHistoryResponseDTO;
+import com.example.iisdrugcrm.repository.portfolio.VariantVersionLifecycleHistoryRepository;
+
 import java.util.List;
 
 @Service
@@ -20,13 +24,16 @@ public class VariantVersionServiceImpl implements VariantVersionService {
 
     private final VariantVersionRepository variantVersionRepository;
     private final VariantRepository variantRepository;
+    private final VariantVersionLifecycleHistoryRepository lifecycleHistoryRepository;
 
     public VariantVersionServiceImpl(
             VariantVersionRepository variantVersionRepository,
-            VariantRepository variantRepository
+            VariantRepository variantRepository,
+            VariantVersionLifecycleHistoryRepository lifecycleHistoryRepository
     ) {
         this.variantVersionRepository = variantVersionRepository;
         this.variantRepository = variantRepository;
+        this.lifecycleHistoryRepository = lifecycleHistoryRepository;
     }
 
     @Override
@@ -109,11 +116,29 @@ public List<VariantVersionResponseDTO> getVariantVersions(
     ) {
         VariantVersion version = getVariantVersion(id);
 
-        if (dto.getStatus() == VariantVersionStatus.ACTIVE) {
+        VariantVersionStatus oldStatus = version.getStatus();
+        VariantVersionStatus newStatus = dto.getStatus();
+
+        if (oldStatus == newStatus) {
+            return VariantVersionResponseDTO.fromEntity(version);
+        }
+
+        if (newStatus == VariantVersionStatus.ACTIVE) {
             archiveCurrentActiveVersion(version);
         }
 
-        version.changeStatus(dto.getStatus());
+        version.changeStatus(newStatus);
+
+        lifecycleHistoryRepository.save(
+                new VariantVersionLifecycleHistory(
+                        version,
+                        oldStatus,
+                        newStatus,
+                        1L,
+                        "Variant version status changed manually",
+                        false
+                )
+        );
 
         return VariantVersionResponseDTO.fromEntity(
                 variantVersionRepository.save(version)
@@ -128,10 +153,31 @@ public List<VariantVersionResponseDTO> getVariantVersions(
                 )
                 .ifPresent(currentActiveVersion -> {
                     if (!currentActiveVersion.getId().equals(newActiveVersion.getId())) {
+                        VariantVersionStatus oldStatus = currentActiveVersion.getStatus();
+
                         currentActiveVersion.changeStatus(VariantVersionStatus.ARCHIVED);
                         variantVersionRepository.save(currentActiveVersion);
+
+                        lifecycleHistoryRepository.save(
+                                new VariantVersionLifecycleHistory(
+                                        currentActiveVersion,
+                                        oldStatus,
+                                        VariantVersionStatus.ARCHIVED,
+                                        1L,
+                                        "Automatically archived because another version became ACTIVE",
+                                        true
+                                )
+                        );
                     }
                 });
+    }
+
+    @Override
+    public List<VariantVersionLifecycleHistoryResponseDTO> getHistory(Long variantVersionId) {
+        return lifecycleHistoryRepository.findByVariantVersionIdWithRelations(variantVersionId)
+                .stream()
+                .map(VariantVersionLifecycleHistoryResponseDTO::fromEntity)
+                .toList();
     }
 
     private Variant getVariant(Long id) {

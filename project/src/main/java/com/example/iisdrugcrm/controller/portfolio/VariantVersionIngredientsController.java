@@ -44,6 +44,4 @@ public class VariantVersionIngredientsController {
     ) {
         return service.update(id, dto);
     }
-
-   
 }

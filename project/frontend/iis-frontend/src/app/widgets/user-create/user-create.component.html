@@ -46,6 +46,23 @@
       </select>
     </label>
 
+    @if (isBuyerRole) {
+      <label>
+        <span>Buyer region</span>
+        <select formControlName="regionId">
+          <option [ngValue]="null">{{ loadingRegions ? 'Loading regions...' : 'Select region' }}</option>
+          @for (region of regions; track region.id) {
+            <option [ngValue]="region.id">{{ region.name }} ({{ region.code }})</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Customer segment</span>
+        <input type="text" formControlName="customerSegment" placeholder="Pharmacy chains" />
+      </label>
+    }
+
     @if (successMessage) {
       <div class="success-box">{{ successMessage }}</div>
     }

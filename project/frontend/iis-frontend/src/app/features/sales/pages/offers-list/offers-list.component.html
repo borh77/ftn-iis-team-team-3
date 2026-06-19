@@ -1,0 +1,105 @@
+<main class="page">
+  <section class="page-header">
+    <div>
+      <p class="eyebrow">Sales workspace</p>
+      <h1>Offers</h1>
+      <p>Review offers, accept them, and create contracts.</p>
+    </div>
+  </section>
+
+  <section class="table-card">
+    <div *ngIf="loading" class="loading">Loading offers...</div>
+
+    <table *ngIf="!loading && offers.length > 0">
+      <thead>
+        <tr>
+          <th>Offer No.</th>
+          <th>Customer</th>
+          <th>Sales Process</th>
+          <th>Status</th>
+          <th>Total</th>
+          <th>Valid Until</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <ng-container *ngFor="let offer of offers">
+          <tr>
+            <td>{{ offer.offerNumber }}</td>
+            <td>{{ offer.customerName }}</td>
+            <td>{{ offer.salesProcessTitle }}</td>
+            <td><span class="status">{{ offer.status }}</span></td>
+            <td>{{ offer.totalAmount }}</td>
+            <td>{{ offer.validUntil }}</td>
+            <td>
+              <div class="action-buttons">
+                <button
+                    *ngIf="offer.status !== 'ACCEPTED'"
+                    type="button"
+                    class="secondary-button"
+                    (click)="acceptOffer(offer)">
+                    Accept
+                </button>
+
+                <button
+                    *ngIf="offer.status === 'ACCEPTED' && !contractExistsForOffer(offer.id)"
+                    type="button"
+                    class="secondary-button"
+                    (click)="openContractForm(offer)">
+                    Create Contract
+                </button>
+
+                <span
+                    *ngIf="offer.status === 'ACCEPTED' && contractExistsForOffer(offer.id)"
+                    class="muted-text">
+                    Contract created
+                </span>
+              </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="showContractFormForOfferId === offer.id">
+            <td colspan="7">
+              <form (ngSubmit)="createContract()" class="process-form">
+                <label>
+                  Start Date
+                  <input
+                    type="date"
+                    name="contract-start-{{ offer.id }}"
+                    [(ngModel)]="newContract.startDate"
+                    required
+                  />
+                </label>
+
+                <label>
+                  End Date
+                  <input
+                    type="date"
+                    name="contract-end-{{ offer.id }}"
+                    [(ngModel)]="newContract.endDate"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Terms
+                  <input
+                    name="contract-terms-{{ offer.id }}"
+                    [(ngModel)]="newContract.terms"
+                  />
+                </label>
+
+                <button type="submit" class="primary-button">Save Contract</button>
+              </form>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+
+    <div *ngIf="!loading && offers.length === 0" class="loading">
+      No offers found.
+    </div>
+  </section>
+</main>

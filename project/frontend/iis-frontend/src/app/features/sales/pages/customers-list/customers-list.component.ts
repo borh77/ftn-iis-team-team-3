@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { SalesApiService } from '../../api/sales-api.service';
 import { Customer, CustomerRequest } from '../../models/customer.model';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-customers-list',
@@ -17,6 +18,7 @@ export class CustomersListComponent implements OnInit {
   private readonly salesApiService = inject(SalesApiService);
   private readonly authService = inject(AuthService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly router = inject(Router);
 
   customers: Customer[] = [];
   loading = true;
@@ -52,6 +54,10 @@ export class CustomersListComponent implements OnInit {
         this.cdr.detectChanges();
       },
     });
+  }
+
+  viewDetails(customer: Customer): void {
+    this.router.navigate(['/sales/customers', customer.id]);
   }
 
   createCustomer(): void {

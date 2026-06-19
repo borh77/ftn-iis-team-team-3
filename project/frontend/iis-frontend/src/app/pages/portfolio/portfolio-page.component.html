@@ -1,0 +1,434 @@
+<section class="page-shell">
+  <header class="page-hero">
+    <div>
+      <p class="kicker">Portfolio Manager</p>
+      <h2>Product Portfolio</h2>
+      <p>Manage product hierarchy, variants, versions and version ingredients / BOM.</p>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button type="button" [class.active]="activeTab() === 'products'" (click)="setTab('products')">Products</button>
+    <button type="button" [class.active]="activeTab() === 'variants'" (click)="setTab('variants')">Variants</button>
+    <button type="button" [class.active]="activeTab() === 'versions'" (click)="setTab('versions')">Versions</button>
+    <button type="button" [class.active]="activeTab() === 'ingredients'" (click)="setTab('ingredients')">Ingredients</button>
+    <button type="button" [class.active]="activeTab() === 'bom'" (click)="setTab('bom')">Version Ingredients / BOM</button>
+  </nav>
+
+  <section class="panel">
+    @if (activeTab() === 'products') {
+      <section class="panel-section">
+        <div class="panel-head">
+          <div>
+            <h3>Products</h3>
+            <p class="muted">Browse active portfolio products.</p>
+          </div>
+
+          <button type="button" class="secondary" (click)="loadProducts()">Refresh</button>
+        </div>
+
+        <form [formGroup]="productForm" (ngSubmit)="createProduct()" class="inline-form product-form">
+  <label>
+    <span>Name</span>
+    <input type="text" formControlName="name" placeholder="Brufen" />
+  </label>
+
+  <label>
+    <span>Description</span>
+    <input type="text" formControlName="description" placeholder="Ibuprofen-based product" />
+  </label>
+
+  <label>
+    <span>Subcategory</span>
+    <select formControlName="subcategoryId">
+      <option [ngValue]="0">Select subcategory</option>
+      @for (subcategory of subcategories(); track subcategory.id) {
+        <option [ngValue]="subcategory.id">
+          {{ subcategory.categoryName }} / {{ subcategory.name }}
+        </option>
+      }
+    </select>
+  </label>
+
+  <label>
+    <span>Therapeutic area</span>
+    <select formControlName="therapeuticAreaId">
+      <option [ngValue]="0">Select therapeutic area</option>
+      @for (area of therapeuticAreas(); track area.id) {
+        <option [ngValue]="area.id">{{ area.name }}</option>
+      }
+    </select>
+  </label>
+
+  <button type="submit" class="primary" [disabled]="productForm.invalid || savingProduct">
+    {{ savingProduct ? 'Saving...' : 'Add product' }}
+  </button>
+</form>
+
+        @if (loadingProducts()) {
+          <p class="muted">Loading products...</p>
+        } @else {
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Subcategory</th>
+                  <th>Therapeutic area</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                @for (product of products(); track product.id) {
+                  <tr>
+                    <td>{{ product.name }}</td>
+                    <td>{{ product.subcategoryName }}</td>
+                    <td>{{ product.therapeuticAreaName }}</td>
+                    <td>{{ product.status }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4">No products found.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    }
+
+    @if (activeTab() === 'variants') {
+  <section class="panel-section">
+    <div class="panel-head">
+      <div>
+        <h3>Variants</h3>
+        <p class="muted">Browse product variants by form and dosage.</p>
+      </div>
+
+      <button type="button" class="secondary" (click)="loadVariants()">Refresh</button>
+    </div>
+
+    <form [formGroup]="variantForm" (ngSubmit)="createVariant()" class="inline-form">
+  <label>
+    <span>Product</span>
+    <select formControlName="productId">
+      <option [ngValue]="0">Select product</option>
+      @for (product of products(); track product.id) {
+        <option [ngValue]="product.id">{{ product.name }}</option>
+      }
+    </select>
+  </label>
+
+  <label>
+    <span>Form</span>
+    <input type="text" formControlName="form" placeholder="TABLET" />
+  </label>
+
+  <label>
+    <span>Dosage</span>
+    <input type="text" formControlName="dosage" placeholder="30mg" />
+  </label>
+
+  <button type="submit" class="primary" [disabled]="variantForm.invalid || savingVariant">
+    {{ savingVariant ? 'Saving...' : 'Add variant' }}
+  </button>
+</form>
+
+    @if (loadingVariants()) {
+      <p class="muted">Loading variants...</p>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Form</th>
+              <th>Dosage</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (variant of variants(); track variant.id) {
+              <tr>
+                <td>{{ variant.productName }}</td>
+                <td>{{ variant.form }}</td>
+                <td>{{ variant.dosage }}</td>
+                <td>{{ variant.status }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="4">No variants found.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+}
+
+    @if (activeTab() === 'versions') {
+  <section class="panel-section">
+    <div class="panel-head">
+      <div>
+        <h3>Versions</h3>
+        <p class="muted">Browse variant versions and lifecycle statuses.</p>
+      </div>
+
+      <button type="button" class="secondary" (click)="loadVersions()">Refresh</button>
+    </div>
+
+    <form [formGroup]="versionForm" (ngSubmit)="createVersion()" class="inline-form">
+  <label>
+    <span>Variant</span>
+    <select formControlName="variantId">
+      <option [ngValue]="0">Select variant</option>
+      @for (variant of variants(); track variant.id) {
+        <option [ngValue]="variant.id">
+          {{ variant.productName }} / {{ variant.form }} {{ variant.dosage }}
+        </option>
+      }
+    </select>
+  </label>
+
+  <label>
+    <span>Version label</span>
+    <input type="text" formControlName="versionLabel" placeholder="3.8v" />
+  </label>
+
+  <label>
+    <span>Description</span>
+    <input type="text" formControlName="description" placeholder="Improved formulation" />
+  </label>
+
+  <button type="submit" class="primary" [disabled]="versionForm.invalid || savingVersion">
+    {{ savingVersion ? 'Saving...' : 'Add version' }}
+  </button>
+</form>
+
+    @if (loadingVersions()) {
+      <p class="muted">Loading versions...</p>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+                 <th>Product</th>
+                <th>Variant</th>
+                <th>Version</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (version of versions(); track version.id) {
+              <tr>
+                <td>{{ version.productName }}</td>
+                <td>{{ version.variantForm }} {{ version.variantDosage }}</td>
+                <td>{{ version.versionLabel }}</td>
+                <td>{{ version.description || '-' }}</td>
+                <td>{{ version.status }}</td>
+                <td>
+                    @if (version.status === 'DEVELOPMENT') {
+                    <button
+                    type="button"
+                    class="secondary"
+                    (click)="activateVersion(version.id)"
+                    [disabled]="changingVersionStatus">
+                    Activate
+                    </button>
+                    } @else {
+                        <span class="muted">Locked</span>
+                    }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6">No versions found.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+}
+
+    @if (activeTab() === 'ingredients') {
+      <section class="panel-section">
+        <div class="panel-head">
+          <div>
+            <h3>Ingredients</h3>
+            <p class="muted">Browse active substances and excipients.</p>
+          </div>
+
+          <button type="button" class="secondary" (click)="loadIngredients()">Refresh</button>
+        </div>
+        
+        <form [formGroup]="ingredientForm" (ngSubmit)="createIngredient()" class="inline-form">
+  <label>
+    <span>Name</span>
+    <input type="text" formControlName="name" placeholder="Ibuprofen" />
+  </label>
+
+  <label>
+    <span>CAS</span>
+    <input type="text" formControlName="cas" placeholder="15687-27-1" />
+  </label>
+
+  <label>
+    <span>Formula</span>
+    <input type="text" formControlName="chemicalFormula" placeholder="C13H18O2" />
+  </label>
+
+  <label>
+    <span>Type</span>
+    <select formControlName="type">
+      <option value="ACTIVE_SUBSTANCE">ACTIVE_SUBSTANCE</option>
+      <option value="EXCIPIENT">EXCIPIENT</option>
+    </select>
+  </label>
+
+  <button type="submit" class="primary" [disabled]="ingredientForm.invalid || savingIngredient">
+    {{ savingIngredient ? 'Saving...' : 'Add ingredient' }}
+  </button>
+</form>
+
+        @if (loadingIngredients()) {
+          <p class="muted">Loading ingredients...</p>
+        } @else {
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>CAS</th>
+                  <th>Formula</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                @for (ingredient of ingredients(); track ingredient.id) {
+                  <tr>
+                    <td>{{ ingredient.name }}</td>
+                    <td>{{ ingredient.cas }}</td>
+                    <td>{{ ingredient.chemicalFormula || '-' }}</td>
+                    <td>{{ ingredient.type }}</td>
+                    <td>{{ ingredient.status }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="5">No ingredients found.</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    }
+
+    @if (activeTab() === 'bom') {
+  <section class="panel-section">
+    <div class="panel-head">
+      <div>
+        <h3>Version Ingredients / BOM</h3>
+        <p class="muted">Browse bill of materials for variant versions.</p>
+      </div>
+
+      <button type="button" class="secondary" (click)="loadVersionIngredients()">Refresh</button>
+    </div>
+
+    <form [formGroup]="versionIngredientForm" (ngSubmit)="createVersionIngredient()" class="inline-form">
+  <label>
+    <span>Version</span>
+    <select formControlName="variantVersionId">
+      <option [ngValue]="0">Select version</option>
+      @for (version of versions(); track version.id) {
+        <option [ngValue]="version.id">
+          {{ version.productName }} / {{ version.variantForm }} {{ version.variantDosage }} / {{ version.versionLabel }} ({{ version.status }})
+        </option>
+      }
+    </select>
+  </label>
+
+  <label>
+    <span>Ingredient</span>
+    <select formControlName="ingredientId">
+      <option [ngValue]="0">Select ingredient</option>
+      @for (ingredient of ingredients(); track ingredient.id) {
+        <option [ngValue]="ingredient.id">
+          {{ ingredient.name }} / {{ ingredient.cas }}
+        </option>
+      }
+    </select>
+  </label>
+
+  <label>
+    <span>Amount</span>
+    <input type="number" formControlName="amount" min="0.0001" step="0.0001" />
+  </label>
+
+  <label>
+    <span>Unit</span>
+    <input type="text" formControlName="unit" placeholder="mg" />
+  </label>
+
+  <button
+    type="submit"
+    class="primary"
+    [disabled]="versionIngredientForm.invalid || savingVersionIngredient">
+    {{ savingVersionIngredient ? 'Saving...' : 'Add BOM item' }}
+  </button>
+</form>
+
+    @if (loadingVersionIngredients()) {
+      <p class="muted">Loading version ingredients...</p>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Variant</th>
+              <th>Version</th>
+              <th>Ingredient</th>
+              <th>CAS</th>
+              <th>Amount</th>
+              <th>Unit</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (item of versionIngredients(); track item.id) {
+              <tr>
+                <td>{{ item.productName }}</td>
+                <td>{{ item.variantForm }} {{ item.variantDosage }}</td>
+                <td>{{ item.versionLabel }}</td>
+                <td>{{ item.ingredientName }}</td>
+                <td>{{ item.ingredientCas }}</td>
+                <td>{{ item.amount }}</td>
+                <td>{{ item.unit }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7">No version ingredients found.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+}
+
+
+  </section>
+</section>

@@ -14,11 +14,20 @@ import { AdminRegionsPageComponent } from './pages/admin-regions/admin-regions-p
 import { RoleLandingComponent } from './pages/role-landing/role-landing.component';
 import { ForcePasswordChangeComponent } from './pages/force-password-change/force-password-change.component';
 import { ProfileComponent } from './pages/profile/profile.component';
+import { PortfolioPageComponent } from './pages/portfolio/portfolio-page.component';
+import { PricelistCreateComponent } from './pages/pricelist-create/pricelist-create.component';
 import { SalesDashboardComponent } from './pages/sales-dashboard/sales-dashboard.component';
+import { BuyerCatalogComponent } from './pages/buyer-catalog/buyer-catalog.component';
 import { LeadsListComponent } from './features/sales/pages/leads-list/leads-list.component';
 import { CustomersListComponent } from './features/sales/pages/customers-list/customers-list.component';
 import { ProcessesListComponent } from './features/sales/pages/processes-list/processes-list.component';
 import { CommunicationsListComponent } from './features/sales/pages/communications-list/communications-list.component';
+import { OffersListComponent } from './features/sales/pages/offers-list/offers-list.component';
+import { ContractsListComponent } from './features/sales/pages/contracts-list/contracts-list.component';
+import { ProcessDetailsComponent } from './features/sales/pages/process-details/process-details.component';
+import { CustomerDetailsComponent } from './features/sales/pages/customer-details/customer-details.component';
+import { ContractDetailsComponent } from './features/sales/pages/contract-details/contract-details.component';
+
 
 export const routes: Routes = [
 	{ path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -68,15 +77,46 @@ export const routes: Routes = [
 		title: 'IIS Drug CRM | Content',
 	},
 	{
-		path: 'published-pricelists',
-		component: RoleLandingComponent,
+		path: 'content/mine',
+		loadComponent: () => import('./pages/pricelist-list/pricelist-list.component').then(m => m.PricelistListComponent),
 		canActivate: [authGuard, passwordChangeGuard],
-		data: {
-			roles: ['ROLE_BUYER'],
-			title: 'Published pricelists',
-			subtitle: 'Buyer landing page.',
-		},
+		data: { roles: ['ROLE_PRICELIST_CREATOR'] },
+		title: 'IIS Drug CRM | My Drafts',
+	},
+	{
+		path: 'content/new',
+		component: PricelistCreateComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_PRICELIST_CREATOR'] },
+		title: 'IIS Drug CRM | New Pricelist',
+	},
+	{
+		path: 'pricelists/:id/edit',
+		component: PricelistCreateComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_PRICELIST_CREATOR'] },
+		title: 'IIS Drug CRM | Edit Pricelist',
+	},
+	{
+		path: 'published-pricelists',
+		component: BuyerCatalogComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_BUYER'] },
 		title: 'IIS Drug CRM | Pricelists',
+	},
+	{
+		path: 'catalog',
+		component: BuyerCatalogComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_BUYER'] },
+		title: 'IIS Drug CRM | Medicine Catalog',
+	},
+	{
+		path: 'portfolio',
+		component: PortfolioPageComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_PORTFOLIO_MANAGER'] },
+		title: 'IIS Drug CRM | Product Portfolio',
 	},
 	{
 		path: 'sales',
@@ -112,6 +152,19 @@ export const routes: Routes = [
 			],
 		},
 		title: 'IIS Drug CRM | Customers',
+	},
+	{
+		path: 'sales/customers/:id',
+		component: CustomerDetailsComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: {
+			roles: [
+			'ROLE_SALES_REPRESENTATIVE',
+			'ROLE_ACCOUNT_MANAGER',
+			'ROLE_SALES_MANAGER',
+			],
+		},
+		title: 'IIS Drug CRM | Customer Details',
 	},
 	{
 		path: 'sales/processes',
@@ -181,6 +234,58 @@ export const routes: Routes = [
 		canActivate: [authGuard, passwordChangeGuard],
 		data: { roles: ['ROLE_FARMAKOVIGILANT', 'ROLE_LEKAR'] },
 		title: 'IIS Drug CRM | Report Details',
+	},
+	{
+		path: 'sales/offers',
+		component: OffersListComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: {
+			roles: [
+			'ROLE_SALES_REPRESENTATIVE',
+			'ROLE_ACCOUNT_MANAGER',
+			'ROLE_SALES_MANAGER',
+			],
+		},
+		title: 'IIS Drug CRM | Offers',
+	},
+	{
+		path: 'sales/contracts',
+		component: ContractsListComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: {
+			roles: [
+			'ROLE_SALES_REPRESENTATIVE',
+			'ROLE_ACCOUNT_MANAGER',
+			'ROLE_SALES_MANAGER',
+			],
+		},
+		title: 'IIS Drug CRM | Contracts',
+	},
+	{
+		path: 'sales/processes/:id',
+		component: ProcessDetailsComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: {
+			roles: [
+			'ROLE_SALES_REPRESENTATIVE',
+			'ROLE_ACCOUNT_MANAGER',
+			'ROLE_SALES_MANAGER',
+			],
+		},
+		title: 'IIS Drug CRM | Process Details',
+	},
+	{
+		path: 'sales/contracts/:id',
+		component: ContractDetailsComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: {
+			roles: [
+			'ROLE_SALES_REPRESENTATIVE',
+			'ROLE_ACCOUNT_MANAGER',
+			'ROLE_SALES_MANAGER',
+			],
+		},
+		title: 'IIS Drug CRM | Contract Details',
 	},
 	{ path: '**', redirectTo: 'login' },
 ];

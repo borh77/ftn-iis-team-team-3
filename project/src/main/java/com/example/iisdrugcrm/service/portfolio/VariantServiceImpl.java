@@ -28,19 +28,24 @@ public class VariantServiceImpl implements VariantService {
         this.productRepository = productRepository;
     }
 
+    
     @Override
-    public List<VariantResponseDTO> getVariants(String search, Long productId, boolean includeArchived) {
-        String normalizedSearch = search == null || search.isBlank()
-                ? null
-                : search.trim();
+    @Transactional(readOnly = true)
+    public List<VariantResponseDTO> getVariants(
+        String search,
+        Long productId,
+        boolean includeArchived
+    ) {
+        String normalizedSearch = search == null || search.isBlank() ? null : search.trim();
 
-        return variantRepository.searchVariants(
-                        normalizedSearch,
-                        productId,
-                        includeArchived,
-                        EntityStatus.ACTIVE
-                )
-                .stream()
+                List<Variant> variants = variantRepository.findByStatusWithRelations(
+                EntityStatus.ACTIVE,
+                includeArchived,
+                productId,
+                normalizedSearch
+        );
+
+        return variants.stream()
                 .map(VariantResponseDTO::fromEntity)
                 .toList();
     }

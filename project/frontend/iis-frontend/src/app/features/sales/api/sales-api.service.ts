@@ -7,6 +7,10 @@ import { Lead, LeadRequest } from '../models/lead.model';
 import { Customer, CustomerRequest } from '../models/customer.model';
 import { SalesProcess, SalesProcessRequest, UpdateSalesStageRequest } from '../models/sales-process.model';
 import { CustomerCommunication, CustomerCommunicationRequest } from '../models/customer-communication.model';
+import { CustomerNeed, CreateCustomerNeedRequest } from '../models/customer-need.model';
+import { Offer, CreateOfferRequest } from '../models/offer.model';
+import { Contract, CreateContractRequest } from '../models/contract.model';
+import { SalesProcessHistory } from '../models/sales-process-history.model';
 
 @Injectable({
   providedIn: 'root',
@@ -91,6 +95,80 @@ export class SalesApiService {
     return this.http.post<CustomerCommunication>(
         `${this.apiBaseUrl}/api/sales/customers/${customerId}/communications`,
         request,
+    );
+  }
+
+  getCustomerNeeds(customerId: number): Observable<CustomerNeed[]> {
+    return this.http.get<CustomerNeed[]>(
+      `${this.apiBaseUrl}/api/customers/${customerId}/needs`,
+    );
+  }
+
+  createCustomerNeed(
+    customerId: number,
+    request: CreateCustomerNeedRequest,
+  ): Observable<CustomerNeed> {
+    return this.http.post<CustomerNeed>(
+      `${this.apiBaseUrl}/api/customers/${customerId}/needs`,
+      request,
+    );
+  }
+
+  getOffers(): Observable<Offer[]> {
+    return this.http.get<Offer[]>(
+      `${this.apiBaseUrl}/api/offers`,
+    );
+  }
+
+  createOffer(request: CreateOfferRequest): Observable<Offer> {
+    return this.http.post<Offer>(
+      `${this.apiBaseUrl}/api/offers`,
+      request,
+    );
+  }
+
+  acceptOffer(id: number): Observable<Offer> {
+    return this.http.patch<Offer>(
+      `${this.apiBaseUrl}/api/offers/${id}/accept`,
+      {},
+    );
+  }
+
+  getContracts(): Observable<Contract[]> {
+    return this.http.get<Contract[]>(
+      `${this.apiBaseUrl}/api/contracts`,
+    );
+  }
+
+  createContract(request: CreateContractRequest): Observable<Contract> {
+    return this.http.post<Contract>(
+      `${this.apiBaseUrl}/api/contracts`,
+      request,
+    );
+  }
+
+  signContract(id: number): Observable<Contract> {
+    return this.http.patch<Contract>(
+      `${this.apiBaseUrl}/api/contracts/${id}/sign`,
+      {},
+    );
+  }
+
+  getSalesProcessById(id: number): Observable<SalesProcess> {
+    return this.http.get<SalesProcess>(
+      `${this.apiBaseUrl}/api/sales/processes/${id}`,
+    );
+  }
+
+  getSalesProcessHistory(id: number): Observable<SalesProcessHistory[]> {
+    return this.http.get<SalesProcessHistory[]>(
+      `${this.apiBaseUrl}/api/sales/processes/${id}/history`,
+    );
+  }
+
+  getContractById(id: number): Observable<Contract> {
+    return this.http.get<Contract>(
+      `${this.apiBaseUrl}/api/contracts/${id}`,
     );
   }
 }
