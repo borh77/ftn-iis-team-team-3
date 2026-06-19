@@ -41,3 +41,30 @@ export interface CreateDoctorReportRequest {
   patientGender?: string;
   patientAge?: number;
 }
+
+export interface StatusTransition {
+  id: number;
+  oldStatus: string;
+  newStatus: string;
+  changedAt: string;
+  changedByUsername: string;
+  comment?: string;
+  priority?: string;
+  closureReason?: string;
+  verdict?: string;
+}
+
+export interface AnalystNote {
+  id: number;
+  content: string;
+  createdAt: string;
+  authorUsername: string;
+}
+
+export interface ChangeStatusRequest {
+  newStatus: ReportStatus;
+  comment?: string;
+  priority?: string;
+  closureReason?: string;
+  verdict?: string;
+}

@@ -1,6 +1,5 @@
 <div class="page-wrapper">
 
-  <!-- Navigation bar -->
   <nav class="ae-nav">
     <a class="nav-link" routerLink="/adverse-effects/all-reports" routerLinkActive="active">All Reports</a>
   </nav>
@@ -10,27 +9,40 @@
       <h1>All Adverse Effect Reports</h1>
       <p>Overview of all reports submitted in the system.</p>
     </div>
-    <div class="filter-bar">
-      <select [(ngModel)]="selectedStatus" (change)="applyFilter()">
-        <option value="">All statuses</option>
-        <option *ngFor="let s of statusOptions" [value]="s">{{ s }}</option>
-      </select>
-      <button class="btn-clear" *ngIf="selectedStatus" (click)="clearFilter()">✕ Clear filter</button>
-    </div>
+  </div>
+
+  <div class="filter-bar">
+    <select [(ngModel)]="selectedStatus">
+      <option value="">All statuses</option>
+      <option *ngFor="let s of statusOptions" [value]="s">{{ s }}</option>
+    </select>
+
+    <input
+      type="text"
+      [(ngModel)]="medicationName"
+      placeholder="Medication name">
+
+    <select [(ngModel)]="selectedSeverity">
+      <option value="">All severities</option>
+      <option *ngFor="let s of severityOptions" [value]="s">{{ s }}</option>
+    </select>
+
+    <button class="btn-filter" (click)="applyFilter()">Filter</button>
+    <button class="btn-clear" (click)="clearFilter()">Clear</button>
   </div>
 
   <div class="loading" *ngIf="loading">Loading...</div>
   <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
 
   <div class="summary" *ngIf="!loading">
-    Showing: <strong>{{ filteredReports.length }}</strong> of <strong>{{ allReports.length }}</strong> reports
+    Showing: <strong>{{ reports.length }}</strong> reports
   </div>
 
-  <div class="empty-state" *ngIf="!loading && filteredReports.length === 0">
-    <p>No reports match the selected filter.</p>
+  <div class="empty-state" *ngIf="!loading && reports.length === 0">
+    <p>No reports match the selected filters.</p>
   </div>
 
-  <div class="reports-table" *ngIf="!loading && filteredReports.length > 0">
+  <div class="reports-table" *ngIf="!loading && reports.length > 0">
     <table>
       <thead>
         <tr>
@@ -46,7 +58,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let report of filteredReports">
+        <tr *ngFor="let report of reports">
           <td>{{ report.id }}</td>
           <td>
             <span class="type-badge" [class.type-doctor]="report.reportType === 'DOCTOR'" [class.type-patient]="report.reportType === 'PATIENT'">
@@ -55,13 +67,13 @@
           </td>
           <td>{{ report.reporterUsername }}</td>
           <td>{{ report.medicationName }}</td>
-          <td>{{ report.severity || '—' }}</td>
+          <td>{{ report.severity || '-' }}</td>
           <td>
             <span class="status-badge" [ngClass]="getStatusClass(report.status)">
               {{ report.status }}
             </span>
           </td>
-          <td>{{ report.symptomDate || '—' }}</td>
+          <td>{{ report.symptomDate || '-' }}</td>
           <td>{{ report.createdAt | date:'dd.MM.yyyy HH:mm' }}</td>
           <td><button class="btn-view" (click)="viewReport(report.id)">View</button></td>
         </tr>

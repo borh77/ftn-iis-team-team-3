@@ -18,41 +18,33 @@ export class AllReportsComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
 
-  allReports: AdverseEffectReport[] = [];
-  filteredReports: AdverseEffectReport[] = [];
+  reports: AdverseEffectReport[] = [];
   loading = true;
   errorMessage = '';
 
-  selectedStatus: string = '';
+  selectedStatus = '';
+  medicationName = '';
+  selectedSeverity = '';
   statusOptions: ReportStatus[] = ['SUBMITTED', 'UNDER_REVIEW', 'CLOSED', 'EVIDENCED'];
+  severityOptions = ['MILD', 'MODERATE', 'SEVERE', 'LIFE_THREATENING', 'CRITICAL'];
 
   ngOnInit(): void {
-    this.api.getAllReports().subscribe({
-      next: (data) => {
-        this.allReports = data;
-        this.filteredReports = data;
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.errorMessage = 'Error loading reports.';
-        this.loading = false;
-        this.cdr.detectChanges();
-      }
-    });
+    this.loadReports();
   }
 
   applyFilter(): void {
-    if (!this.selectedStatus) {
-      this.filteredReports = this.allReports;
-    } else {
-      this.filteredReports = this.allReports.filter(r => r.status === this.selectedStatus);
-    }
+    this.loadReports({
+      status: this.selectedStatus,
+      medicationName: this.medicationName.trim(),
+      severity: this.selectedSeverity
+    });
   }
 
   clearFilter(): void {
     this.selectedStatus = '';
-    this.filteredReports = this.allReports;
+    this.medicationName = '';
+    this.selectedSeverity = '';
+    this.loadReports();
   }
 
   viewReport(id: number): void {
@@ -67,5 +59,23 @@ export class AllReportsComponent implements OnInit {
       'EVIDENCED': 'status-evidenced'
     };
     return map[status] ?? '';
+  }
+
+  private loadReports(filters: { status?: string; medicationName?: string; severity?: string } = {}): void {
+    this.loading = true;
+    this.errorMessage = '';
+
+    this.api.getAllReportsFiltered(filters).subscribe({
+      next: (data) => {
+        this.reports = data;
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.errorMessage = 'Error loading reports.';
+        this.loading = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 }

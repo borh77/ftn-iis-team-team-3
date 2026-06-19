@@ -1,8 +1,12 @@
 package com.example.iisdrugcrm.service.adverse;
 
 import com.example.iisdrugcrm.dto.adverse.AdverseEffectReportResponseDTO;
+import com.example.iisdrugcrm.dto.adverse.AddNoteRequestDTO;
+import com.example.iisdrugcrm.dto.adverse.AnalystNoteResponseDTO;
+import com.example.iisdrugcrm.dto.adverse.ChangeStatusRequestDTO;
 import com.example.iisdrugcrm.dto.adverse.CreateDoctorReportRequestDTO;
 import com.example.iisdrugcrm.dto.adverse.CreatePatientReportRequestDTO;
+import com.example.iisdrugcrm.dto.adverse.StatusTransitionResponseDTO;
 import com.example.iisdrugcrm.dto.adverse.UpdateDoctorReportRequestDTO;
 
 import java.util.List;
@@ -24,6 +28,16 @@ public interface AdverseEffectReportService {
     // US-04: Farmakovigilant vidi sve naloge
     List<AdverseEffectReportResponseDTO> getAllReports();
 
+    List<AdverseEffectReportResponseDTO> getAllReportsFiltered(String status, String medicationName, String severity);
+
     // US-03: Detalji jednog naloga
     AdverseEffectReportResponseDTO getReportById(Long id);
+
+    AdverseEffectReportResponseDTO changeStatus(Long reportId, ChangeStatusRequestDTO dto, String currentUsername);
+
+    AnalystNoteResponseDTO addNote(Long reportId, AddNoteRequestDTO dto, String currentUsername);
+
+    List<StatusTransitionResponseDTO> getStatusHistory(Long reportId);
+
+    List<AnalystNoteResponseDTO> getNotes(Long reportId);
 }

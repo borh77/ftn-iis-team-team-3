@@ -33,4 +33,26 @@ public class EmailServiceImpl implements EmailService {
         );
         mailSender.send(message);
     }
+
+    @Override
+    public void sendStatusChangeEmail(
+            String toEmail,
+            String reporterName,
+            Long reportId,
+            String oldStatus,
+            String newStatus,
+            String comment) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("Adverse effect report status changed");
+        message.setText(
+                "Hello " + reporterName + ",\n\n" +
+                "The status of your adverse effect report #" + reportId + " has changed.\n\n" +
+                "Old status: " + oldStatus + "\n" +
+                "New status: " + newStatus + "\n" +
+                "Comment: " + (comment == null || comment.isBlank() ? "-" : comment) + "\n\n" +
+                "Application: " + frontendUrl
+        );
+        mailSender.send(message);
+    }
 }

@@ -4,8 +4,11 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../../../core/api.token';
 import {
   AdverseEffectReport,
+  AnalystNote,
+  ChangeStatusRequest,
   CreateDoctorReportRequest,
-  CreatePatientReportRequest
+  CreatePatientReportRequest,
+  StatusTransition
 } from '../models/adverse-effect-report.model';
 
 @Injectable({ providedIn: 'root' })
@@ -35,6 +38,19 @@ export class AdverseEffectsApiService {
     return this.http.get<AdverseEffectReport[]>(this.base);
   }
 
+  getAllReportsFiltered(filters: {
+    status?: string;
+    medicationName?: string;
+    severity?: string;
+  }): Observable<AdverseEffectReport[]> {
+    const params: Record<string, string> = {};
+    if (filters.status) params['status'] = filters.status;
+    if (filters.medicationName) params['medicationName'] = filters.medicationName;
+    if (filters.severity) params['severity'] = filters.severity;
+
+    return this.http.get<AdverseEffectReport[]>(`${this.base}/reports`, { params });
+  }
+
   // Detalji jednog naloga
   getReportById(id: number): Observable<AdverseEffectReport> {
     return this.http.get<AdverseEffectReport>(`${this.base}/${id}`);
@@ -43,5 +59,21 @@ export class AdverseEffectsApiService {
   // US-03: Lekar edituje nalog (samo dok je SUBMITTED)
   updateDoctorReport(id: number, dto: any): Observable<AdverseEffectReport> {
     return this.http.put<AdverseEffectReport>(`${this.base}/doctor-reports/${id}`, dto);
+  }
+
+  changeStatus(id: number, dto: ChangeStatusRequest): Observable<AdverseEffectReport> {
+    return this.http.put<AdverseEffectReport>(`${this.base}/reports/${id}/status`, dto);
+  }
+
+  addNote(id: number, dto: { content: string }): Observable<AnalystNote> {
+    return this.http.post<AnalystNote>(`${this.base}/reports/${id}/notes`, dto);
+  }
+
+  getStatusHistory(id: number): Observable<StatusTransition[]> {
+    return this.http.get<StatusTransition[]>(`${this.base}/reports/${id}/history`);
+  }
+
+  getNotes(id: number): Observable<AnalystNote[]> {
+    return this.http.get<AnalystNote[]>(`${this.base}/reports/${id}/notes`);
   }
 }

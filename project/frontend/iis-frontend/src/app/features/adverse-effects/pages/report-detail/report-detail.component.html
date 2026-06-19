@@ -1,11 +1,12 @@
 <div class="page-wrapper">
 
   <nav class="ae-nav">
-    <a class="nav-link" routerLink="/adverse-effects/all-reports" routerLinkActive="active">← All Reports</a>
+    <a class="nav-link" [routerLink]="isPharmacovigilant ? '/adverse-effects/all-reports' : '/adverse-effects/my-reports'" routerLinkActive="active">Back</a>
   </nav>
 
   <div class="loading" *ngIf="loading">Loading...</div>
   <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="success-message" *ngIf="successMessage">{{ successMessage }}</div>
 
   <div class="detail-card" *ngIf="report">
 
@@ -26,11 +27,11 @@
         </div>
         <div class="info-item">
           <span class="label">Severity</span>
-          <span class="value severity" [attr.data-severity]="report.severity">{{ report.severity || '—' }}</span>
+          <span class="value severity" [attr.data-severity]="report.severity">{{ report.severity || '-' }}</span>
         </div>
         <div class="info-item">
           <span class="label">Symptom Date</span>
-          <span class="value">{{ report.symptomDate || '—' }}</span>
+          <span class="value">{{ report.symptomDate || '-' }}</span>
         </div>
         <div class="info-item">
           <span class="label">Reporter</span>
@@ -43,12 +44,11 @@
       </div>
     </div>
 
-    <!-- Doctor report fields -->
     <div class="section" *ngIf="report.reportType === 'DOCTOR'">
       <h2>Clinical Details</h2>
       <div class="info-item full-width">
         <span class="label">Effect Description</span>
-        <span class="value text-block">{{ report.effectDescription || '—' }}</span>
+        <span class="value text-block">{{ report.effectDescription || '-' }}</span>
       </div>
       <div class="info-item full-width" *ngIf="report.additionalNotes">
         <span class="label">Additional Notes</span>
@@ -56,12 +56,11 @@
       </div>
     </div>
 
-    <!-- Patient report fields -->
     <div class="section" *ngIf="report.reportType === 'PATIENT'">
       <h2>Patient Details</h2>
       <div class="info-item full-width">
         <span class="label">Symptoms</span>
-        <span class="value text-block">{{ report.symptoms || '—' }}</span>
+        <span class="value text-block">{{ report.symptoms || '-' }}</span>
       </div>
       <div class="info-item full-width" *ngIf="report.additionalDesc">
         <span class="label">Additional Description</span>
@@ -69,8 +68,104 @@
       </div>
     </div>
 
+    <div class="section" *ngIf="isPharmacovigilant">
+      <h2>Change Status</h2>
+
+      <div class="status-actions" *ngIf="getAvailableTransitions().length > 0; else finalStatus">
+        <button
+          class="btn-primary"
+          *ngFor="let status of getAvailableTransitions()"
+          (click)="startTransition(status)"
+          [disabled]="actionLoading">
+          {{ getTransitionLabel(status) }}
+        </button>
+      </div>
+
+      <ng-template #finalStatus>
+        <p class="muted">This report is in a final status.</p>
+      </ng-template>
+
+      <div class="inline-form" *ngIf="selectedTransition">
+        <h3>{{ getTransitionLabel(selectedTransition) }}</h3>
+
+        <label>
+          Comment <span *ngIf="selectedTransition === 'CLOSED'">*</span>
+          <textarea rows="3" [(ngModel)]="statusForm.comment"></textarea>
+        </label>
+
+        <label *ngIf="selectedTransition === 'UNDER_REVIEW'">
+          Priority
+          <select [(ngModel)]="statusForm.priority">
+            <option value="LOW">LOW</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="HIGH">HIGH</option>
+          </select>
+        </label>
+
+        <label *ngIf="selectedTransition === 'CLOSED'">
+          Closure Reason
+          <textarea rows="2" [(ngModel)]="statusForm.closureReason"></textarea>
+        </label>
+
+        <label *ngIf="selectedTransition === 'CLOSED'">
+          Verdict
+          <textarea rows="2" [(ngModel)]="statusForm.verdict"></textarea>
+        </label>
+
+        <div class="form-actions">
+          <button class="btn-primary" (click)="confirmStatusChange()" [disabled]="actionLoading">Confirm</button>
+          <button class="btn-secondary" (click)="cancelTransition()" [disabled]="actionLoading">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Status History</h2>
+      <div class="empty-inline" *ngIf="statusHistory.length === 0">No status changes recorded yet.</div>
+      <table class="history-table" *ngIf="statusHistory.length > 0">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Changed By</th>
+            <th>Old Status</th>
+            <th>New Status</th>
+            <th>Comment</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of statusHistory">
+            <td>{{ item.changedAt | date:'dd.MM.yyyy HH:mm' }}</td>
+            <td>{{ item.changedByUsername }}</td>
+            <td>{{ item.oldStatus }}</td>
+            <td>{{ item.newStatus }}</td>
+            <td>{{ item.comment || '-' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Analyst Notes</h2>
+
+      <div class="notes-list" *ngIf="notes.length > 0">
+        <div class="note-item" *ngFor="let note of notes">
+          <div class="note-meta">{{ note.authorUsername }} - {{ note.createdAt | date:'dd.MM.yyyy HH:mm' }}</div>
+          <div class="note-content">{{ note.content }}</div>
+        </div>
+      </div>
+      <div class="empty-inline" *ngIf="notes.length === 0">No analyst notes yet.</div>
+
+      <div class="inline-form compact" *ngIf="isPharmacovigilant">
+        <label>
+          Add Note
+          <textarea rows="3" [(ngModel)]="newNoteContent"></textarea>
+        </label>
+        <button class="btn-primary" (click)="addNote()" [disabled]="actionLoading || !newNoteContent.trim()">Add Note</button>
+      </div>
+    </div>
+
     <div class="card-footer">
-      <button class="btn-secondary" (click)="goBack()">← Back to All Reports</button>
+      <button class="btn-secondary" (click)="goBack()">Back</button>
     </div>
 
   </div>
