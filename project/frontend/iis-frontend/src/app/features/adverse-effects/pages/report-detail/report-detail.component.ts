@@ -132,8 +132,9 @@ export class ReportDetailComponent implements OnInit {
 
   getAvailableTransitions(): ReportStatus[] {
     if (!this.isPharmacovigilant || !this.report) return [];
+    if (this.report.reportType === 'PATIENT') return [];
     if (this.report.status === 'SUBMITTED') return ['UNDER_REVIEW'];
-    if (this.report.status === 'UNDER_REVIEW') return ['CLOSED', 'EVIDENCED'];
+    if (this.report.status === 'UNDER_REVIEW') return ['CLOSED'];
     return [];
   }
 
@@ -145,6 +146,14 @@ export class ReportDetailComponent implements OnInit {
       EVIDENCED: 'Mark as Evidenced'
     };
     return labels[status];
+  }
+
+  getFinalStatusMessage(): string {
+    if (this.report?.reportType === 'PATIENT') {
+      return 'Patient reports are evidenced automatically and are not analyzed.';
+    }
+
+    return 'This report is in a final status.';
   }
 
   getStatusClass(status: string): string {

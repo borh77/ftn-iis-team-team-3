@@ -102,7 +102,7 @@ public class RestExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", exception.getMessage()));
     }
 
-    @ExceptionHandler({IllegalArgumentException.class, PropertyReferenceException.class})
+    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class, PropertyReferenceException.class})
     public ResponseEntity<Map<String, String>> handleBadRequest(Exception exception) {
         return ResponseEntity.badRequest().body(Map.of("error", exception.getMessage()));
     }

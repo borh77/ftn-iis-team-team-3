@@ -301,10 +301,13 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
     }
 
     private void validateTransition(ReportStatus oldStatus, ReportStatus newStatus, ChangeStatusRequestDTO dto) {
+        if (oldStatus == ReportStatus.EVIDENCED) {
+            throw new IllegalStateException("Patient reports are evidenced automatically and are not analyzed.");
+        }
+
         boolean allowed =
                 oldStatus == ReportStatus.SUBMITTED && newStatus == ReportStatus.UNDER_REVIEW
-                || oldStatus == ReportStatus.UNDER_REVIEW && newStatus == ReportStatus.CLOSED
-                || oldStatus == ReportStatus.UNDER_REVIEW && newStatus == ReportStatus.EVIDENCED;
+                || oldStatus == ReportStatus.UNDER_REVIEW && newStatus == ReportStatus.CLOSED;
 
         if (!allowed) {
             throw new IllegalStateException("Status transition not allowed");

@@ -82,7 +82,7 @@
       </div>
 
       <ng-template #finalStatus>
-        <p class="muted">This report is in a final status.</p>
+        <p class="muted">{{ getFinalStatusMessage() }}</p>
       </ng-template>
 
       <div class="inline-form" *ngIf="selectedTransition">
