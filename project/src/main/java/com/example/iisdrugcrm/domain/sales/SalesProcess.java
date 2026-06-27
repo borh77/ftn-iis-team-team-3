@@ -61,36 +61,18 @@ public class SalesProcess {
     }
 
     public void changeStage(SalesStage newStage) {
-    if (!isTransitionAllowed(this.stage, newStage)) {
-        throw new IllegalArgumentException(
-                "Transition from " + this.stage + " to " + newStage + " is not allowed."
-        );
-    }
+        this.stage = newStage;
 
-    this.stage = newStage;
-
-    if (newStage == SalesStage.WON) {
-        this.status = SalesProcessStatus.SUCCESSFUL;
-        this.outcome = SalesProcessOutcome.CLOSED_WON;
-    } else if (newStage == SalesStage.LOST) {
-        this.status = SalesProcessStatus.UNSUCCESSFUL;
-        this.outcome = SalesProcessOutcome.CLOSED_LOST;
-    } else {
-        this.status = SalesProcessStatus.ACTIVE;
-        this.outcome = SalesProcessOutcome.OPEN;
-    }
-    
-    }
-
-    private boolean isTransitionAllowed(SalesStage currentStage, SalesStage newStage) {
-        return switch (currentStage) {
-            case NEW -> newStage == SalesStage.CONTACTED;
-            case CONTACTED -> newStage == SalesStage.QUALIFIED;
-            case QUALIFIED -> newStage == SalesStage.PROPOSAL_SENT;
-            case PROPOSAL_SENT -> newStage == SalesStage.NEGOTIATION;
-            case NEGOTIATION -> newStage == SalesStage.WON || newStage == SalesStage.LOST;
-            case WON, LOST -> false;
-        };
+        if (newStage == SalesStage.WON) {
+            this.status = SalesProcessStatus.SUCCESSFUL;
+            this.outcome = SalesProcessOutcome.CLOSED_WON;
+        } else if (newStage == SalesStage.LOST) {
+            this.status = SalesProcessStatus.UNSUCCESSFUL;
+            this.outcome = SalesProcessOutcome.CLOSED_LOST;
+        } else {
+            this.status = SalesProcessStatus.ACTIVE;
+            this.outcome = SalesProcessOutcome.OPEN;
+        }
     }
 
     public Long getId() { return id; }

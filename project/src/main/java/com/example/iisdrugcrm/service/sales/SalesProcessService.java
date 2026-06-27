@@ -8,11 +8,18 @@ import com.example.iisdrugcrm.dto.sales.process.SalesProcessResponseDTO;
 import com.example.iisdrugcrm.dto.sales.process.StageUpdateRequestDTO;
 import com.example.iisdrugcrm.repository.sales.CustomerRepository;
 import com.example.iisdrugcrm.repository.sales.SalesProcessRepository;
+import com.example.iisdrugcrm.repository.sales.workflow.SalesStageDefinitionRepository;
+import com.example.iisdrugcrm.repository.sales.workflow.SalesStageTransitionRepository;
+import com.example.iisdrugcrm.repository.sales.workflow.SalesWorkflowRepository;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.iisdrugcrm.domain.sales.SalesProcessHistory;
 import com.example.iisdrugcrm.domain.sales.SalesStage;
+import com.example.iisdrugcrm.domain.sales.workflow.SalesStageDefinition;
+import com.example.iisdrugcrm.domain.sales.workflow.SalesWorkflow;
 import com.example.iisdrugcrm.repository.sales.SalesProcessHistoryRepository;
+
 
 import java.util.List;
 
@@ -22,13 +29,24 @@ public class SalesProcessService {
     private final SalesProcessRepository salesProcessRepository;
     private final CustomerRepository customerRepository;
     private final SalesProcessHistoryRepository salesProcessHistoryRepository;
+    private final SalesWorkflowRepository salesWorkflowRepository;
+    private final SalesStageDefinitionRepository salesStageDefinitionRepository;
+    private final SalesStageTransitionRepository salesStageTransitionRepository;
 
-    public SalesProcessService(SalesProcessRepository salesProcessRepository,
-                            CustomerRepository customerRepository,
-                            SalesProcessHistoryRepository salesProcessHistoryRepository) {
+    public SalesProcessService(
+            SalesProcessRepository salesProcessRepository,
+            CustomerRepository customerRepository,
+            SalesProcessHistoryRepository salesProcessHistoryRepository,
+            SalesWorkflowRepository salesWorkflowRepository,
+            SalesStageDefinitionRepository salesStageDefinitionRepository,
+            SalesStageTransitionRepository salesStageTransitionRepository
+    ) {
         this.salesProcessRepository = salesProcessRepository;
         this.customerRepository = customerRepository;
         this.salesProcessHistoryRepository = salesProcessHistoryRepository;
+        this.salesWorkflowRepository = salesWorkflowRepository;
+        this.salesStageDefinitionRepository = salesStageDefinitionRepository;
+        this.salesStageTransitionRepository = salesStageTransitionRepository;
     }
 
     public List<SalesProcessResponseDTO> getAll() {
@@ -54,6 +72,8 @@ public class SalesProcessService {
 
         SalesStage previousStage = process.getStage();
 
+        validateWorkflowTransition(previousStage, dto.getStage());
+        
         process.changeStage(dto.getStage());
 
         salesProcessHistoryRepository.save(
@@ -83,6 +103,48 @@ public class SalesProcessService {
                         history.getChangedAt()
                 ))
                 .toList();
+    }
+
+    private void validateWorkflowTransition(SalesStage currentStage, SalesStage targetStage) {
+        SalesWorkflow workflow = salesWorkflowRepository.findByRegionAndActiveTrue("GLOBAL")
+                .orElseThrow(() -> new IllegalStateException("Active sales workflow for GLOBAL region not found."));
+
+        SalesStageDefinition fromStage = findStageDefinition(workflow.getId(), currentStage);
+        SalesStageDefinition toStage = findStageDefinition(workflow.getId(), targetStage);
+
+        salesStageTransitionRepository
+                .findByWorkflow_IdAndFromStage_IdAndToStage_Id(
+                        workflow.getId(),
+                        fromStage.getId(),
+                        toStage.getId()
+                )
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Transition from " + currentStage + " to " + targetStage + " is not allowed by workflow."
+                ));
+    }
+
+    private SalesStageDefinition findStageDefinition(Long workflowId, SalesStage stage) {
+        String stageName = mapEnumStageToWorkflowStageName(stage);
+
+        return salesStageDefinitionRepository.findByWorkflow_IdOrderByStageOrderAsc(workflowId)
+                .stream()
+                .filter(definition -> definition.getName().equals(stageName))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Stage " + stageName + " is not defined in active workflow."
+                ));
+    }
+
+    private String mapEnumStageToWorkflowStageName(SalesStage stage) {
+        return switch (stage) {
+            case NEW -> "New";
+            case CONTACTED -> "Contacted";
+            case QUALIFIED -> "Qualified";
+            case PROPOSAL_SENT -> "Proposal Sent";
+            case NEGOTIATION -> "Negotiation";
+            case WON -> "Closed Won";
+            case LOST -> "Closed Lost";
+        };
     }
 
     private SalesProcessResponseDTO mapToDto(SalesProcess salesProcess) {
