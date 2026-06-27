@@ -1,5 +1,6 @@
 package com.example.iisdrugcrm.dto.pricelist;
 
+import com.example.iisdrugcrm.domain.PricelistStatus;
 import com.example.iisdrugcrm.domain.pricelist.PricelistActionType;
 import com.example.iisdrugcrm.domain.pricelist.PricelistActivityLog;
 import java.time.OffsetDateTime;
@@ -13,6 +14,8 @@ public class PricelistActivityLogResponseDTO {
     private PricelistActionType actionType;
     private String description;
     private OffsetDateTime timestamp;
+    private PricelistStatus statusFrom;
+    private PricelistStatus statusTo;
 
     public static PricelistActivityLogResponseDTO fromEntity(PricelistActivityLog log) {
         PricelistActivityLogResponseDTO dto = new PricelistActivityLogResponseDTO();
@@ -23,6 +26,8 @@ public class PricelistActivityLogResponseDTO {
         dto.setActionType(log.getActionType());
         dto.setDescription(log.getDescription());
         dto.setTimestamp(log.getTimestamp());
+        dto.setStatusFrom(log.getStatusFrom());
+        dto.setStatusTo(log.getStatusTo());
         return dto;
     }
 
@@ -80,5 +85,21 @@ public class PricelistActivityLogResponseDTO {
 
     public void setTimestamp(OffsetDateTime timestamp) {
         this.timestamp = timestamp;
+    }
+
+    public PricelistStatus getStatusFrom() {
+        return statusFrom;
+    }
+
+    public void setStatusFrom(PricelistStatus statusFrom) {
+        this.statusFrom = statusFrom;
+    }
+
+    public PricelistStatus getStatusTo() {
+        return statusTo;
+    }
+
+    public void setStatusTo(PricelistStatus statusTo) {
+        this.statusTo = statusTo;
     }
 }

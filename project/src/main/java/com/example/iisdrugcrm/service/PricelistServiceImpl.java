@@ -254,7 +254,9 @@ public class PricelistServiceImpl implements PricelistService {
                 saved,
                 currentUserId,
                 PricelistActionType.STATUS_CHANGE,
-                "Promenjen status iz " + previousStatus + " u " + saved.getStatus()
+                "Promenjen status iz " + previousStatus + " u " + saved.getStatus(),
+                previousStatus,
+                saved.getStatus()
         );
         LOGGER.info("Changed pricelist {} status from {} to {}", saved.getId(), previousStatus, saved.getStatus());
         return toResponse(saved);
@@ -437,6 +439,17 @@ public class PricelistServiceImpl implements PricelistService {
     }
 
     private void publishPricelistAction(Pricelist pricelist, Long userId, PricelistActionType actionType, String description) {
+        publishPricelistAction(pricelist, userId, actionType, description, null, null);
+    }
+
+    private void publishPricelistAction(
+            Pricelist pricelist,
+            Long userId,
+            PricelistActionType actionType,
+            String description,
+            PricelistStatus statusFrom,
+            PricelistStatus statusTo
+    ) {
         if (pricelist.getId() == null || userId == null) {
             LOGGER.debug("Skipping pricelist activity event for pricelist {} and user {}", pricelist.getId(), userId);
             return;
@@ -446,7 +459,9 @@ public class PricelistServiceImpl implements PricelistService {
                 userId,
                 resolveTeamId(pricelist),
                 actionType,
-                description
+                description,
+                statusFrom,
+                statusTo
         ));
     }
 

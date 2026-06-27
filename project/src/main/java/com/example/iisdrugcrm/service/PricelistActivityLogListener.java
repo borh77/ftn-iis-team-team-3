@@ -33,7 +33,9 @@ public class PricelistActivityLogListener {
                     event.teamId(),
                     event.actionType(),
                     event.description(),
-                    OffsetDateTime.now(ZoneOffset.UTC)
+                    OffsetDateTime.now(ZoneOffset.UTC),
+                    event.statusFrom(),
+                    event.statusTo()
             ));
         } catch (Exception exception) {
             LOGGER.warn("Failed to persist pricelist activity log for pricelist {}: {}", event.pricelistId(), exception.getMessage());

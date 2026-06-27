@@ -1,5 +1,6 @@
 package com.example.iisdrugcrm.service;
 
+import com.example.iisdrugcrm.domain.PricelistStatus;
 import com.example.iisdrugcrm.domain.pricelist.PricelistActionType;
 import com.example.iisdrugcrm.domain.pricelist.PricelistActivityLog;
 import com.example.iisdrugcrm.repository.PricelistActivityLogRepository;
@@ -52,6 +53,30 @@ class PricelistActivityLogListenerTest {
         assertEquals(PricelistActionType.CREATE, log.getActionType());
         assertEquals("Kreiran cenovnik u statusu DRAFT", log.getDescription());
         assertEquals(ZoneOffset.UTC, log.getTimestamp().getOffset());
+        assertEquals(null, log.getStatusFrom());
+        assertEquals(null, log.getStatusTo());
+    }
+
+    @Test
+    void handlePersistsStructuredStatusTransitionFields() {
+        PricelistActionEvent event = new PricelistActionEvent(
+                10L,
+                99L,
+                null,
+                PricelistActionType.STATUS_CHANGE,
+                "Promenjen status iz DRAFT u IN_REVIEW",
+                PricelistStatus.DRAFT,
+                PricelistStatus.IN_REVIEW
+        );
+
+        listener.handle(event);
+
+        ArgumentCaptor<PricelistActivityLog> captor = ArgumentCaptor.forClass(PricelistActivityLog.class);
+        verify(repository).save(captor.capture());
+        PricelistActivityLog log = captor.getValue();
+        assertEquals(PricelistActionType.STATUS_CHANGE, log.getActionType());
+        assertEquals(PricelistStatus.DRAFT, log.getStatusFrom());
+        assertEquals(PricelistStatus.IN_REVIEW, log.getStatusTo());
     }
 
     @Test

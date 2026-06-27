@@ -1,5 +1,6 @@
 package com.example.iisdrugcrm.domain.pricelist;
 
+import com.example.iisdrugcrm.domain.PricelistStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -37,16 +38,39 @@ public class PricelistActivityLog {
     @Column(nullable = false)
     private OffsetDateTime timestamp;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status_from", length = 32)
+    private PricelistStatus statusFrom;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status_to", length = 32)
+    private PricelistStatus statusTo;
+
     protected PricelistActivityLog() {
     }
 
     public PricelistActivityLog(Long pricelistId, Long userId, Long teamId, PricelistActionType actionType, String description, OffsetDateTime timestamp) {
+        this(pricelistId, userId, teamId, actionType, description, timestamp, null, null);
+    }
+
+    public PricelistActivityLog(
+            Long pricelistId,
+            Long userId,
+            Long teamId,
+            PricelistActionType actionType,
+            String description,
+            OffsetDateTime timestamp,
+            PricelistStatus statusFrom,
+            PricelistStatus statusTo
+    ) {
         this.pricelistId = pricelistId;
         this.userId = userId;
         this.teamId = teamId;
         this.actionType = actionType;
         this.description = description;
         this.timestamp = timestamp;
+        this.statusFrom = statusFrom;
+        this.statusTo = statusTo;
     }
 
     public Long getId() {
@@ -75,5 +99,13 @@ public class PricelistActivityLog {
 
     public OffsetDateTime getTimestamp() {
         return timestamp;
+    }
+
+    public PricelistStatus getStatusFrom() {
+        return statusFrom;
+    }
+
+    public PricelistStatus getStatusTo() {
+        return statusTo;
     }
 }
