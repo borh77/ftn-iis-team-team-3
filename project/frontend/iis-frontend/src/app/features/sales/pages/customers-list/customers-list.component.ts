@@ -26,7 +26,17 @@ export class CustomersListComponent implements OnInit {
   showCreateForm = false;
   canManageCustomers = false;
 
+  editingCustomerId: number | null = null;
+
   newCustomer: CustomerRequest = {
+    name: '',
+    email: '',
+    phone: '',
+    website: '',
+    address: '',
+  };
+
+  editCustomer: CustomerRequest = {
     name: '',
     email: '',
     phone: '',
@@ -78,6 +88,37 @@ export class CustomersListComponent implements OnInit {
       },
       error: (error) => {
         console.error('Failed to create customer:', error);
+        this.saving = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  startEditCustomer(customer: Customer): void {
+    this.editingCustomerId = customer.id;
+    this.editCustomer = {
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone ?? '',
+      website: customer.website ?? '',
+      address: customer.address ?? '',
+    };
+  }
+
+  cancelEditCustomer(): void {
+    this.editingCustomerId = null;
+  }
+
+  updateCustomer(id: number): void {
+    this.saving = true;
+    this.salesApiService.updateCustomer(id, this.editCustomer).subscribe({
+      next: () => {
+        this.editingCustomerId = null;
+        this.saving = false;
+        this.loadCustomers();
+      },
+      error: (error) => {
+        console.error('Failed to update customer:', error);
         this.saving = false;
         this.cdr.detectChanges();
       },

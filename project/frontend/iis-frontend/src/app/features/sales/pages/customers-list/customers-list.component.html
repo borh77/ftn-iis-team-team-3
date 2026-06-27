@@ -7,10 +7,10 @@
     </div>
 
     <button
-        *ngIf="canManageCustomers"
-        class="primary-button"
-        type="button"
-        (click)="showCreateForm = !showCreateForm">
+      *ngIf="canManageCustomers"
+      class="primary-button"
+      type="button"
+      (click)="showCreateForm = !showCreateForm">
       + Add Customer
     </button>
   </section>
@@ -70,32 +70,90 @@
           <th>Website</th>
           <th>Address</th>
           <th>Status</th>
-          <th>Actions</th>
+          <th class="actions-column">Actions</th>
         </tr>
       </thead>
 
       <tbody>
-        <tr *ngFor="let customer of customers">
-          <td>{{ customer.name }}</td>
-          <td>{{ customer.email }}</td>
-          <td>{{ customer.phone || '-' }}</td>
-          <td>{{ customer.website || '-' }}</td>
-          <td>{{ customer.address || '-' }}</td>
-          <td>
-            <span class="status">
-              {{ customer.status }}
-            </span>
-          </td>
+        <ng-container *ngFor="let customer of customers">
+          <tr>
+            <td>{{ customer.name }}</td>
+            <td>{{ customer.email }}</td>
+            <td>{{ customer.phone || '-' }}</td>
+            <td>{{ customer.website || '-' }}</td>
+            <td>{{ customer.address || '-' }}</td>
+            <td>
+              <span class="status">
+                {{ customer.status }}
+              </span>
+            </td>
 
-           <td>
-            <button
-              type="button"
-              class="secondary-button"
-              (click)="viewDetails(customer)">
-              View Details
-            </button>
-          </td>
-        </tr>
+            <td class="actions-cell">
+              <div class="action-buttons">
+                <button
+                  type="button"
+                  class="secondary-button compact-button"
+                  (click)="viewDetails(customer)">
+                  View Details
+                </button>
+
+                <button
+                  *ngIf="canManageCustomers"
+                  type="button"
+                  class="icon-button"
+                  title="Edit"
+                  (click)="startEditCustomer(customer)">
+                  ✎
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="editingCustomerId === customer.id">
+            <td colspan="7">
+              <form (ngSubmit)="updateCustomer(customer.id)" class="customer-form edit-form">
+                <label>
+                  Name
+                  <input name="edit-customer-name-{{ customer.id }}" [(ngModel)]="editCustomer.name" required />
+                </label>
+
+                <label>
+                  Email
+                  <input
+                    name="edit-customer-email-{{ customer.id }}"
+                    type="email"
+                    [(ngModel)]="editCustomer.email"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Phone
+                  <input name="edit-customer-phone-{{ customer.id }}" [(ngModel)]="editCustomer.phone" />
+                </label>
+
+                <label>
+                  Website
+                  <input name="edit-customer-website-{{ customer.id }}" [(ngModel)]="editCustomer.website" />
+                </label>
+
+                <label>
+                  Address
+                  <input name="edit-customer-address-{{ customer.id }}" [(ngModel)]="editCustomer.address" />
+                </label>
+
+                <div class="form-actions">
+                  <button type="button" class="secondary-button" (click)="cancelEditCustomer()">
+                    Cancel
+                  </button>
+                  <button type="submit" class="primary-button" [disabled]="saving">
+                    {{ saving ? 'Saving...' : 'Save Changes' }}
+                  </button>
+                </div>
+              </form>
+            </td>
+          </tr>
+        </ng-container>
       </tbody>
     </table>
 

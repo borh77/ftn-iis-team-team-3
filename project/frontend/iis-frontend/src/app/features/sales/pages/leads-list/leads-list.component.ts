@@ -27,7 +27,17 @@ export class LeadsListComponent implements OnInit {
 
   canManageLeads = false;
 
+  editingLeadId: number | null = null;
+
   newLead: LeadRequest = {
+    name: '',
+    email: '',
+    address: '',
+    source: '',
+    score: 0,
+  };
+
+  editLead: LeadRequest = {
     name: '',
     email: '',
     address: '',
@@ -93,5 +103,36 @@ export class LeadsListComponent implements OnInit {
             next: () => this.loadLeads(),
             error: (error) => console.error('Failed to convert lead:', error),
         });
+    }
+
+    startEditLead(lead: Lead): void {
+      this.editingLeadId = lead.id;
+      this.editLead = {
+        name: lead.name,
+        email: lead.email,
+        address: lead.address,
+        source: lead.source,
+        score: lead.score,
+      };
+    }
+
+    cancelEditLead(): void {
+      this.editingLeadId = null;
+    }
+
+    updateLead(id: number): void {
+      this.saving = true;
+      this.salesApiService.updateLead(id, this.editLead).subscribe({
+        next: () => {
+          this.editingLeadId = null;
+          this.saving = false;
+          this.loadLeads();
+        },
+        error: (error) => {
+          console.error('Failed to update lead:', error);
+          this.saving = false;
+          this.cdr.detectChanges();
+        },
+      });
     }
 }

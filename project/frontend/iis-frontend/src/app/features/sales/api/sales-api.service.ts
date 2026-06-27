@@ -33,6 +33,13 @@ export class SalesApiService {
     );
   }
 
+  updateLead(id: number, request: LeadRequest): Observable<Lead> {
+    return this.http.put<Lead>(
+      `${this.apiBaseUrl}/api/sales/leads/${id}`,
+      request,
+    );
+  }
+
   qualifyLead(id: number): Observable<Lead> {
     return this.http.patch<Lead>(
         `${this.apiBaseUrl}/api/sales/leads/${id}/qualify`,
@@ -57,6 +64,13 @@ export class SalesApiService {
     return this.http.post<Customer>(
         `${this.apiBaseUrl}/api/sales/customers`,
         request,
+    );
+  }
+
+  updateCustomer(id: number, request: CustomerRequest): Observable<Customer> {
+    return this.http.put<Customer>(
+      `${this.apiBaseUrl}/api/sales/customers/${id}`,
+      request,
     );
   }
 
