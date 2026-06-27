@@ -2,7 +2,9 @@ package com.example.iisdrugcrm.controller;
 
 import com.example.iisdrugcrm.domain.pricelist.PricelistActionType;
 import com.example.iisdrugcrm.dto.pricelist.PricelistActivityLogResponseDTO;
+import com.example.iisdrugcrm.dto.pricelist.TeamPerformanceReportDTO;
 import com.example.iisdrugcrm.service.PricelistActivityLogService;
+import java.math.BigDecimal;
 import java.lang.reflect.Method;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -92,6 +94,55 @@ class AdminAnalyticsControllerTest {
                 OffsetDateTime.class,
                 OffsetDateTime.class,
                 Pageable.class
+        );
+
+        PreAuthorize preAuthorize = method.getAnnotation(PreAuthorize.class);
+
+        assertEquals("hasRole('ADMIN')", preAuthorize.value());
+    }
+
+    @Test
+    void performanceEndpointBindsTeamAndPeriod() throws Exception {
+        TeamPerformanceReportDTO dto = new TeamPerformanceReportDTO();
+        dto.setTeamId(5L);
+        dto.setAverageTotalProcessingTimeHours(new BigDecimal("48.50"));
+        dto.setAverageReviewTimeHours(new BigDecimal("12.25"));
+        dto.setActivatedPricelistsCount(1L);
+        dto.setStuckDraftCount(2L);
+        dto.setStuckInReviewCount(3L);
+        when(service.getPerformanceReport(
+                eq(5L),
+                eq(OffsetDateTime.parse("2026-06-01T00:00:00Z")),
+                eq(OffsetDateTime.parse("2026-06-30T23:59:59Z"))
+        )).thenReturn(dto);
+
+        mockMvc.perform(get("/api/admin/analytics/performance")
+                        .param("teamId", "5")
+                        .param("start", "2026-06-01T00:00:00Z")
+                        .param("end", "2026-06-30T23:59:59Z"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.teamId").value(5))
+                .andExpect(jsonPath("$.averageTotalProcessingTimeHours").value(48.50))
+                .andExpect(jsonPath("$.averageReviewTimeHours").value(12.25))
+                .andExpect(jsonPath("$.activatedPricelistsCount").value(1))
+                .andExpect(jsonPath("$.stuckDraftCount").value(2))
+                .andExpect(jsonPath("$.stuckInReviewCount").value(3));
+
+        verify(service).getPerformanceReport(
+                eq(5L),
+                eq(OffsetDateTime.parse("2026-06-01T00:00:00Z")),
+                eq(OffsetDateTime.parse("2026-06-30T23:59:59Z"))
+        );
+    }
+
+    @Test
+    void performanceEndpointRequiresAdminRole() throws Exception {
+        Method method = AdminAnalyticsController.class.getMethod(
+                "getPerformanceReport",
+                Long.class,
+                OffsetDateTime.class,
+                OffsetDateTime.class
         );
 
         PreAuthorize preAuthorize = method.getAnnotation(PreAuthorize.class);

@@ -23,11 +23,14 @@ class PricelistActivityLogRepositoryTest {
     @Autowired
     private PricelistActivityLogRepository repository;
 
+    @Autowired
+    private PricelistRepository pricelistRepository;
+
     private PricelistActivityLogServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new PricelistActivityLogServiceImpl(repository);
+        service = new PricelistActivityLogServiceImpl(repository, pricelistRepository);
     }
 
     @Test
