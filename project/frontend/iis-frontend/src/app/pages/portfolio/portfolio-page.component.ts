@@ -9,21 +9,33 @@ import {
   VariantVersionIngredientsResponse,
   SubcategoryResponse,
   TherapeuticAreaResponse,
+  MarketProductResponse,
+  MarketLicenseResponse,
+  MarketLicenseStatus,
+  MarketLicenseHistoryResponse,
+  VariantVersionLifecycleHistoryResponse,
+  VariantVersionStatusCountResponse,
+  ProductCountByTherapeuticAreaResponse,
+  RegionResponse,
 } from '../../core/portfolio/portfolio.models';
 
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 
 type PortfolioTab =
   | 'products'
   | 'variants'
   | 'versions'
   | 'ingredients'
-  | 'bom';
+  | 'bom'
+  | 'market-products'
+  | 'market-licenses'
+  | 'lifecycle'
+  | 'analytics';
 
 @Component({
   selector: 'app-portfolio-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './portfolio-page.component.html',
   styleUrl: './portfolio-page.component.css',
 })
@@ -47,12 +59,40 @@ export class PortfolioPageComponent implements OnInit {
     readonly subcategories = signal<SubcategoryResponse[]>([]);
     readonly therapeuticAreas = signal<TherapeuticAreaResponse[]>([]);
 
+
+    readonly marketProducts = signal<MarketProductResponse[]>([]);
+    readonly marketLicenses = signal<MarketLicenseResponse[]>([]);
+    readonly marketLicenseHistory = signal<MarketLicenseHistoryResponse[]>([]);
+    readonly variantLifecycleHistory = signal<VariantVersionLifecycleHistoryResponse[]>([]);
+    readonly versionStatusCounts = signal<VariantVersionStatusCountResponse[]>([]);
+    readonly productsByTherapeuticArea = signal<ProductCountByTherapeuticAreaResponse[]>([]);
+    readonly expiringLicenses = signal<MarketLicenseResponse[]>([]);
+    readonly regions = signal<RegionResponse[]>([]);
+
+    readonly versionHistory = signal<VariantVersionLifecycleHistoryResponse[]>([]);
+    readonly loadingVersionHistory = signal(false);
+    readonly selectedVersionId = signal(0);
+
+    readonly loadingMarketProducts = signal(false);
+    readonly loadingMarketLicenses = signal(false);
+    readonly loadingMarketLicenseHistory = signal(false);
+    readonly loadingVariantLifecycleHistory = signal(false);
+    readonly loadingAnalytics = signal(false);
+
+
     savingProduct = false;
     savingVariant = false;
     savingIngredient = false;
     savingVersion = false;
     changingVersionStatus = false;
     savingVersionIngredient = false;
+
+    savingMarketProduct = false;
+    savingMarketLicense = false;
+    changingMarketLicenseStatus = false;
+    readonly lifecycleVariantId = signal(0);
+    readonly selectedMarketLicenseId = signal(0);
+    readonly expiringUntilDate = signal('2026-12-31');
 
     readonly errorMessage = signal('');
 
@@ -92,6 +132,24 @@ export class PortfolioPageComponent implements OnInit {
     });
 
 
+    readonly marketProductForm = this.fb.nonNullable.group({
+      variantId: [0, Validators.required],
+      regionId: [0, Validators.required],
+      localName: ['', [Validators.required, Validators.maxLength(255)]],
+      packagingDescription: ['', [Validators.maxLength(500)]],
+      barcode: ['', [Validators.maxLength(100)]],
+    });
+
+    readonly marketLicenseForm = this.fb.nonNullable.group({
+      marketProductId: [0, Validators.required],
+      variantVersionId: [0, Validators.required],
+      licenseNumber: ['', [Validators.required, Validators.maxLength(100)]],
+      issuedAt: [''],
+      validUntil: [''],
+    });
+
+
+
   ngOnInit(): void {
     this.loadProducts();
     this.loadIngredients();
@@ -99,6 +157,9 @@ export class PortfolioPageComponent implements OnInit {
     this.loadVersions();
     this.loadVersionIngredients();
     this.loadReferenceData();
+    this.loadMarketProducts();
+    this.loadMarketLicenses();
+    this.loadAnalytics();
   }
 
   setTab(tab: PortfolioTab): void {
@@ -226,6 +287,10 @@ loadReferenceData(): void {
 
   this.portfolioService.getTherapeuticAreas().subscribe({
     next: (items) => this.therapeuticAreas.set(items),
+  });
+
+  this.portfolioService.getRegions().subscribe({
+    next: (items) => this.regions.set(items),
   });
 }
 
@@ -377,6 +442,220 @@ createVersionIngredient(): void {
     error: (error) => {
       this.savingVersionIngredient = false;
       this.errorMessage.set(error?.error?.message ?? 'Failed to add BOM item.');
+    },
+  });
+}
+
+//sprint2
+loadMarketProducts(): void {
+  this.loadingMarketProducts.set(true);
+  this.errorMessage.set('');
+
+  this.portfolioService.getMarketProducts().subscribe({
+    next: (items) => {
+      this.marketProducts.set(items);
+      this.loadingMarketProducts.set(false);
+    },
+    error: () => {
+      this.loadingMarketProducts.set(false);
+      this.errorMessage.set('Failed to load market products.');
+    },
+  });
+}
+
+createMarketProduct(): void {
+  if (
+    this.marketProductForm.invalid ||
+    this.marketProductForm.controls.variantId.value === 0 ||
+    this.marketProductForm.controls.regionId.value === 0
+  ) {
+    this.marketProductForm.markAllAsTouched();
+    return;
+  }
+
+  this.savingMarketProduct = true;
+  this.errorMessage.set('');
+
+  const payload = {
+    variantId: this.marketProductForm.controls.variantId.value,
+    regionId: this.marketProductForm.controls.regionId.value,
+    localName: this.marketProductForm.controls.localName.value.trim(),
+    packagingDescription: this.marketProductForm.controls.packagingDescription.value.trim(),
+    barcode: this.marketProductForm.controls.barcode.value.trim(),
+  };
+
+  this.portfolioService.createMarketProduct(payload).subscribe({
+    next: () => {
+      this.savingMarketProduct = false;
+      this.marketProductForm.reset({
+        variantId: 0,
+        regionId: 0,
+        localName: '',
+        packagingDescription: '',
+        barcode: '',
+      });
+      this.loadMarketProducts();
+    },
+    error: (error) => {
+      this.savingMarketProduct = false;
+      this.errorMessage.set(error?.error?.message ?? 'Failed to create market product.');
+    },
+  });
+}
+
+loadMarketLicenses(): void {
+  this.loadingMarketLicenses.set(true);
+  this.errorMessage.set('');
+
+  this.portfolioService.getMarketLicenses().subscribe({
+    next: (items) => {
+      this.marketLicenses.set(items);
+      this.loadingMarketLicenses.set(false);
+    },
+    error: () => {
+      this.loadingMarketLicenses.set(false);
+      this.errorMessage.set('Failed to load market licenses.');
+    },
+  });
+}
+
+createMarketLicense(): void {
+  if (
+    this.marketLicenseForm.invalid ||
+    this.marketLicenseForm.controls.marketProductId.value === 0 ||
+    this.marketLicenseForm.controls.variantVersionId.value === 0
+  ) {
+    this.marketLicenseForm.markAllAsTouched();
+    return;
+  }
+
+  this.savingMarketLicense = true;
+  this.errorMessage.set('');
+
+  const payload = {
+    marketProductId: this.marketLicenseForm.controls.marketProductId.value,
+    variantVersionId: this.marketLicenseForm.controls.variantVersionId.value,
+    licenseNumber: this.marketLicenseForm.controls.licenseNumber.value.trim(),
+    issuedAt: this.marketLicenseForm.controls.issuedAt.value || null,
+    validUntil: this.marketLicenseForm.controls.validUntil.value || null,
+  };
+
+  this.portfolioService.createMarketLicense(payload).subscribe({
+    next: () => {
+      this.savingMarketLicense = false;
+      this.marketLicenseForm.reset({
+        marketProductId: 0,
+        variantVersionId: 0,
+        licenseNumber: '',
+        issuedAt: '',
+        validUntil: '',
+      });
+      this.loadMarketLicenses();
+    },
+    error: (error) => {
+      this.savingMarketLicense = false;
+      this.errorMessage.set(error?.error?.message ?? 'Failed to create market license.');
+    },
+  });
+}
+
+changeMarketLicenseStatus(id: number, status: MarketLicenseStatus): void {
+  this.changingMarketLicenseStatus = true;
+  this.errorMessage.set('');
+
+  this.portfolioService.changeMarketLicenseStatus(id, { status }).subscribe({
+    next: () => {
+      this.changingMarketLicenseStatus = false;
+      this.loadMarketLicenses();
+      if (this.selectedMarketLicenseId() === id) {
+        this.loadMarketLicenseHistory(id);
+      }
+    },
+    error: (error) => {
+      this.changingMarketLicenseStatus = false;
+      this.errorMessage.set(error?.error?.message ?? 'Failed to change market license status.');
+    },
+  });
+}
+
+loadMarketLicenseHistory(id: number): void {
+  this.selectedMarketLicenseId.set(id);
+  this.loadingMarketLicenseHistory.set(true);
+  this.errorMessage.set('');
+
+  this.portfolioService.getMarketLicenseHistory(id).subscribe({
+    next: (items) => {
+      this.marketLicenseHistory.set(items);
+      this.loadingMarketLicenseHistory.set(false);
+    },
+    error: () => {
+      this.loadingMarketLicenseHistory.set(false);
+      this.errorMessage.set('Failed to load market license history.');
+    },
+  });
+}
+
+loadVariantLifecycleHistory(variantId: number): void {
+  if (!variantId) {
+    this.variantLifecycleHistory.set([]);
+    return;
+  }
+
+  this.lifecycleVariantId.set(variantId);
+  this.loadingVariantLifecycleHistory.set(true);
+  this.errorMessage.set('');
+
+  this.portfolioService.getVariantLifecycleHistory(variantId).subscribe({
+    next: (items) => {
+      this.variantLifecycleHistory.set(items);
+      this.loadingVariantLifecycleHistory.set(false);
+    },
+    error: () => {
+      this.loadingVariantLifecycleHistory.set(false);
+      this.errorMessage.set('Failed to load variant lifecycle history.');
+    },
+  });
+}
+
+loadAnalytics(): void {
+  this.loadingAnalytics.set(true);
+  this.errorMessage.set('');
+
+  this.portfolioService.getVariantVersionStatusCount().subscribe({
+    next: (items) => this.versionStatusCounts.set(items),
+    error: () => this.errorMessage.set('Failed to load status analytics.'),
+  });
+
+  this.portfolioService.getProductsByTherapeuticArea().subscribe({
+    next: (items) => this.productsByTherapeuticArea.set(items),
+    error: () => this.errorMessage.set('Failed to load therapeutic area analytics.'),
+  });
+
+  this.portfolioService.getLicensesExpiringUntil(this.expiringUntilDate()).subscribe({
+    next: (items) => {
+      this.expiringLicenses.set(items);
+      this.loadingAnalytics.set(false);
+    },
+    error: () => {
+      this.loadingAnalytics.set(false);
+      this.errorMessage.set('Failed to load expiring licenses.');
+    },
+  });
+}
+
+loadVersionHistory(versionId: number): void {
+  this.selectedVersionId.set(versionId);
+  this.loadingVersionHistory.set(true);
+  this.errorMessage.set('');
+
+  this.portfolioService.getVariantVersionHistory(versionId).subscribe({
+    next: (items) => {
+      this.versionHistory.set(items);
+      this.loadingVersionHistory.set(false);
+    },
+    error: () => {
+      this.loadingVersionHistory.set(false);
+      this.errorMessage.set('Failed to load version history.');
     },
   });
 }

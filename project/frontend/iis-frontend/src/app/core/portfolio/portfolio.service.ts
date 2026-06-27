@@ -20,6 +20,17 @@ import {
   VariantVersionResponse,
   VariantVersionStatus,
   VariantVersionStatusRequest,
+  MarketProductRequest,
+  MarketProductResponse,
+  MarketLicenseRequest,
+  MarketLicenseResponse,
+  MarketLicenseStatus,
+  MarketLicenseStatusRequest,
+  MarketLicenseHistoryResponse,
+  VariantVersionLifecycleHistoryResponse,
+  VariantVersionStatusCountResponse,
+  ProductCountByTherapeuticAreaResponse,
+  RegionResponse,
 } from './portfolio.models';
 
 @Injectable({ providedIn: 'root' })
@@ -199,4 +210,139 @@ export class PortfolioService {
       payload,
     );
   }
+//sprint2
+  getMarketProducts(search?: string, variantId?: number, regionId?: number, includeArchived = false) {
+    let params = new HttpParams().set('includeArchived', includeArchived);
+
+    if (search?.trim()) {
+      params = params.set('search', search.trim());
+    }
+
+    if (variantId) {
+      params = params.set('variantId', variantId);
+    }
+
+    if (regionId) {
+      params = params.set('regionId', regionId);
+    }
+
+    return this.http.get<MarketProductResponse[]>(
+      `${this.apiBaseUrl}/api/market-products`,
+      { params },
+    );
+  }
+
+  createMarketProduct(payload: MarketProductRequest) {
+    return this.http.post<MarketProductResponse>(
+      `${this.apiBaseUrl}/api/market-products`,
+      payload,
+    );
+  }
+
+  updateMarketProduct(id: number, payload: MarketProductRequest) {
+    return this.http.put<MarketProductResponse>(
+      `${this.apiBaseUrl}/api/market-products/${id}`,
+      payload,
+    );
+  }
+
+  archiveMarketProduct(id: number) {
+    return this.http.patch<void>(
+      `${this.apiBaseUrl}/api/market-products/${id}/archive`,
+      {},
+    );
+  }
+
+  getMarketLicenses(
+    search?: string,
+    marketProductId?: number,
+    variantVersionId?: number,
+    status?: MarketLicenseStatus,
+  ) {
+    let params = new HttpParams();
+
+    if (search?.trim()) {
+      params = params.set('search', search.trim());
+    }
+
+    if (marketProductId) {
+      params = params.set('marketProductId', marketProductId);
+    }
+
+    if (variantVersionId) {
+      params = params.set('variantVersionId', variantVersionId);
+    }
+
+    if (status) {
+      params = params.set('status', status);
+    }
+
+    return this.http.get<MarketLicenseResponse[]>(
+      `${this.apiBaseUrl}/api/market-licenses`,
+      { params },
+    );
+  }
+
+  createMarketLicense(payload: MarketLicenseRequest) {
+    return this.http.post<MarketLicenseResponse>(
+      `${this.apiBaseUrl}/api/market-licenses`,
+      payload,
+    );
+  }
+
+  updateMarketLicense(id: number, payload: MarketLicenseRequest) {
+    return this.http.put<MarketLicenseResponse>(
+      `${this.apiBaseUrl}/api/market-licenses/${id}`,
+      payload,
+    );
+  }
+
+  changeMarketLicenseStatus(id: number, payload: MarketLicenseStatusRequest) {
+    return this.http.patch<MarketLicenseResponse>(
+      `${this.apiBaseUrl}/api/market-licenses/${id}/status`,
+      payload,
+    );
+  }
+
+  getMarketLicenseHistory(id: number) {
+    return this.http.get<MarketLicenseHistoryResponse[]>(
+      `${this.apiBaseUrl}/api/market-licenses/${id}/history`,
+    );
+  }
+
+  getLicensesExpiringUntil(date: string) {
+    return this.http.get<MarketLicenseResponse[]>(
+      `${this.apiBaseUrl}/api/market-licenses/expiring`,
+      { params: new HttpParams().set('date', date) },
+    );
+  }
+
+  getVariantVersionHistory(id: number) {
+    return this.http.get<VariantVersionLifecycleHistoryResponse[]>(
+      `${this.apiBaseUrl}/api/variant-versions/${id}/history`,
+    );
+  }
+
+  getVariantLifecycleHistory(variantId: number) {
+    return this.http.get<VariantVersionLifecycleHistoryResponse[]>(
+      `${this.apiBaseUrl}/api/portfolio-analytics/variants/${variantId}/lifecycle-history`,
+    );
+  }
+
+  getVariantVersionStatusCount() {
+    return this.http.get<VariantVersionStatusCountResponse[]>(
+      `${this.apiBaseUrl}/api/portfolio-analytics/variant-version-status-count`,
+    );
+  }
+
+  getProductsByTherapeuticArea() {
+    return this.http.get<ProductCountByTherapeuticAreaResponse[]>(
+      `${this.apiBaseUrl}/api/portfolio-analytics/products/by-therapeutic-area`,
+    );
+  }
+
+  getRegions() {
+    return this.http.get<RegionResponse[]>(`${this.apiBaseUrl}/api/regions`);
+  }
+  
 }
