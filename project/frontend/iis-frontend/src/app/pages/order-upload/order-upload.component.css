@@ -1,0 +1,132 @@
+.page-hero__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.upload-zone {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: 18px;
+  background: var(--color-surface-strong);
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+}
+
+.upload-zone--active {
+  border-color: var(--color-primary);
+  background: rgba(29, 78, 216, 0.06);
+  transform: translateY(-1px);
+}
+
+.upload-zone--selected {
+  border-style: solid;
+}
+
+.file-input {
+  display: none;
+}
+
+.upload-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.upload-content h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.upload-icon {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  color: #fff;
+  background: var(--color-primary);
+  font-weight: 900;
+  letter-spacing: 0;
+  flex-shrink: 0;
+}
+
+.upload-actions,
+.action-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.action-row {
+  margin-top: 1rem;
+}
+
+.primary,
+.secondary,
+.ghost {
+  border-radius: 999px;
+  padding: 0.7rem 1.1rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.primary {
+  border: 0;
+  color: #fff;
+  background: var(--color-primary);
+}
+
+.secondary {
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.ghost {
+  border: 1px solid transparent;
+  color: var(--color-muted);
+  background: transparent;
+}
+
+.primary:disabled,
+.secondary:disabled,
+.ghost:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.muted {
+  display: block;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.error-box {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  font-weight: 700;
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+@media (max-width: 760px) {
+  .upload-zone {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .upload-actions,
+  .action-row {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}

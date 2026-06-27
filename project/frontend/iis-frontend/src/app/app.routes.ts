@@ -20,6 +20,7 @@ import { PortfolioPageComponent } from './pages/portfolio/portfolio-page.compone
 import { PricelistCreateComponent } from './pages/pricelist-create/pricelist-create.component';
 import { SalesDashboardComponent } from './pages/sales-dashboard/sales-dashboard.component';
 import { BuyerCatalogComponent } from './pages/buyer-catalog/buyer-catalog.component';
+import { OrderUploadComponent } from './pages/order-upload/order-upload.component';
 import { LeadsListComponent } from './features/sales/pages/leads-list/leads-list.component';
 import { CustomersListComponent } from './features/sales/pages/customers-list/customers-list.component';
 import { ProcessesListComponent } from './features/sales/pages/processes-list/processes-list.component';
@@ -126,6 +127,13 @@ export const routes: Routes = [
 		canActivate: [authGuard, passwordChangeGuard],
 		data: { roles: ['ROLE_BUYER'] },
 		title: 'IIS Drug CRM | Medicine Catalog',
+	},
+	{
+		path: 'buyer/order-validation',
+		component: OrderUploadComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_BUYER'] },
+		title: 'IIS Drug CRM | Order Validation',
 	},
 	{
 		path: 'portfolio',
