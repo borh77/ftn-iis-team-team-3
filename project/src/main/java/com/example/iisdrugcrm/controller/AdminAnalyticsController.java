@@ -1,6 +1,7 @@
 package com.example.iisdrugcrm.controller;
 
 import com.example.iisdrugcrm.dto.pricelist.PricelistActivityLogResponseDTO;
+import com.example.iisdrugcrm.dto.pricelist.TeamPerformanceReportDTO;
 import com.example.iisdrugcrm.service.PricelistActivityLogService;
 import java.time.OffsetDateTime;
 import org.springframework.data.domain.Page;
@@ -35,5 +36,15 @@ public class AdminAnalyticsController {
             @PageableDefault(sort = "timestamp", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return ResponseEntity.ok(activityLogService.findLogs(teamId, userId, from, to, pageable));
+    }
+
+    @GetMapping("/analytics/performance")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<TeamPerformanceReportDTO> getPerformanceReport(
+            @RequestParam(required = false) Long teamId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime end
+    ) {
+        return ResponseEntity.ok(activityLogService.getPerformanceReport(teamId, start, end));
     }
 }
