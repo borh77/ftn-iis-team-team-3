@@ -2,6 +2,7 @@ package com.example.iisdrugcrm.dto.pricelist;
 
 import com.example.iisdrugcrm.domain.PricelistStatus;
 import com.example.iisdrugcrm.domain.pricelist.Pricelist;
+import com.example.iisdrugcrm.domain.pricelist.PricelistCreationStep;
 import com.example.iisdrugcrm.domain.pricelist.PricelistItem;
 import com.example.iisdrugcrm.domain.pricelist.QuantityThreshold;
 import java.math.BigDecimal;
@@ -21,6 +22,11 @@ public class PricelistResponseDTO {
     private Integer versionNumber;
     private Long parentPricelistId;
     private Long rootPricelistId;
+    private PricelistCreationStep creationStep;
+    private boolean creationCompleted;
+    private OffsetDateTime lastEditedAt;
+    private Long teamId;
+    private String teamName;
     private boolean canCreateNewVersion;
     private boolean owner;
     private boolean canCollaborate;
@@ -121,6 +127,46 @@ public class PricelistResponseDTO {
         this.rootPricelistId = rootPricelistId;
     }
 
+    public PricelistCreationStep getCreationStep() {
+        return creationStep;
+    }
+
+    public void setCreationStep(PricelistCreationStep creationStep) {
+        this.creationStep = creationStep;
+    }
+
+    public boolean isCreationCompleted() {
+        return creationCompleted;
+    }
+
+    public void setCreationCompleted(boolean creationCompleted) {
+        this.creationCompleted = creationCompleted;
+    }
+
+    public OffsetDateTime getLastEditedAt() {
+        return lastEditedAt;
+    }
+
+    public void setLastEditedAt(OffsetDateTime lastEditedAt) {
+        this.lastEditedAt = lastEditedAt;
+    }
+
+    public Long getTeamId() {
+        return teamId;
+    }
+
+    public void setTeamId(Long teamId) {
+        this.teamId = teamId;
+    }
+
+    public String getTeamName() {
+        return teamName;
+    }
+
+    public void setTeamName(String teamName) {
+        this.teamName = teamName;
+    }
+
     public boolean isCanCreateNewVersion() {
         return canCreateNewVersion;
     }
@@ -181,6 +227,13 @@ public class PricelistResponseDTO {
         dto.setVersionNumber(pricelist.getVersionNumber());
         dto.setParentPricelistId(pricelist.getParentPricelistId());
         dto.setRootPricelistId(pricelist.getRootPricelistId());
+        dto.setCreationStep(pricelist.getCreationStep());
+        dto.setCreationCompleted(pricelist.isCreationCompleted());
+        dto.setLastEditedAt(pricelist.getLastEditedAt());
+        if (pricelist.getTeam() != null) {
+            dto.setTeamId(pricelist.getTeam().getId());
+            dto.setTeamName(pricelist.getTeam().getName());
+        }
         dto.setCanCreateNewVersion(pricelist.getStatus() == PricelistStatus.IN_REVIEW || pricelist.getStatus() == PricelistStatus.ACTIVE);
         dto.setPeriodStart(pricelist.getPeriodStart());
         dto.setPeriodEnd(pricelist.getPeriodEnd());

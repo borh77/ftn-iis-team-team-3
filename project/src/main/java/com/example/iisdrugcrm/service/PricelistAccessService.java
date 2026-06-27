@@ -28,7 +28,13 @@ public class PricelistAccessService {
     }
 
     public boolean canCollaborate(Pricelist pricelist, Long userId) {
-        return isOwner(pricelist, userId) || isSameTeamCreator(pricelist, userId);
+        if (isOwner(pricelist, userId) || isSameTeamCreator(pricelist, userId)) {
+            return true;
+        }
+        if (pricelist.getTeam() == null || userId == null) {
+            return false;
+        }
+        return pricelist.getTeam().getLeaderId().equals(userId) || pricelist.getTeam().getMemberIds().contains(userId);
     }
 
     public void validateOwnerOnly(Pricelist pricelist, Long userId) {

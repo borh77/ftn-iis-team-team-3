@@ -4,6 +4,7 @@ import com.example.iisdrugcrm.domain.PricelistStatus;
 import com.example.iisdrugcrm.domain.Region;
 import com.example.iisdrugcrm.domain.pricelist.PricelistActionType;
 import com.example.iisdrugcrm.domain.pricelist.Pricelist;
+import com.example.iisdrugcrm.domain.pricelist.PricelistCreationStep;
 import com.example.iisdrugcrm.domain.pricelist.PricelistItem;
 import com.example.iisdrugcrm.domain.pricelist.QuantityThreshold;
 import com.example.iisdrugcrm.dto.pricelist.CatalogVariantDTO;
@@ -72,6 +73,9 @@ public class PricelistServiceImpl implements PricelistService {
         pricelist.setPeriodStart(periodStart);
         pricelist.setPeriodEnd(periodEnd);
         pricelist.setVersionNumber(1);
+        pricelist.setCreationStep(PricelistCreationStep.COMPLETED);
+        pricelist.setCreationCompleted(true);
+        pricelist.setLastEditedAt(OffsetDateTime.now(ZoneOffset.UTC));
 
         replaceItems(pricelist, dto);
 
@@ -123,6 +127,9 @@ public class PricelistServiceImpl implements PricelistService {
         pricelist.setCurrency(dto.getCurrency().trim().toUpperCase());
         pricelist.setPeriodStart(periodStart);
         pricelist.setPeriodEnd(periodEnd);
+        pricelist.setCreationStep(PricelistCreationStep.COMPLETED);
+        pricelist.setCreationCompleted(true);
+        pricelist.setLastEditedAt(OffsetDateTime.now(ZoneOffset.UTC));
         replaceItems(pricelist, dto);
         pricelist.validateThresholds();
 
@@ -162,6 +169,9 @@ public class PricelistServiceImpl implements PricelistService {
         newVersion.setCreatedBy(currentUserId);
         newVersion.setParentPricelistId(source.getId());
         newVersion.setRootPricelistId(rootPricelistId);
+        newVersion.setCreationStep(PricelistCreationStep.COMPLETED);
+        newVersion.setCreationCompleted(true);
+        newVersion.setLastEditedAt(OffsetDateTime.now(ZoneOffset.UTC));
         int currentVersion = maxVersion != null && maxVersion > 0
                 ? maxVersion
                 : source.getVersionNumber() != null ? source.getVersionNumber() : 1;
@@ -233,6 +243,11 @@ public class PricelistServiceImpl implements PricelistService {
     }
 
     private PricelistResponseDTO changeStatus(Pricelist pricelist, ChangePricelistStatusDTO dto, Long currentUserId) {
+        if (pricelist.getStatus() == PricelistStatus.DRAFT
+                && dto.getTargetStatus() == PricelistStatus.IN_REVIEW
+                && !pricelist.isCreationCompleted()) {
+            throw new IllegalArgumentException("Cenovnik nije kompletiran kroz wizard i ne moze biti poslat na proveru.");
+        }
         if ((pricelist.getStatus() == PricelistStatus.DRAFT && dto.getTargetStatus() == PricelistStatus.IN_REVIEW)
                 || (pricelist.getStatus() == PricelistStatus.IN_REVIEW && dto.getTargetStatus() == PricelistStatus.ACTIVE)) {
             validateAllVariantsActive(pricelist);
@@ -466,8 +481,7 @@ public class PricelistServiceImpl implements PricelistService {
     }
 
     private Long resolveTeamId(Pricelist pricelist) {
-        // TODO: Resolve teamId once pricelists store a direct assignment to pricelist_teams.
-        return null;
+        return pricelist.getTeam() != null ? pricelist.getTeam().getId() : null;
     }
 
     private void validateNoBlockingOverlap(Region region, String customerSegment, OffsetDateTime periodStart, OffsetDateTime periodEnd) {
