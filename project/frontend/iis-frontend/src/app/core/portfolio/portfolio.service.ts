@@ -31,6 +31,8 @@ import {
   VariantVersionStatusCountResponse,
   ProductCountByTherapeuticAreaResponse,
   RegionResponse,
+  MarketLicenseStatusCountResponse,
+  MarketProductCountByRegionResponse,
 } from './portfolio.models';
 
 @Injectable({ providedIn: 'root' })
@@ -343,6 +345,18 @@ export class PortfolioService {
 
   getRegions() {
     return this.http.get<RegionResponse[]>(`${this.apiBaseUrl}/api/regions`);
+  }
+
+  getMarketLicenseStatusCount() {
+    return this.http.get<MarketLicenseStatusCountResponse[]>(
+      `${this.apiBaseUrl}/api/portfolio-analytics/market-license-status-count`,
+    );
+  }
+
+  getMarketProductsByRegion() {
+    return this.http.get<MarketProductCountByRegionResponse[]>(
+      `${this.apiBaseUrl}/api/portfolio-analytics/market-products/by-region`,
+    );
   }
   
 }

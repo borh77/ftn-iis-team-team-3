@@ -17,6 +17,8 @@ import {
   VariantVersionStatusCountResponse,
   ProductCountByTherapeuticAreaResponse,
   RegionResponse,
+  MarketLicenseStatusCountResponse,
+  MarketProductCountByRegionResponse,
 } from '../../core/portfolio/portfolio.models';
 
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -78,6 +80,9 @@ export class PortfolioPageComponent implements OnInit {
     readonly loadingMarketLicenseHistory = signal(false);
     readonly loadingVariantLifecycleHistory = signal(false);
     readonly loadingAnalytics = signal(false);
+
+    readonly marketLicenseStatusCounts = signal<MarketLicenseStatusCountResponse[]>([]);
+    readonly marketProductsByRegion = signal<MarketProductCountByRegionResponse[]>([]);
 
 
     savingProduct = false;
@@ -629,6 +634,16 @@ loadAnalytics(): void {
   this.portfolioService.getProductsByTherapeuticArea().subscribe({
     next: (items) => this.productsByTherapeuticArea.set(items),
     error: () => this.errorMessage.set('Failed to load therapeutic area analytics.'),
+  });
+
+  this.portfolioService.getMarketLicenseStatusCount().subscribe({
+    next: (items) => this.marketLicenseStatusCounts.set(items),
+    error: () => this.errorMessage.set('Failed to load market license status analytics.'),
+  });
+
+  this.portfolioService.getMarketProductsByRegion().subscribe({
+    next: (items) => this.marketProductsByRegion.set(items),
+    error: () => this.errorMessage.set('Failed to load market products by region analytics.'),
   });
 
   this.portfolioService.getLicensesExpiringUntil(this.expiringUntilDate()).subscribe({
