@@ -5,6 +5,7 @@ import com.example.iisdrugcrm.dto.sales.offer.OfferResponseDTO;
 import com.example.iisdrugcrm.service.sales.OfferService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 
@@ -34,7 +35,7 @@ public class OfferController {
     }
 
     @PatchMapping("/{id}/accept")
-    public OfferResponseDTO accept(@PathVariable Long id) {
-        return offerService.acceptOffer(id);
+    public OfferResponseDTO accept(@PathVariable Long id, Authentication authentication) {
+        return offerService.acceptOffer(id, authentication.getName());
     }
 }

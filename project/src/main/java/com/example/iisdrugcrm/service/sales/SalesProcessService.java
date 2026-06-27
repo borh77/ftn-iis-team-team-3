@@ -1,20 +1,21 @@
 package com.example.iisdrugcrm.service.sales;
 
+import com.example.iisdrugcrm.domain.User;
 import com.example.iisdrugcrm.domain.sales.Customer;
 import com.example.iisdrugcrm.domain.sales.SalesProcess;
+import com.example.iisdrugcrm.domain.sales.SalesProcessHistory;
+import com.example.iisdrugcrm.domain.sales.SalesStage;
 import com.example.iisdrugcrm.dto.sales.process.CreateSalesProcessRequestDTO;
 import com.example.iisdrugcrm.dto.sales.process.SalesProcessHistoryResponseDTO;
 import com.example.iisdrugcrm.dto.sales.process.SalesProcessResponseDTO;
 import com.example.iisdrugcrm.dto.sales.process.StageUpdateRequestDTO;
+import com.example.iisdrugcrm.repository.UserRepository;
 import com.example.iisdrugcrm.repository.sales.CustomerRepository;
+import com.example.iisdrugcrm.repository.sales.SalesProcessHistoryRepository;
 import com.example.iisdrugcrm.repository.sales.SalesProcessRepository;
 import com.example.iisdrugcrm.service.sales.workflow.SalesWorkflowService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.example.iisdrugcrm.domain.sales.SalesProcessHistory;
-import com.example.iisdrugcrm.domain.sales.SalesStage;
-import com.example.iisdrugcrm.repository.sales.SalesProcessHistoryRepository;
-
 
 import java.util.List;
 
@@ -25,17 +26,20 @@ public class SalesProcessService {
     private final CustomerRepository customerRepository;
     private final SalesProcessHistoryRepository salesProcessHistoryRepository;
     private final SalesWorkflowService salesWorkflowService;
+    private final UserRepository userRepository;
 
     public SalesProcessService(
             SalesProcessRepository salesProcessRepository,
             CustomerRepository customerRepository,
             SalesProcessHistoryRepository salesProcessHistoryRepository,
-            SalesWorkflowService salesWorkflowService
+            SalesWorkflowService salesWorkflowService,
+            UserRepository userRepository
     ) {
         this.salesProcessRepository = salesProcessRepository;
         this.customerRepository = customerRepository;
         this.salesProcessHistoryRepository = salesProcessHistoryRepository;
         this.salesWorkflowService = salesWorkflowService;
+        this.userRepository = userRepository;
     }
 
     public List<SalesProcessResponseDTO> getAll() {
@@ -55,7 +59,7 @@ public class SalesProcessService {
     }
 
     @Transactional
-    public SalesProcessResponseDTO updateStage(Long id, StageUpdateRequestDTO dto) {
+    public SalesProcessResponseDTO updateStage(Long id, StageUpdateRequestDTO dto, String username) {
         SalesProcess process = salesProcessRepository.findWithCustomerById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Sales process not found."));
 
@@ -66,10 +70,14 @@ public class SalesProcessService {
                     "Transition from " + previousStage + " to " + dto.getStage() + " is not allowed by workflow."
             );
         }
+
+        User changedBy = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Authenticated user not found."));
+
         process.changeStage(dto.getStage());
 
         salesProcessHistoryRepository.save(
-                new SalesProcessHistory(process, previousStage, dto.getStage())
+                new SalesProcessHistory(process, previousStage, dto.getStage(), changedBy)
         );
 
         return mapToDto(process);
@@ -92,7 +100,9 @@ public class SalesProcessService {
                         history.getSalesProcess().getId(),
                         history.getPreviousStage(),
                         history.getNewStage(),
-                        history.getChangedAt()
+                        history.getChangedAt(),
+                        history.getChangedBy() != null ? history.getChangedBy().getId() : null,
+                        history.getChangedBy() != null ? history.getChangedBy().getUsername() : null
                 ))
                 .toList();
     }

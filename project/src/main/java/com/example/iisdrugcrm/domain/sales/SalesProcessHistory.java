@@ -2,6 +2,7 @@ package com.example.iisdrugcrm.domain.sales;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import com.example.iisdrugcrm.domain.User;
 
 @Entity
 @Table(name = "sales_process_history")
@@ -26,13 +27,18 @@ public class SalesProcessHistory {
     @Column(nullable = false)
     private LocalDateTime changedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "changed_by_id")
+    private User changedBy;
+
     protected SalesProcessHistory() {
     }
 
-    public SalesProcessHistory(SalesProcess salesProcess, SalesStage previousStage, SalesStage newStage) {
+    public SalesProcessHistory(SalesProcess salesProcess, SalesStage previousStage, SalesStage newStage, User changedBy) {
         this.salesProcess = salesProcess;
         this.previousStage = previousStage;
         this.newStage = newStage;
+        this.changedBy = changedBy;
         this.changedAt = LocalDateTime.now();
     }
 
@@ -54,5 +60,9 @@ public class SalesProcessHistory {
 
     public LocalDateTime getChangedAt() {
         return changedAt;
+    }
+
+    public User getChangedBy() {
+        return changedBy;
     }
 }

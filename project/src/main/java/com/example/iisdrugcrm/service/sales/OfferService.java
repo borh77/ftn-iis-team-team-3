@@ -10,6 +10,8 @@ import com.example.iisdrugcrm.repository.sales.SalesProcessRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.iisdrugcrm.repository.sales.SalesProcessHistoryRepository;
+import com.example.iisdrugcrm.domain.User;
+import com.example.iisdrugcrm.repository.UserRepository;
 
 import java.util.List;
 
@@ -21,19 +23,22 @@ public class OfferService {
     private final SalesProcessRepository salesProcessRepository;
     private final ProductRepository productRepository;
     private final SalesProcessHistoryRepository salesProcessHistoryRepository;
+    private final UserRepository userRepository;
 
     public OfferService(
             OfferRepository offerRepository,
             CustomerRepository customerRepository,
             SalesProcessRepository salesProcessRepository,
             ProductRepository productRepository,
-            SalesProcessHistoryRepository salesProcessHistoryRepository
+            SalesProcessHistoryRepository salesProcessHistoryRepository,
+            UserRepository userRepository
     ) {
         this.offerRepository = offerRepository;
         this.customerRepository = customerRepository;
         this.salesProcessRepository = salesProcessRepository;
         this.productRepository = productRepository;
         this.salesProcessHistoryRepository = salesProcessHistoryRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -98,7 +103,7 @@ public class OfferService {
     }
 
     @Transactional
-    public OfferResponseDTO acceptOffer(Long id) {
+    public OfferResponseDTO acceptOffer(Long id, String username) {
         Offer offer = offerRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Offer not found."));
 
@@ -114,8 +119,11 @@ public class OfferService {
         if (previousStage != SalesStage.WON) {
             salesProcess.changeStage(SalesStage.WON);
 
+            User changedBy = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("Authenticated user not found."));
+
             salesProcessHistoryRepository.save(
-                new SalesProcessHistory(salesProcess, previousStage, SalesStage.WON)
+                new SalesProcessHistory(salesProcess, previousStage, SalesStage.WON, changedBy)
             );
         }
 

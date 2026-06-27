@@ -1,15 +1,16 @@
 package com.example.iisdrugcrm.controller.sales;
 
+import com.example.iisdrugcrm.domain.sales.SalesStage;
 import com.example.iisdrugcrm.dto.sales.process.CreateSalesProcessRequestDTO;
 import com.example.iisdrugcrm.dto.sales.process.SalesProcessHistoryResponseDTO;
 import com.example.iisdrugcrm.dto.sales.process.SalesProcessResponseDTO;
 import com.example.iisdrugcrm.dto.sales.process.StageUpdateRequestDTO;
 import com.example.iisdrugcrm.service.sales.SalesProcessService;
-import com.example.iisdrugcrm.domain.sales.SalesStage;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -52,9 +53,12 @@ public class SalesProcessController {
     @PreAuthorize("hasRole('SALES_REPRESENTATIVE')")
     public ResponseEntity<SalesProcessResponseDTO> updateStage(
             @PathVariable Long id,
-            @Valid @RequestBody StageUpdateRequestDTO dto
+            @Valid @RequestBody StageUpdateRequestDTO dto,
+            Authentication authentication
     ) {
-        return ResponseEntity.ok(salesProcessService.updateStage(id, dto));
+        return ResponseEntity.ok(
+                salesProcessService.updateStage(id, dto, authentication.getName())
+        );
     }
 
     @GetMapping("/{id}/available-transitions")
