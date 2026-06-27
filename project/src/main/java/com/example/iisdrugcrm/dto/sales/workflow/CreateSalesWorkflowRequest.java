@@ -1,0 +1,15 @@
+package com.example.iisdrugcrm.dto.sales.workflow;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+public record CreateSalesWorkflowRequest(
+        @NotBlank(message = "Workflow name is required")
+        @Size(max = 150)
+        String name,
+
+        @NotBlank(message = "Region is required")
+        @Size(max = 100)
+        String region
+) {
+}
