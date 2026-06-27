@@ -37,3 +37,8 @@ export interface CreateOfferRequest {
   notes?: string;
   items: CreateOfferItemRequest[];
 }
+
+export interface UpdateOfferRequest {
+  validUntil: string;
+  notes?: string;
+}

@@ -103,6 +103,20 @@ public class OfferService {
     }
 
     @Transactional
+    public OfferResponseDTO update(Long id, UpdateOfferRequestDTO dto) {
+        Offer offer = offerRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Offer not found."));
+
+        if (offer.getStatus() == OfferStatus.ACCEPTED || offer.getStatus() == OfferStatus.REJECTED) {
+            throw new IllegalArgumentException("Accepted or rejected offers cannot be edited.");
+        }
+
+        offer.update(dto.getValidUntil(), dto.getNotes());
+
+        return mapToDto(offer);
+    }
+
+    @Transactional
     public OfferResponseDTO acceptOffer(Long id, String username) {
         Offer offer = offerRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Offer not found."));

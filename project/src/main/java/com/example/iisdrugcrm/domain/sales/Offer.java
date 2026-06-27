@@ -80,6 +80,11 @@ public class Offer {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
+    public void update(LocalDate validUntil, String notes) {
+        this.validUntil = validUntil;
+        this.notes = notes;
+    }
+
     public Long getId() { return id; }
     public String getOfferNumber() { return offerNumber; }
     public Customer getCustomer() { return customer; }

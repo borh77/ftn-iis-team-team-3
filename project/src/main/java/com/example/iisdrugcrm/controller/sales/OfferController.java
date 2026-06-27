@@ -2,6 +2,7 @@ package com.example.iisdrugcrm.controller.sales;
 
 import com.example.iisdrugcrm.dto.sales.offer.CreateOfferRequestDTO;
 import com.example.iisdrugcrm.dto.sales.offer.OfferResponseDTO;
+import com.example.iisdrugcrm.dto.sales.offer.UpdateOfferRequestDTO;
 import com.example.iisdrugcrm.service.sales.OfferService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -32,6 +33,14 @@ public class OfferController {
     @GetMapping("/{id}")
     public OfferResponseDTO getById(@PathVariable Long id) {
         return offerService.getById(id);
+    }
+
+    @PutMapping("/{id}")
+    public OfferResponseDTO update(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateOfferRequestDTO dto
+    ) {
+        return offerService.update(id, dto);
     }
 
     @PatchMapping("/{id}/accept")

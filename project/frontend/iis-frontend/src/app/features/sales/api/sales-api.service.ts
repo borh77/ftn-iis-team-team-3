@@ -8,7 +8,7 @@ import { Customer, CustomerRequest } from '../models/customer.model';
 import { SalesProcess, SalesProcessRequest, UpdateSalesStageRequest, SalesStage } from '../models/sales-process.model';
 import { CustomerCommunication, CustomerCommunicationRequest } from '../models/customer-communication.model';
 import { CustomerNeed, CreateCustomerNeedRequest } from '../models/customer-need.model';
-import { Offer, CreateOfferRequest } from '../models/offer.model';
+import { Offer, CreateOfferRequest, UpdateOfferRequest } from '../models/offer.model';
 import { Contract, CreateContractRequest, UpdateContractRequest } from '../models/contract.model';
 import { SalesProcessHistory } from '../models/sales-process-history.model';
 import { CreateSalesStageRequest, CreateSalesStageTransitionRequest, CreateSalesWorkflowRequest, SalesStageDefinition, SalesStageTransition, SalesWorkflow, } from '../models/sales-workflow.model';
@@ -138,6 +138,13 @@ export class SalesApiService {
   createOffer(request: CreateOfferRequest): Observable<Offer> {
     return this.http.post<Offer>(
       `${this.apiBaseUrl}/api/offers`,
+      request,
+    );
+  }
+
+  updateOffer(id: number, request: UpdateOfferRequest): Observable<Offer> {
+    return this.http.put<Offer>(
+      `${this.apiBaseUrl}/api/offers/${id}`,
       request,
     );
   }

@@ -32,30 +32,79 @@
             <td><span class="status">{{ offer.status }}</span></td>
             <td>{{ offer.totalAmount }}</td>
             <td>{{ offer.validUntil }}</td>
+
             <td>
               <div class="action-buttons">
                 <button
-                    *ngIf="offer.status !== 'ACCEPTED'"
-                    type="button"
-                    class="secondary-button"
-                    (click)="acceptOffer(offer)">
-                    Accept
+                  *ngIf="offer.status !== 'ACCEPTED' && offer.status !== 'REJECTED'"
+                  type="button"
+                  class="secondary-button"
+                  (click)="startEditOffer(offer)">
+                  Edit
                 </button>
 
                 <button
-                    *ngIf="offer.status === 'ACCEPTED' && !contractExistsForOffer(offer.id)"
-                    type="button"
-                    class="secondary-button"
-                    (click)="openContractForm(offer)">
-                    Create Contract
+                  *ngIf="offer.status !== 'ACCEPTED'"
+                  type="button"
+                  class="secondary-button"
+                  (click)="acceptOffer(offer)">
+                  Accept
+                </button>
+
+                <button
+                  *ngIf="offer.status === 'ACCEPTED' && !contractExistsForOffer(offer.id)"
+                  type="button"
+                  class="secondary-button"
+                  (click)="openContractForm(offer)">
+                  Create Contract
                 </button>
 
                 <span
-                    *ngIf="offer.status === 'ACCEPTED' && contractExistsForOffer(offer.id)"
-                    class="muted-text">
-                    Contract created
+                  *ngIf="offer.status === 'ACCEPTED' && contractExistsForOffer(offer.id)"
+                  class="muted-text">
+                  Contract created
                 </span>
               </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="editingOfferId === offer.id">
+            <td colspan="7">
+              <form (ngSubmit)="updateOffer(offer)" class="process-form">
+                <label>
+                  Valid Until
+                  <input
+                    type="date"
+                    name="edit-offer-valid-until-{{ offer.id }}"
+                    [(ngModel)]="editOffer.validUntil"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Notes
+                  <input
+                    name="edit-offer-notes-{{ offer.id }}"
+                    [(ngModel)]="editOffer.notes"
+                  />
+                </label>
+
+                <div class="form-actions">
+                  <button
+                    type="button"
+                    class="secondary-button"
+                    (click)="cancelEditOffer()">
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    class="primary-button"
+                    [disabled]="saving">
+                    {{ saving ? 'Saving...' : 'Save Changes' }}
+                  </button>
+                </div>
+              </form>
             </td>
           </tr>
 
@@ -90,7 +139,9 @@
                   />
                 </label>
 
-                <button type="submit" class="primary-button">Save Contract</button>
+                <button type="submit" class="primary-button">
+                  Save Contract
+                </button>
               </form>
             </td>
           </tr>

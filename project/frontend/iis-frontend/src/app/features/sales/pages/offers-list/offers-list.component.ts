@@ -3,7 +3,7 @@ import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { SalesApiService } from '../../api/sales-api.service';
-import { Offer } from '../../models/offer.model';
+import { Offer, UpdateOfferRequest } from '../../models/offer.model';
 import { CreateContractRequest } from '../../models/contract.model';
 import { Contract } from '../../models/contract.model';
 
@@ -23,6 +23,43 @@ export class OffersListComponent implements OnInit {
   loading = true;
 
   showContractFormForOfferId: number | null = null;
+
+  saving = false;
+  editingOfferId: number | null = null;
+
+  editOffer: UpdateOfferRequest = {
+    validUntil: '',
+    notes: '',
+  };
+
+  startEditOffer(offer: Offer): void {
+    this.editingOfferId = offer.id;
+    this.editOffer = {
+      validUntil: offer.validUntil,
+      notes: offer.notes ?? '',
+    };
+  }
+
+  cancelEditOffer(): void {
+    this.editingOfferId = null;
+  }
+
+  updateOffer(offer: Offer): void {
+    this.saving = true;
+
+    this.salesApiService.updateOffer(offer.id, this.editOffer).subscribe({
+      next: () => {
+        this.editingOfferId = null;
+        this.saving = false;
+        this.loadData();
+      },
+      error: (error) => {
+        console.error('Failed to update offer:', error);
+        this.saving = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
 
   newContract: CreateContractRequest = {
     offerId: 0,
