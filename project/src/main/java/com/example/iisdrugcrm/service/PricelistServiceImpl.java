@@ -2,6 +2,7 @@ package com.example.iisdrugcrm.service;
 
 import com.example.iisdrugcrm.domain.PricelistStatus;
 import com.example.iisdrugcrm.domain.Region;
+import com.example.iisdrugcrm.domain.pricelist.PricelistActionType;
 import com.example.iisdrugcrm.domain.pricelist.Pricelist;
 import com.example.iisdrugcrm.domain.pricelist.PricelistItem;
 import com.example.iisdrugcrm.domain.pricelist.QuantityThreshold;
@@ -15,6 +16,8 @@ import com.example.iisdrugcrm.exception.PricelistNotFoundException;
 import com.example.iisdrugcrm.exception.VariantNotFoundException;
 import com.example.iisdrugcrm.repository.PricelistRepository;
 import com.example.iisdrugcrm.repository.RegionRepository;
+import com.example.iisdrugcrm.service.event.PricelistActionEvent;
+import java.math.BigDecimal;
 import jakarta.persistence.LockTimeoutException;
 import jakarta.persistence.PessimisticLockException;
 import java.time.OffsetDateTime;
@@ -22,9 +25,11 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -40,12 +45,14 @@ public class PricelistServiceImpl implements PricelistService {
     private final RegionRepository regionRepository;
     private final CatalogService catalogService;
     private final PricelistAccessService accessService;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public PricelistServiceImpl(PricelistRepository pricelistRepository, RegionRepository regionRepository, CatalogService catalogService, PricelistAccessService accessService) {
+    public PricelistServiceImpl(PricelistRepository pricelistRepository, RegionRepository regionRepository, CatalogService catalogService, PricelistAccessService accessService, ApplicationEventPublisher eventPublisher) {
         this.pricelistRepository = pricelistRepository;
         this.regionRepository = regionRepository;
         this.catalogService = catalogService;
         this.accessService = accessService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -75,6 +82,7 @@ public class PricelistServiceImpl implements PricelistService {
         validateNoBlockingOverlap(region, pricelist.getCustomerSegment(), periodStart, periodEnd);
 
         Pricelist saved = pricelistRepository.save(pricelist);
+        publishPricelistAction(saved, currentUserId, PricelistActionType.CREATE, "Kreiran cenovnik u statusu DRAFT");
         LOGGER.info("Created pricelist {} for region {} and customer segment {}", saved.getId(), region.getId(), saved.getCustomerSegment());
         return toResponse(saved);
     }
@@ -108,6 +116,7 @@ public class PricelistServiceImpl implements PricelistService {
         OffsetDateTime periodEnd = utcPeriodEnd(dto);
         validatePeriod(periodStart, periodEnd);
         validateRequestedVariantsActive(dto);
+        PricelistActionType updateActionType = determineUpdateAction(pricelist, dto, region, periodStart, periodEnd);
 
         pricelist.setRegion(region);
         pricelist.setCustomerSegment(dto.getCustomerSegment().trim());
@@ -121,6 +130,7 @@ public class PricelistServiceImpl implements PricelistService {
         validateNoBlockingOverlapExcludingCurrent(pricelist);
 
         Pricelist saved = pricelistRepository.save(pricelist);
+        publishPricelistAction(saved, currentUserId, updateActionType, updateDescription(updateActionType));
         LOGGER.info("Updated draft pricelist {}", saved.getId());
         return toResponse(saved, currentUserId, true);
     }
@@ -175,6 +185,7 @@ public class PricelistServiceImpl implements PricelistService {
         }
 
         Pricelist saved = pricelistRepository.save(newVersion);
+        publishPricelistAction(saved, currentUserId, PricelistActionType.CREATE_VERSION, "Kreirana nova verzija cenovnika");
         LOGGER.info("Created draft version {} from pricelist {}", saved.getId(), source.getId());
         return toResponse(saved);
     }
@@ -209,7 +220,7 @@ public class PricelistServiceImpl implements PricelistService {
     public PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto) {
         Pricelist pricelist = pricelistRepository.findById(id)
                 .orElseThrow(() -> new PricelistNotFoundException("Pricelist not found"));
-        return changeStatus(pricelist, dto);
+        return changeStatus(pricelist, dto, pricelist.getCreatedBy());
     }
 
     @Override
@@ -218,10 +229,10 @@ public class PricelistServiceImpl implements PricelistService {
         Pricelist pricelist = pricelistRepository.findById(id)
                 .orElseThrow(() -> new PricelistNotFoundException("Pricelist not found"));
         accessService.validateOwnerOnly(pricelist, currentUserId);
-        return changeStatus(pricelist, dto);
+        return changeStatus(pricelist, dto, currentUserId);
     }
 
-    private PricelistResponseDTO changeStatus(Pricelist pricelist, ChangePricelistStatusDTO dto) {
+    private PricelistResponseDTO changeStatus(Pricelist pricelist, ChangePricelistStatusDTO dto, Long currentUserId) {
         if ((pricelist.getStatus() == PricelistStatus.DRAFT && dto.getTargetStatus() == PricelistStatus.IN_REVIEW)
                 || (pricelist.getStatus() == PricelistStatus.IN_REVIEW && dto.getTargetStatus() == PricelistStatus.ACTIVE)) {
             validateAllVariantsActive(pricelist);
@@ -239,6 +250,12 @@ public class PricelistServiceImpl implements PricelistService {
         }
 
         Pricelist saved = pricelistRepository.save(pricelist);
+        publishPricelistAction(
+                saved,
+                currentUserId,
+                PricelistActionType.STATUS_CHANGE,
+                "Promenjen status iz " + previousStatus + " u " + saved.getStatus()
+        );
         LOGGER.info("Changed pricelist {} status from {} to {}", saved.getId(), previousStatus, saved.getStatus());
         return toResponse(saved);
     }
@@ -272,7 +289,9 @@ public class PricelistServiceImpl implements PricelistService {
 
         item.setVariantId(replacement.getId());
         item.setVariantName(replacement.getName());
-        return toResponse(pricelistRepository.save(pricelist), currentUserId, accessService.canCollaborate(pricelist, currentUserId));
+        Pricelist saved = pricelistRepository.save(pricelist);
+        publishPricelistAction(saved, currentUserId, PricelistActionType.REPLACE_ITEM, "Zamenjena stavka cenovnika");
+        return toResponse(saved, currentUserId, accessService.canCollaborate(saved, currentUserId));
     }
 
     private void lockExistingPricelists(Long regionId, String customerSegment) {
@@ -341,6 +360,99 @@ public class PricelistServiceImpl implements PricelistService {
             thresholds.add(threshold);
         }
         return thresholds;
+    }
+
+    private PricelistActionType determineUpdateAction(Pricelist pricelist, CreatePricelistDTO dto, Region region, OffsetDateTime periodStart, OffsetDateTime periodEnd) {
+        if (itemsChanged(pricelist, dto)) {
+            return PricelistActionType.UPDATE_ITEMS;
+        }
+        if (thresholdsChanged(pricelist, dto)) {
+            return PricelistActionType.UPDATE_THRESHOLDS;
+        }
+        if (metadataChanged(pricelist, dto, region, periodStart, periodEnd)) {
+            return PricelistActionType.UPDATE_METADATA;
+        }
+        return PricelistActionType.UPDATE_METADATA;
+    }
+
+    private boolean metadataChanged(Pricelist pricelist, CreatePricelistDTO dto, Region region, OffsetDateTime periodStart, OffsetDateTime periodEnd) {
+        return !Objects.equals(pricelist.getRegion().getId(), region.getId())
+                || !Objects.equals(pricelist.getCustomerSegment(), dto.getCustomerSegment().trim())
+                || !Objects.equals(pricelist.getCurrency(), dto.getCurrency().trim().toUpperCase())
+                || !Objects.equals(pricelist.getPeriodStart(), periodStart)
+                || !Objects.equals(pricelist.getPeriodEnd(), periodEnd);
+    }
+
+    private boolean itemsChanged(Pricelist pricelist, CreatePricelistDTO dto) {
+        if (pricelist.getItems().size() != dto.getItems().size()) {
+            return true;
+        }
+        for (int index = 0; index < pricelist.getItems().size(); index++) {
+            PricelistItem item = pricelist.getItems().get(index);
+            CreatePricelistDTO.PricelistItemDTO itemDTO = dto.getItems().get(index);
+            if (!Objects.equals(item.getVariantId(), itemDTO.getVariantId())
+                    || !Objects.equals(item.getVariantName(), itemDTO.getVariantName().trim())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean thresholdsChanged(Pricelist pricelist, CreatePricelistDTO dto) {
+        for (int itemIndex = 0; itemIndex < pricelist.getItems().size(); itemIndex++) {
+            List<QuantityThreshold> thresholds = pricelist.getItems().get(itemIndex).getThresholds();
+            List<CreatePricelistDTO.QuantityThresholdDTO> thresholdDTOs = dto.getItems().get(itemIndex).getThresholds();
+            if (thresholds.size() != thresholdDTOs.size()) {
+                return true;
+            }
+            for (int thresholdIndex = 0; thresholdIndex < thresholds.size(); thresholdIndex++) {
+                QuantityThreshold threshold = thresholds.get(thresholdIndex);
+                CreatePricelistDTO.QuantityThresholdDTO thresholdDTO = thresholdDTOs.get(thresholdIndex);
+                if (!Objects.equals(threshold.getQuantityFrom(), thresholdDTO.getQuantityFrom())
+                        || !Objects.equals(threshold.getQuantityTo(), thresholdDTO.getQuantityTo())
+                        || comparePrice(threshold.getPrice(), thresholdDTO.getPrice()) != 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private int comparePrice(BigDecimal first, BigDecimal second) {
+        if (first == null && second == null) {
+            return 0;
+        }
+        if (first == null || second == null) {
+            return 1;
+        }
+        return first.compareTo(second);
+    }
+
+    private String updateDescription(PricelistActionType actionType) {
+        return switch (actionType) {
+            case UPDATE_ITEMS -> "Azurirane stavke cenovnika";
+            case UPDATE_THRESHOLDS -> "Azurirani pragovi cena cenovnika";
+            default -> "Azurirani metapodaci cenovnika";
+        };
+    }
+
+    private void publishPricelistAction(Pricelist pricelist, Long userId, PricelistActionType actionType, String description) {
+        if (pricelist.getId() == null || userId == null) {
+            LOGGER.debug("Skipping pricelist activity event for pricelist {} and user {}", pricelist.getId(), userId);
+            return;
+        }
+        eventPublisher.publishEvent(new PricelistActionEvent(
+                pricelist.getId(),
+                userId,
+                resolveTeamId(pricelist),
+                actionType,
+                description
+        ));
+    }
+
+    private Long resolveTeamId(Pricelist pricelist) {
+        // TODO: Resolve teamId once pricelists store a direct assignment to pricelist_teams.
+        return null;
     }
 
     private void validateNoBlockingOverlap(Region region, String customerSegment, OffsetDateTime periodStart, OffsetDateTime periodEnd) {

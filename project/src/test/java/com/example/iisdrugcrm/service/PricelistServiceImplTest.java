@@ -2,6 +2,7 @@ package com.example.iisdrugcrm.service;
 
 import com.example.iisdrugcrm.domain.PricelistStatus;
 import com.example.iisdrugcrm.domain.Region;
+import com.example.iisdrugcrm.domain.pricelist.PricelistActionType;
 import com.example.iisdrugcrm.domain.pricelist.Pricelist;
 import com.example.iisdrugcrm.domain.pricelist.PricelistItem;
 import com.example.iisdrugcrm.domain.pricelist.QuantityThreshold;
@@ -13,6 +14,7 @@ import com.example.iisdrugcrm.exception.InvalidPricelistStatusTransitionExceptio
 import com.example.iisdrugcrm.exception.PricelistConflictException;
 import com.example.iisdrugcrm.repository.PricelistRepository;
 import com.example.iisdrugcrm.repository.RegionRepository;
+import com.example.iisdrugcrm.service.event.PricelistActionEvent;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -26,6 +28,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -56,17 +59,26 @@ class PricelistServiceImplTest {
     @Mock
     private PricelistAccessService accessService;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private PricelistServiceImpl service;
     private Region serbia;
 
     @BeforeEach
     void setUp() {
-        service = new PricelistServiceImpl(pricelistRepository, regionRepository, catalogService, accessService);
+        service = new PricelistServiceImpl(pricelistRepository, regionRepository, catalogService, accessService, eventPublisher);
         serbia = region(1L, "Srbija", "RS");
         lenient().when(regionRepository.findById(1L)).thenReturn(Optional.of(serbia));
         lenient().when(catalogService.findActiveVariantsByIds(anyCollection()))
                 .thenReturn(Map.of(10L, new CatalogVariantDTO(10L, "Variant A", true)));
-        lenient().when(pricelistRepository.save(any(Pricelist.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(pricelistRepository.save(any(Pricelist.class))).thenAnswer(invocation -> {
+            Pricelist pricelist = invocation.getArgument(0);
+            if (pricelist.getId() == null) {
+                pricelist.setId(1000L);
+            }
+            return pricelist;
+        });
         lenient().when(accessService.accessibleCreatorIds(99L)).thenReturn(Set.of(99L));
         lenient().when(accessService.canCollaborate(any(Pricelist.class), eq(99L))).thenReturn(true);
     }
@@ -101,6 +113,19 @@ class PricelistServiceImplTest {
     }
 
     @Test
+    void createPublishesActivityEvent() {
+        noBlockingConflict();
+
+        service.createCenovnik(validDto(), 99L);
+
+        PricelistActionEvent event = capturedEvent();
+        assertEquals(1000L, event.pricelistId());
+        assertEquals(99L, event.userId());
+        assertEquals(PricelistActionType.CREATE, event.actionType());
+        assertEquals("Kreiran cenovnik u statusu DRAFT", event.description());
+    }
+
+    @Test
     void draftPricelistCanBeUpdated() {
         Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
@@ -116,6 +141,23 @@ class PricelistServiceImplTest {
         verify(pricelistRepository).save(captor.capture());
         assertEquals("Bolnice", captor.getValue().getCustomerSegment());
         assertEquals(new BigDecimal("90.00"), captor.getValue().getItems().get(0).getThresholds().get(1).getPrice());
+    }
+
+    @Test
+    void updatePublishesThresholdActivityEventWhenOnlyThresholdsChange() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        noActivationConflict();
+        CreatePricelistDTO dto = validDto();
+        dto.getItems().get(0).getThresholds().get(1).setPrice(new BigDecimal("90.00"));
+
+        service.update(100L, dto, 99L);
+
+        PricelistActionEvent event = capturedEvent();
+        assertEquals(100L, event.pricelistId());
+        assertEquals(99L, event.userId());
+        assertEquals(PricelistActionType.UPDATE_THRESHOLDS, event.actionType());
+        assertEquals("Azurirani pragovi cena cenovnika", event.description());
     }
 
     @Test
@@ -221,6 +263,20 @@ class PricelistServiceImplTest {
 
         assertEquals(PricelistStatus.IN_REVIEW, pricelist.getStatus());
         verify(pricelistRepository).save(pricelist);
+    }
+
+    @Test
+    void statusChangePublishesActivityEvent() {
+        Pricelist pricelist = pricelist(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+
+        service.changeStatus(100L, statusDto(PricelistStatus.IN_REVIEW, null), 99L);
+
+        PricelistActionEvent event = capturedEvent();
+        assertEquals(100L, event.pricelistId());
+        assertEquals(99L, event.userId());
+        assertEquals(PricelistActionType.STATUS_CHANGE, event.actionType());
+        assertEquals("Promenjen status iz DRAFT u IN_REVIEW", event.description());
     }
 
     @Test
@@ -466,6 +522,22 @@ class PricelistServiceImplTest {
     }
 
     @Test
+    void createNewVersionPublishesActivityEvent() {
+        Pricelist source = pricelistWithItem(100L, PricelistStatus.ACTIVE, serbia, "Lanci apoteka");
+        source.setVersionNumber(1);
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(source));
+        when(pricelistRepository.findMaxVersionNumberForRoot(100L)).thenReturn(1);
+
+        service.createNewVersion(100L, 99L);
+
+        PricelistActionEvent event = capturedEvent();
+        assertEquals(1000L, event.pricelistId());
+        assertEquals(99L, event.userId());
+        assertEquals(PricelistActionType.CREATE_VERSION, event.actionType());
+        assertEquals("Kreirana nova verzija cenovnika", event.description());
+    }
+
+    @Test
     void teammateCanCreateNewVersionAndOwnsNewDraft() {
         Pricelist source = pricelistWithItem(100L, PricelistStatus.ACTIVE, serbia, "Lanci apoteka");
         source.setCreatedBy(99L);
@@ -569,6 +641,22 @@ class PricelistServiceImplTest {
     }
 
     @Test
+    void replaceItemPublishesActivityEvent() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        when(catalogService.findActiveVariantsByIds(List.of(11L)))
+                .thenReturn(Map.of(11L, new CatalogVariantDTO(11L, "Variant B", true)));
+
+        service.replaceItemVariant(100L, 500L, 11L, 99L);
+
+        PricelistActionEvent event = capturedEvent();
+        assertEquals(100L, event.pricelistId());
+        assertEquals(99L, event.userId());
+        assertEquals(PricelistActionType.REPLACE_ITEM, event.actionType());
+        assertEquals("Zamenjena stavka cenovnika", event.description());
+    }
+
+    @Test
     void cannotReplaceVariantOnActivePricelist() {
         Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.ACTIVE, serbia, "Lanci apoteka");
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
@@ -611,6 +699,12 @@ class PricelistServiceImplTest {
     private void noActivationConflict() {
         when(pricelistRepository.findOverlappingBlockingPricelistsExcludingCurrent(any(), any(), any(), any(), anyList(), any()))
                 .thenReturn(List.of());
+    }
+
+    private PricelistActionEvent capturedEvent() {
+        ArgumentCaptor<PricelistActionEvent> captor = ArgumentCaptor.forClass(PricelistActionEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        return captor.getValue();
     }
 
     private ChangePricelistStatusDTO statusDto(PricelistStatus targetStatus, String reason) {

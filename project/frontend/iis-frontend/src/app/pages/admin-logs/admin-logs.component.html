@@ -1,0 +1,95 @@
+<section class="page-shell">
+  <header class="page-hero">
+    <p class="kicker">Administrator</p>
+    <h2>Team Activity Logs</h2>
+    <p>Review pricelist owner actions with filters by team, user, and date range.</p>
+  </header>
+
+  <section class="panel">
+    <form class="filters" [formGroup]="filtersForm" (ngSubmit)="applyFilters()">
+      <label>
+        <span>Team ID</span>
+        <input type="number" min="1" formControlName="teamId" placeholder="Svi timovi" />
+      </label>
+
+      <label>
+        <span>User ID</span>
+        <input type="number" min="1" formControlName="userId" placeholder="Svi korisnici" />
+      </label>
+
+      <label>
+        <span>From</span>
+        <input type="datetime-local" formControlName="from" />
+      </label>
+
+      <label>
+        <span>To</span>
+        <input type="datetime-local" formControlName="to" />
+      </label>
+
+      <div class="filter-actions">
+        <button type="submit" [disabled]="loading">Apply filters</button>
+        <button class="secondary" type="button" (click)="resetFilters()" [disabled]="loading">
+          Reset filters
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <header class="panel-head">
+      <div>
+        <p class="kicker">Activity logs</p>
+        <h3>Latest activity</h3>
+      </div>
+      <span class="result-count">
+        @if (data) {
+          {{ data.totalElements }} total
+        }
+      </span>
+    </header>
+
+    @if (loading) {
+      <p class="muted">Loading activity logs...</p>
+    } @else if (errorMessage) {
+      <p class="error">{{ errorMessage }}</p>
+    } @else if (!data || data.content.length === 0) {
+      <p class="muted">No activity logs match the selected filters.</p>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Pricelist ID</th>
+              <th>User ID</th>
+              <th>Team ID</th>
+              <th>Action type</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (log of data.content; track log.id) {
+              <tr>
+                <td>{{ formatTimestamp(log.timestamp) }}</td>
+                <td>{{ log.pricelistId }}</td>
+                <td>{{ log.userId }}</td>
+                <td>{{ log.teamId ?? '-' }}</td>
+                <td>
+                  <span class="action-pill">{{ log.actionType }}</span>
+                </td>
+                <td>{{ log.description }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination">
+        <button type="button" (click)="previousPage()" [disabled]="page === 0">Previous</button>
+        <span>Page {{ data.number + 1 }} of {{ data.totalPages || 1 }}</span>
+        <button type="button" (click)="nextPage()" [disabled]="data.last">Next</button>
+      </div>
+    }
+  </section>
+</section>
