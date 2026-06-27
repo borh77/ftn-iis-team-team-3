@@ -65,7 +65,7 @@ export class AdminReportsComponent implements OnInit {
       error: () => {
         this.loading = false;
         this.report = null;
-        this.errorMessage = 'Nije moguce generisati izvestaj za izabrani period.';
+        this.errorMessage = 'Unable to generate the report for the selected period.';
         this.cdr.detectChanges();
       },
     });

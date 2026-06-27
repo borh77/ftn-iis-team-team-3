@@ -1,24 +1,24 @@
 <section class="page-shell">
   <header class="page-hero">
     <p class="kicker">Administrator</p>
-    <h2>Izveštaji o performansama</h2>
+    <h2>Performance Reports</h2>
     <p>Generate productivity reports for all pricelist teams or one selected team.</p>
   </header>
 
   <section class="panel">
     <form class="filters" [formGroup]="form" (ngSubmit)="generateReport()">
       <label>
-        <span>Tim</span>
+        <span>Team</span>
         <select formControlName="teamMode">
-          <option value="all">Svi timovi</option>
-          <option value="specific">Određeni tim</option>
+          <option value="all">All teams</option>
+          <option value="specific">Specific team</option>
         </select>
       </label>
 
       @if (isSpecificTeam()) {
         <label>
           <span>Team ID</span>
-          <input type="number" min="1" formControlName="teamId" placeholder="Unesite ID tima" />
+          <input type="number" min="1" formControlName="teamId" placeholder="Enter team ID" />
         </label>
       }
 
@@ -32,7 +32,7 @@
         <input type="datetime-local" formControlName="end" />
       </label>
 
-      <button type="submit" [disabled]="loading">Generiši izveštaj</button>
+      <button type="submit" [disabled]="loading">Generate report</button>
     </form>
 
     @if (submitted && form.invalid) {
@@ -64,23 +64,23 @@
 
     <section class="kpi-grid">
       <article class="kpi-card">
-        <span>Prosečno vreme obrade</span>
+        <span>Average processing time</span>
         <strong>{{ formatHours(report.averageTotalProcessingTimeHours) }}</strong>
       </article>
       <article class="kpi-card">
-        <span>Prosečno vreme u review fazi</span>
+        <span>Average review time</span>
         <strong>{{ formatHours(report.averageReviewTimeHours) }}</strong>
       </article>
       <article class="kpi-card">
-        <span>Broj aktiviranih cenovnika</span>
+        <span>Activated pricelists</span>
         <strong>{{ report.activatedPricelistsCount }}</strong>
       </article>
       <article class="kpi-card warning">
-        <span>Broj zaglavljenih u DRAFT</span>
+        <span>Stuck in DRAFT</span>
         <strong>{{ report.stuckDraftCount }}</strong>
       </article>
       <article class="kpi-card warning">
-        <span>Broj zaglavljenih u IN_REVIEW</span>
+        <span>Stuck in IN_REVIEW</span>
         <strong>{{ report.stuckInReviewCount }}</strong>
       </article>
     </section>
