@@ -76,6 +76,17 @@
               <span class="label">Pipeline</span>
             </a>
 
+            @if (session.roles.includes('ROLE_SALES_MANAGER')) {
+              <a
+                routerLink="/sales/workflows"
+                routerLinkActive="active"
+                title="Workflow Editor">
+
+                <span class="icon">🔀</span>
+                <span class="label">Workflow</span>
+              </a>
+            }
+
             <a
               routerLink="/sales/offers"
               routerLinkActive="active"

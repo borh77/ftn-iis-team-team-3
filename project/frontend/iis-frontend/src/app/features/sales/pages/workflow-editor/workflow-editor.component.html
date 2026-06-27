@@ -1,0 +1,188 @@
+<main class="page">
+  <section class="page-header">
+    <div>
+      <p class="eyebrow">Sales management</p>
+      <h1>Workflow Editor</h1>
+      <p>Define sales workflows, stages, and allowed transitions.</p>
+    </div>
+  </section>
+
+  <section class="grid">
+    <article class="card">
+      <h2>Create Workflow</h2>
+
+      <form (ngSubmit)="createWorkflow()" class="form">
+        <label>
+          Name
+          <input name="workflow-name" [(ngModel)]="newWorkflow.name" required />
+        </label>
+
+        <label>
+          Region
+          <input name="workflow-region" [(ngModel)]="newWorkflow.region" required />
+        </label>
+
+        <button class="primary-button" type="submit">Create Workflow</button>
+      </form>
+    </article>
+
+    <article class="card">
+      <h2>Workflows</h2>
+
+      <button
+        *ngFor="let workflow of workflows"
+        type="button"
+        class="workflow-button"
+        [class.active]="selectedWorkflow?.id === workflow.id"
+        (click)="selectWorkflow(workflow)">
+        {{ workflow.name }} — {{ workflow.region }}
+      </button>
+    </article>
+  </section>
+
+  <section *ngIf="selectedWorkflow" class="card">
+    <h2>{{ selectedWorkflow.name }}</h2>
+    <p class="muted">Region: {{ selectedWorkflow.region }}</p>
+
+    <h3>Stages</h3>
+
+    <table *ngIf="stages.length > 0">
+      <thead>
+        <tr>
+          <th>Order</th>
+          <th>Name</th>
+          <th>Inputs</th>
+          <th>Outputs</th>
+          <th>Start</th>
+          <th>End</th>
+          <th>Successful</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngFor="let stage of stages">
+          <td>{{ stage.stageOrder }}</td>
+          <td>{{ stage.name }}</td>
+          <td>{{ stage.requiredInputs }}</td>
+          <td>{{ stage.expectedOutputs }}</td>
+          <td>{{ stage.startStage ? 'Yes' : 'No' }}</td>
+          <td>{{ stage.endStage ? 'Yes' : 'No' }}</td>
+          <td>{{ stage.successfulEnd ? 'Yes' : 'No' }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p *ngIf="stages.length === 0" class="muted">No stages defined.</p>
+
+    <h3>Add Stage</h3>
+
+    <form (ngSubmit)="createStage()" class="form stage-form">
+      <label>
+        Name
+        <input name="stage-name" [(ngModel)]="newStage.name" required />
+      </label>
+
+      <label>
+        Description
+        <input name="stage-description" [(ngModel)]="newStage.description" />
+      </label>
+
+      <label>
+        Order
+        <input type="number" name="stage-order" [(ngModel)]="newStage.stageOrder" required />
+      </label>
+
+      <label>
+        Required Inputs
+        <input name="stage-inputs" [(ngModel)]="newStage.requiredInputs" />
+      </label>
+
+      <label>
+        Expected Outputs
+        <input name="stage-outputs" [(ngModel)]="newStage.expectedOutputs" />
+      </label>
+
+      <label class="checkbox">
+        <input type="checkbox" name="stage-start" [(ngModel)]="newStage.startStage" />
+        Start stage
+      </label>
+
+      <label class="checkbox">
+        <input type="checkbox" name="stage-end" [(ngModel)]="newStage.endStage" />
+        End stage
+      </label>
+
+      <label class="checkbox">
+        <input type="checkbox" name="stage-success" [(ngModel)]="newStage.successfulEnd" />
+        Successful end
+      </label>
+
+      <button class="primary-button" type="submit">Add Stage</button>
+    </form>
+
+    <h3>Transitions</h3>
+
+    <table *ngIf="transitions.length > 0">
+      <thead>
+        <tr>
+          <th>From</th>
+          <th>To</th>
+          <th>Condition</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngFor="let transition of transitions">
+          <td>{{ transition.fromStageName }}</td>
+          <td>{{ transition.toStageName }}</td>
+          <td>{{ transition.conditionType }}</td>
+          <td>{{ transition.conditionDescription }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p *ngIf="transitions.length === 0" class="muted">No transitions defined.</p>
+
+    <h3>Add Transition</h3>
+
+    <form (ngSubmit)="createTransition()" class="form transition-form">
+      <label>
+        From stage
+        <select name="from-stage" [(ngModel)]="newTransition.fromStageId" required>
+          <option [ngValue]="0" disabled>Select stage</option>
+          <option *ngFor="let stage of stages" [ngValue]="stage.id">
+            {{ stage.name }}
+          </option>
+        </select>
+      </label>
+
+      <label>
+        To stage
+        <select name="to-stage" [(ngModel)]="newTransition.toStageId" required>
+          <option [ngValue]="0" disabled>Select stage</option>
+          <option *ngFor="let stage of stages" [ngValue]="stage.id">
+            {{ stage.name }}
+          </option>
+        </select>
+      </label>
+
+      <label>
+        Condition Type
+        <input name="condition-type" [(ngModel)]="newTransition.conditionType" />
+      </label>
+
+      <label>
+        Condition Description
+        <input name="condition-description" [(ngModel)]="newTransition.conditionDescription" />
+      </label>
+
+      <button
+        class="primary-button"
+        type="submit"
+        [disabled]="newTransition.fromStageId === 0 || newTransition.toStageId === 0">
+        Add Transition
+      </button>
+    </form>
+  </section>
+</main>

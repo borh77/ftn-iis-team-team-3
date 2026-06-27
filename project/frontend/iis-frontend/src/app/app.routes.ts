@@ -28,7 +28,7 @@ import { ContractsListComponent } from './features/sales/pages/contracts-list/co
 import { ProcessDetailsComponent } from './features/sales/pages/process-details/process-details.component';
 import { CustomerDetailsComponent } from './features/sales/pages/customer-details/customer-details.component';
 import { ContractDetailsComponent } from './features/sales/pages/contract-details/contract-details.component';
-
+import { WorkflowEditorComponent } from './features/sales/pages/workflow-editor/workflow-editor.component';
 
 export const routes: Routes = [
 	{ path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -186,6 +186,15 @@ export const routes: Routes = [
 			],
 		},
 		title: 'IIS Drug CRM | Sales Pipeline',
+	},
+	{
+		path: 'sales/workflows',
+		component: WorkflowEditorComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: {
+			roles: ['ROLE_SALES_MANAGER'],
+		},
+		title: 'IIS Drug CRM | Sales Workflow Editor',
 	},
 	{
 		path: 'sales/communications',

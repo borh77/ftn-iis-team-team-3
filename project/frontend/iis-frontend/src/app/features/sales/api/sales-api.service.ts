@@ -11,6 +11,7 @@ import { CustomerNeed, CreateCustomerNeedRequest } from '../models/customer-need
 import { Offer, CreateOfferRequest } from '../models/offer.model';
 import { Contract, CreateContractRequest } from '../models/contract.model';
 import { SalesProcessHistory } from '../models/sales-process-history.model';
+import { CreateSalesStageRequest, CreateSalesStageTransitionRequest, CreateSalesWorkflowRequest, SalesStageDefinition, SalesStageTransition, SalesWorkflow, } from '../models/sales-workflow.model';
 
 @Injectable({
   providedIn: 'root',
@@ -175,6 +176,51 @@ export class SalesApiService {
   getAvailableStageTransitions(processId: number): Observable<SalesStage[]> {
     return this.http.get<SalesStage[]>(
       `${this.apiBaseUrl}/api/sales/processes/${processId}/available-transitions`,
+    );
+  }
+
+  getSalesWorkflows(): Observable<SalesWorkflow[]> {
+    return this.http.get<SalesWorkflow[]>(
+      `${this.apiBaseUrl}/api/sales/workflows`,
+    );
+  }
+
+  createSalesWorkflow(request: CreateSalesWorkflowRequest): Observable<SalesWorkflow> {
+    return this.http.post<SalesWorkflow>(
+      `${this.apiBaseUrl}/api/sales/workflows`,
+      request,
+    );
+  }
+
+  getSalesWorkflowStages(workflowId: number): Observable<SalesStageDefinition[]> {
+    return this.http.get<SalesStageDefinition[]>(
+      `${this.apiBaseUrl}/api/sales/workflows/${workflowId}/stages`,
+    );
+  }
+
+  addSalesWorkflowStage(
+    workflowId: number,
+    request: CreateSalesStageRequest,
+  ): Observable<SalesStageDefinition> {
+    return this.http.post<SalesStageDefinition>(
+      `${this.apiBaseUrl}/api/sales/workflows/${workflowId}/stages`,
+      request,
+    );
+  }
+
+  getSalesWorkflowTransitions(workflowId: number): Observable<SalesStageTransition[]> {
+    return this.http.get<SalesStageTransition[]>(
+      `${this.apiBaseUrl}/api/sales/workflows/${workflowId}/transitions`,
+    );
+  }
+
+  addSalesWorkflowTransition(
+    workflowId: number,
+    request: CreateSalesStageTransitionRequest,
+  ): Observable<SalesStageTransition> {
+    return this.http.post<SalesStageTransition>(
+      `${this.apiBaseUrl}/api/sales/workflows/${workflowId}/transitions`,
+      request,
     );
   }
 }
