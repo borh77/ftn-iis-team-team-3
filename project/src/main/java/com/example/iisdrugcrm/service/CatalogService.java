@@ -9,5 +9,7 @@ public interface CatalogService {
 
     Map<Long, CatalogVariantDTO> findActiveVariantsByIds(Collection<Long> variantIds);
 
+    Map<Long, CatalogVariantDTO> findVariantsByIdsIncludingInactive(Collection<Long> variantIds);
+
     List<CatalogVariantDTO> getActiveVariants();
 }

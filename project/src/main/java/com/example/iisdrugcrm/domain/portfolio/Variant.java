@@ -32,6 +32,10 @@ public class Variant extends AbstractAuditEntity {
     @Column(nullable = false, length = 30)
     private EntityStatus status = EntityStatus.ACTIVE;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "replacement_variant_id")
+    private Variant replacementVariant;
+
     protected Variant() {
     }
 
@@ -46,6 +50,10 @@ public class Variant extends AbstractAuditEntity {
         this.product = product;
         this.form = form;
         this.dosage = dosage;
+    }
+
+    public void setReplacementVariant(Variant replacementVariant) {
+        this.replacementVariant = replacementVariant;
     }
 
     public void archive() {
@@ -70,5 +78,9 @@ public class Variant extends AbstractAuditEntity {
 
     public EntityStatus getStatus() {
         return status;
+    }
+
+    public Variant getReplacementVariant() {
+        return replacementVariant;
     }
 }

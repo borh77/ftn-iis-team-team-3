@@ -10,6 +10,7 @@ import com.example.iisdrugcrm.domain.pricelist.QuantityThreshold;
 import com.example.iisdrugcrm.domain.pricelist.SpecialOffer;
 import com.example.iisdrugcrm.dto.order.InvalidOrderItemDTO;
 import com.example.iisdrugcrm.dto.order.OrderDocumentItemDTO;
+import com.example.iisdrugcrm.dto.order.ReplacementSuggestionDTO;
 import com.example.iisdrugcrm.dto.order.ValidatedOrderItemDTO;
 import com.example.iisdrugcrm.dto.order.ValidationResultDTO;
 import com.example.iisdrugcrm.dto.pricelist.CatalogVariantDTO;
@@ -24,8 +25,11 @@ import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -75,12 +79,19 @@ public class OrderValidationServiceImpl implements OrderValidationService {
 
         Map<Long, PricelistItem> pricelistItemsByVariantId = pricelist.getItems().stream()
                 .collect(Collectors.toMap(PricelistItem::getVariantId, Function.identity(), (first, ignored) -> first));
-        Map<Long, CatalogVariantDTO> activeVariants = catalogService.findActiveVariantsByIds(
-                orderItems.stream()
-                        .map(OrderDocumentItemDTO::getVariantId)
-                        .filter(variantId -> variantId != null)
-                        .toList()
-        );
+        Set<Long> requestedVariantIds = orderItems.stream()
+                .map(OrderDocumentItemDTO::getVariantId)
+                .filter(variantId -> variantId != null)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<Long, CatalogVariantDTO> catalogVariants = new LinkedHashMap<>(catalogService.findVariantsByIdsIncludingInactive(requestedVariantIds));
+        Set<Long> replacementVariantIds = catalogVariants.values().stream()
+                .map(CatalogVariantDTO::getReplacementVariantId)
+                .filter(replacementVariantId -> replacementVariantId != null)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (!replacementVariantIds.isEmpty()) {
+            Map<Long, CatalogVariantDTO> replacementVariants = catalogService.findVariantsByIdsIncludingInactive(replacementVariantIds);
+            catalogVariants.putAll(replacementVariants);
+        }
         Map<Long, SpecialOffer> activeOffersByVariantId = specialOfferRepository
                 .findActiveOffersForPricelist(pricelist.getId(), now)
                 .stream()
@@ -90,9 +101,36 @@ public class OrderValidationServiceImpl implements OrderValidationService {
         BigDecimal totalPrice = BigDecimal.ZERO;
 
         for (OrderDocumentItemDTO orderItem : orderItems) {
-            InvalidOrderItemDTO invalidItem = validateItemBasics(orderItem, activeVariants, pricelistItemsByVariantId);
+            InvalidOrderItemDTO invalidItem = validateItemBasics(orderItem, catalogVariants);
             if (invalidItem != null) {
                 result.getInvalidItems().add(invalidItem);
+                continue;
+            }
+
+            CatalogVariantDTO catalogVariant = catalogVariants.get(orderItem.getVariantId());
+            if (!catalogVariant.isActive()) {
+                ReplacementResolution replacementResolution = resolveReplacementSuggestion(
+                        orderItem,
+                        catalogVariant,
+                        catalogVariants,
+                        pricelistItemsByVariantId,
+                        activeOffersByVariantId
+                );
+                if (replacementResolution.suggestion() != null) {
+                    result.getReplacements().add(replacementResolution.suggestion());
+                } else {
+                    result.getInvalidItems().add(replacementResolution.invalidItem());
+                }
+                continue;
+            }
+
+            if (!pricelistItemsByVariantId.containsKey(orderItem.getVariantId())) {
+                result.getInvalidItems().add(new InvalidOrderItemDTO(
+                        orderItem.getVariantId(),
+                        orderItem.getRequestedQuantity(),
+                        "VARIANT_NOT_IN_PRICELIST",
+                        "Variant is not available in the active pricelist."
+                ));
                 continue;
             }
 
@@ -114,7 +152,7 @@ public class OrderValidationServiceImpl implements OrderValidationService {
         }
 
         result.setTotalPrice(scaleMoney(totalPrice));
-        result.setValid(result.getInvalidItems().isEmpty());
+        result.setValid(result.getInvalidItems().isEmpty() && result.getReplacements().isEmpty());
         return result;
     }
 
@@ -154,8 +192,7 @@ public class OrderValidationServiceImpl implements OrderValidationService {
 
     private InvalidOrderItemDTO validateItemBasics(
             OrderDocumentItemDTO item,
-            Map<Long, CatalogVariantDTO> activeVariants,
-            Map<Long, PricelistItem> pricelistItemsByVariantId
+            Map<Long, CatalogVariantDTO> catalogVariants
     ) {
         if (item.getVariantId() == null) {
             return new InvalidOrderItemDTO(null, item.getRequestedQuantity(), "MISSING_VARIANT_ID", "Variant id is required.");
@@ -163,13 +200,65 @@ public class OrderValidationServiceImpl implements OrderValidationService {
         if (item.getRequestedQuantity() == null || item.getRequestedQuantity() <= 0) {
             return new InvalidOrderItemDTO(item.getVariantId(), item.getRequestedQuantity(), "INVALID_QUANTITY", "Requested quantity must be positive.");
         }
-        if (!activeVariants.containsKey(item.getVariantId())) {
-            return new InvalidOrderItemDTO(item.getVariantId(), item.getRequestedQuantity(), "VARIANT_NOT_FOUND", "Variant does not exist or is not active.");
-        }
-        if (!pricelistItemsByVariantId.containsKey(item.getVariantId())) {
-            return new InvalidOrderItemDTO(item.getVariantId(), item.getRequestedQuantity(), "VARIANT_NOT_IN_PRICELIST", "Variant is not available in the active pricelist.");
+        if (!catalogVariants.containsKey(item.getVariantId())) {
+            return new InvalidOrderItemDTO(item.getVariantId(), item.getRequestedQuantity(), "VARIANT_NOT_FOUND", "Variant does not exist.");
         }
         return null;
+    }
+
+    private ReplacementResolution resolveReplacementSuggestion(
+            OrderDocumentItemDTO orderItem,
+            CatalogVariantDTO oldVariant,
+            Map<Long, CatalogVariantDTO> catalogVariants,
+            Map<Long, PricelistItem> pricelistItemsByVariantId,
+            Map<Long, SpecialOffer> activeOffersByVariantId
+    ) {
+        if (oldVariant.getReplacementVariantId() == null) {
+            return ReplacementResolution.invalid(new InvalidOrderItemDTO(
+                    orderItem.getVariantId(),
+                    orderItem.getRequestedQuantity(),
+                    "DISCONTINUED_NO_REPLACEMENT",
+                    "Medicine is discontinued and has no available replacement in the active pricelist."
+            ));
+        }
+
+        CatalogVariantDTO replacementVariant = catalogVariants.get(oldVariant.getReplacementVariantId());
+        if (replacementVariant == null || !replacementVariant.isActive()) {
+            return ReplacementResolution.invalid(new InvalidOrderItemDTO(
+                    orderItem.getVariantId(),
+                    orderItem.getRequestedQuantity(),
+                    "REPLACEMENT_NOT_ACTIVE",
+                    "Medicine is discontinued and its replacement is not active."
+            ));
+        }
+
+        PricelistItem replacementItem = pricelistItemsByVariantId.get(replacementVariant.getId());
+        if (replacementItem == null) {
+            return ReplacementResolution.invalid(new InvalidOrderItemDTO(
+                    orderItem.getVariantId(),
+                    orderItem.getRequestedQuantity(),
+                    "REPLACEMENT_NOT_IN_PRICELIST",
+                    "Medicine is discontinued and has no available replacement in the active pricelist."
+            ));
+        }
+
+        QuantityThreshold threshold = findMatchingThreshold(replacementItem, orderItem.getRequestedQuantity());
+        if (threshold == null) {
+            return ReplacementResolution.invalid(new InvalidOrderItemDTO(
+                    orderItem.getVariantId(),
+                    orderItem.getRequestedQuantity(),
+                    "REPLACEMENT_NO_QUANTITY_THRESHOLD",
+                    "Replacement medicine has no quantity threshold for the requested quantity."
+            ));
+        }
+
+        return ReplacementResolution.suggestion(buildReplacementSuggestion(
+                orderItem,
+                oldVariant,
+                replacementItem,
+                threshold,
+                activeOffersByVariantId.get(replacementVariant.getId())
+        ));
     }
 
     private QuantityThreshold findMatchingThreshold(PricelistItem item, Integer requestedQuantity) {
@@ -205,6 +294,36 @@ public class OrderValidationServiceImpl implements OrderValidationService {
         return dto;
     }
 
+    private ReplacementSuggestionDTO buildReplacementSuggestion(
+            OrderDocumentItemDTO orderItem,
+            CatalogVariantDTO oldVariant,
+            PricelistItem replacementItem,
+            QuantityThreshold threshold,
+            SpecialOffer activeOffer
+    ) {
+        BigDecimal currentUnitPrice = scaleMoney(threshold.getPrice());
+        BigDecimal finalUnitPrice = applyDiscount(currentUnitPrice, activeOffer);
+        BigDecimal lineTotal = scaleMoney(finalUnitPrice.multiply(BigDecimal.valueOf(orderItem.getRequestedQuantity())));
+
+        ReplacementSuggestionDTO dto = new ReplacementSuggestionDTO();
+        dto.setOldVariantId(orderItem.getVariantId());
+        dto.setOldVariantName(oldVariant.getName());
+        dto.setNewVariantId(replacementItem.getVariantId());
+        dto.setNewVariantName(replacementItem.getVariantName());
+        dto.setRequestedQuantity(orderItem.getRequestedQuantity());
+        dto.setCurrentUnitPrice(currentUnitPrice);
+        if (activeOffer != null) {
+            if (activeOffer.getDiscountType() == DiscountType.PERCENTAGE) {
+                dto.setDiscountPercentage(scaleMoney(activeOffer.getDiscountValue()));
+            }
+            dto.setDiscountAmount(scaleMoney(currentUnitPrice.subtract(finalUnitPrice)));
+        }
+        dto.setFinalUnitPrice(finalUnitPrice);
+        dto.setLineTotal(lineTotal);
+        dto.setMessage("Requested medicine is discontinued. Suggested replacement is priced from the active pricelist.");
+        return dto;
+    }
+
     private BigDecimal applyDiscount(BigDecimal unitPrice, SpecialOffer offer) {
         if (offer == null) {
             return unitPrice;
@@ -221,5 +340,16 @@ public class OrderValidationServiceImpl implements OrderValidationService {
 
     private BigDecimal scaleMoney(BigDecimal value) {
         return value.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private record ReplacementResolution(ReplacementSuggestionDTO suggestion, InvalidOrderItemDTO invalidItem) {
+
+        static ReplacementResolution suggestion(ReplacementSuggestionDTO suggestion) {
+            return new ReplacementResolution(suggestion, null);
+        }
+
+        static ReplacementResolution invalid(InvalidOrderItemDTO invalidItem) {
+            return new ReplacementResolution(null, invalidItem);
+        }
     }
 }

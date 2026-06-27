@@ -47,6 +47,22 @@ public class MockCatalogService implements CatalogService {
 
     @Override
     @Transactional(readOnly = true)
+    public Map<Long, CatalogVariantDTO> findVariantsByIdsIncludingInactive(Collection<Long> variantIds) {
+        Set<Long> requestedIds = new LinkedHashSet<>(variantIds);
+        if (requestedIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Long, CatalogVariantDTO> matches = new LinkedHashMap<>();
+        List<Variant> variants = variantRepository.findByIdInWithRelationsIncludingReplacement(requestedIds);
+        for (Variant variant : variants) {
+            matches.put(variant.getId(), toCatalogVariantDTO(variant));
+        }
+        return matches;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<CatalogVariantDTO> getActiveVariants() {
         // ISPRAVLJENO: Pravo ime metode i ispravan redosled parametara
         return variantRepository.findByStatusWithRelations(
@@ -60,10 +76,13 @@ public class MockCatalogService implements CatalogService {
     }
 
     private CatalogVariantDTO toCatalogVariantDTO(Variant variant) {
+        Variant replacement = variant.getReplacementVariant();
         return new CatalogVariantDTO(
                 variant.getId(),
                 variant.getProduct().getName() + " " + variant.getForm() + " " + variant.getDosage(),
-                true
+                variant.getStatus() == EntityStatus.ACTIVE,
+                replacement == null ? null : replacement.getId(),
+                replacement == null ? null : replacement.getProduct().getName() + " " + replacement.getForm() + " " + replacement.getDosage()
         );
     }
 }

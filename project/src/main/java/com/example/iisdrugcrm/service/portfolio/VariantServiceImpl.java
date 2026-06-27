@@ -68,6 +68,7 @@ public class VariantServiceImpl implements VariantService {
                 dto.getForm(),
                 dto.getDosage()
         );
+        variant.setReplacementVariant(getReplacementVariant(dto.getReplacementVariantId(), null));
 
         return VariantResponseDTO.fromEntity(variantRepository.save(variant));
     }
@@ -92,6 +93,7 @@ public class VariantServiceImpl implements VariantService {
                 dto.getForm(),
                 dto.getDosage()
         );
+        variant.setReplacementVariant(getReplacementVariant(dto.getReplacementVariantId(), id));
 
         return VariantResponseDTO.fromEntity(variantRepository.save(variant));
     }
@@ -107,6 +109,17 @@ public class VariantServiceImpl implements VariantService {
     private Variant getVariant(Long id) {
         return variantRepository.findById(id)
                 .orElseThrow(() -> new PortfolioResourceNotFoundException("Variant not found"));
+    }
+
+    private Variant getReplacementVariant(Long replacementVariantId, Long currentVariantId) {
+        if (replacementVariantId == null) {
+            return null;
+        }
+        if (currentVariantId != null && currentVariantId.equals(replacementVariantId)) {
+            throw new IllegalArgumentException("Variant cannot replace itself");
+        }
+        return variantRepository.findById(replacementVariantId)
+                .orElseThrow(() -> new PortfolioResourceNotFoundException("Replacement variant not found"));
     }
 
     private Product getProduct(Long id) {

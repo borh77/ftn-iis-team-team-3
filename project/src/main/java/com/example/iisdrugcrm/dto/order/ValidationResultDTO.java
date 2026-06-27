@@ -10,6 +10,7 @@ public class ValidationResultDTO {
     private BigDecimal totalPrice = BigDecimal.ZERO;
     private List<ValidatedOrderItemDTO> validatedItems = new ArrayList<>();
     private List<InvalidOrderItemDTO> invalidItems = new ArrayList<>();
+    private List<ReplacementSuggestionDTO> replacements = new ArrayList<>();
 
     public boolean isValid() {
         return valid;
@@ -41,5 +42,13 @@ public class ValidationResultDTO {
 
     public void setInvalidItems(List<InvalidOrderItemDTO> invalidItems) {
         this.invalidItems = invalidItems;
+    }
+
+    public List<ReplacementSuggestionDTO> getReplacements() {
+        return replacements;
+    }
+
+    public void setReplacements(List<ReplacementSuggestionDTO> replacements) {
+        this.replacements = replacements;
     }
 }

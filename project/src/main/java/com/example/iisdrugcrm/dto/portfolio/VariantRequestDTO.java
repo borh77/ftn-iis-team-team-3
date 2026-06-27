@@ -17,6 +17,8 @@ public class VariantRequestDTO {
     @Size(max = 100)
     private String dosage;
 
+    private Long replacementVariantId;
+
     public Long getProductId() {
         return productId;
     }
@@ -27,5 +29,9 @@ public class VariantRequestDTO {
 
     public String getDosage() {
         return dosage;
+    }
+
+    public Long getReplacementVariantId() {
+        return replacementVariantId;
     }
 }
