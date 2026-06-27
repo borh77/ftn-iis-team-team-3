@@ -658,6 +658,27 @@ loadAnalytics(): void {
   });
 }
 
+downloadAnalyticsReport(): void {
+  this.portfolioService
+    .downloadPortfolioAnalyticsReport(this.expiringUntilDate())
+    .subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'portfolio-analytics-report.pdf';
+
+        link.click();
+
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.errorMessage.set('Failed to generate analytics report.');
+      },
+    });
+}
+
 loadVersionHistory(versionId: number): void {
   this.selectedVersionId.set(versionId);
   this.loadingVersionHistory.set(true);

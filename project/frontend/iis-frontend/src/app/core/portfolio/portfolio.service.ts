@@ -358,5 +358,21 @@ export class PortfolioService {
       `${this.apiBaseUrl}/api/portfolio-analytics/market-products/by-region`,
     );
   }
+
+  downloadPortfolioAnalyticsReport(expiringUntil?: string) {
+    let params = new HttpParams();
+
+    if (expiringUntil) {
+      params = params.set('expiringUntil', expiringUntil);
+    }
+
+    return this.http.get(
+      `${this.apiBaseUrl}/api/portfolio-analytics/report/pdf`,
+      {
+        params,
+        responseType: 'blob',
+      },
+    );
+  }
   
 }

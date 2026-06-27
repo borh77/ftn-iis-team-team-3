@@ -798,7 +798,21 @@
         <p class="muted">Overview of lifecycle states, hierarchy distribution and expiring licenses.</p>
       </div>
 
-      <button type="button" class="secondary" (click)="loadAnalytics()">Refresh</button>
+      <div style="display:flex; gap:12px;">
+        <button
+          type="button"
+          class="secondary"
+          (click)="loadAnalytics()">
+          Refresh
+        </button>
+
+        <button
+          type="button"
+          class="primary"
+          (click)="downloadAnalyticsReport()">
+          Download PDF
+        </button>
+      </div>
     </div>
 
     @if (loadingAnalytics()) {
