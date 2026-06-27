@@ -18,9 +18,24 @@ export interface InvalidOrderItem {
   message: string;
 }
 
+export interface ReplacementSuggestion {
+  oldVariantId: number;
+  oldVariantName?: string | null;
+  newVariantId: number;
+  newVariantName?: string | null;
+  requestedQuantity: number;
+  currentUnitPrice: number;
+  discountAmount?: number | null;
+  discountPercentage?: number | null;
+  finalUnitPrice: number;
+  lineTotal: number;
+  message?: string | null;
+}
+
 export interface ValidationResult {
   valid: boolean;
   totalPrice: number;
   validatedItems: ValidatedOrderItem[];
   invalidItems: InvalidOrderItem[];
+  replacements: ReplacementSuggestion[];
 }

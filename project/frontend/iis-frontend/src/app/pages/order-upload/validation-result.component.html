@@ -2,9 +2,9 @@
   <div class="result-summary">
     <div>
       <p class="kicker">Validation result</p>
-      <h3>{{ result.valid ? 'Document is fully valid' : 'Document contains problematic items' }}</h3>
+      <h3>{{ result.valid ? 'Document is fully valid' : 'Document requires attention' }}</h3>
       <p class="muted">
-        {{ result.valid ? 'All uploaded order items match the active pricelist.' : 'Valid items are priced, while problematic items are listed separately.' }}
+        {{ result.valid ? 'All uploaded order items match the active pricelist.' : 'Valid items, replacement suggestions, and problematic items are listed separately.' }}
       </p>
     </div>
     <div class="total-card">
@@ -56,6 +56,83 @@
     </div>
   }
 
+  @if (result.replacements.length) {
+    <div class="table-section replacement-section">
+      <div class="replacement-head">
+        <div>
+          <h4>Predložene zamene</h4>
+          <p class="muted">Sledeći artikli su izašli iz proizvodnje. Sistem je pronašao moguće zamene sa aktuelnim cenama.</p>
+        </div>
+        <span class="warning-badge">{{ result.replacements.length }} suggestion{{ result.replacements.length === 1 ? '' : 's' }}</span>
+      </div>
+
+      <div class="table-wrap">
+        <table class="result-table">
+          <thead>
+            <tr>
+              <th>Stara stavka</th>
+              <th>Tražena količina</th>
+              <th>Predložena zamena</th>
+              <th>Aktuelna cena</th>
+              <th>Cena sa popustom / finalna cena</th>
+              <th>Ukupno</th>
+              <th>Akcija</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (replacement of result.replacements; track replacement.oldVariantId + '-' + replacement.newVariantId + '-' + $index) {
+              <tr [class.accepted-row]="isReplacementAccepted(replacement)">
+                <td>
+                  <strong>{{ replacement.oldVariantName || 'Variant ' + replacement.oldVariantId }}</strong>
+                  <span class="muted">ID: {{ replacement.oldVariantId }}</span>
+                </td>
+                <td>{{ replacement.requestedQuantity }}</td>
+                <td>
+                  <strong>{{ replacement.newVariantName || 'Variant ' + replacement.newVariantId }}</strong>
+                  <span class="muted">ID: {{ replacement.newVariantId }}</span>
+                  @if (replacement.message) {
+                    <span class="replacement-message">{{ replacement.message }}</span>
+                  }
+                </td>
+                <td>{{ replacement.currentUnitPrice | number:'1.2-2' }}</td>
+                <td>
+                  @if (replacement.discountPercentage !== null && replacement.discountPercentage !== undefined) {
+                    <span class="discount-badge">{{ replacement.discountPercentage }}%</span>
+                  }
+                  @if (replacement.discountAmount !== null && replacement.discountAmount !== undefined && replacement.discountAmount > 0) {
+                    <span class="discount-badge">{{ replacement.discountAmount | number:'1.2-2' }} off</span>
+                  }
+                  <strong>{{ replacement.finalUnitPrice | number:'1.2-2' }}</strong>
+                </td>
+                <td><strong>{{ replacement.lineTotal | number:'1.2-2' }}</strong></td>
+                <td>
+                  <button
+                    type="button"
+                    class="accept-button"
+                    [disabled]="isReplacementAccepted(replacement)"
+                    (click)="acceptReplacement(replacement)"
+                  >
+                    {{ isReplacementAccepted(replacement) ? 'Prihvaćeno' : 'Prihvati zamenu' }}
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (acceptedReplacements.length) {
+        <div class="accepted-box">
+          <strong>Prihvaćene zamene</strong>
+          <span>
+            {{ acceptedReplacements.length }} replacement{{ acceptedReplacements.length === 1 ? '' : 's' }} accepted in this view.
+            Zamena je prihvaćena u prikazu. Finalno slanje nabavke će biti dostupno kroz poseban korak.
+          </span>
+        </div>
+      }
+    </div>
+  }
+
   @if (result.invalidItems.length) {
     <div class="table-section table-section--invalid">
       <h4>Problematic items</h4>
@@ -84,7 +161,7 @@
     </div>
   }
 
-  @if (result.valid) {
+  @if (result.valid || canShowConfirmStep) {
     <div class="confirm-row">
       <button type="button" class="primary" disabled title="Purchase confirmation is planned for a later ticket">
         Confirm procurement

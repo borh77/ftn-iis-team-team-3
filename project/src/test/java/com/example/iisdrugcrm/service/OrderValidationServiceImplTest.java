@@ -11,6 +11,7 @@ import com.example.iisdrugcrm.domain.pricelist.QuantityThreshold;
 import com.example.iisdrugcrm.domain.pricelist.SpecialOffer;
 import com.example.iisdrugcrm.domain.pricelist.SpecialOfferStatus;
 import com.example.iisdrugcrm.dto.order.OrderDocumentItemDTO;
+import com.example.iisdrugcrm.dto.order.ReplacementSuggestionDTO;
 import com.example.iisdrugcrm.dto.order.ValidationResultDTO;
 import com.example.iisdrugcrm.dto.pricelist.CatalogVariantDTO;
 import com.example.iisdrugcrm.repository.PricelistRepository;
@@ -35,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
@@ -83,8 +85,8 @@ class OrderValidationServiceImplTest {
     @Test
     void quantityThresholdSelectionUsesMatchingRange() throws Exception {
         when(parser.parse(file)).thenReturn(List.of(new OrderDocumentItemDTO(101L, 55)));
-        when(catalogService.findActiveVariantsByIds(List.of(101L)))
-                .thenReturn(Map.of(101L, new CatalogVariantDTO(101L, "Medicine A 10mg", true)));
+        when(catalogService.findVariantsByIdsIncludingInactive(anyCollection()))
+                .thenReturn(Map.of(101L, catalogVariant(101L, "Medicine A 10mg", true, null, null)));
 
         ValidationResultDTO result = service.validateOrderDocument("buyer", file);
 
@@ -96,8 +98,8 @@ class OrderValidationServiceImplTest {
     @Test
     void itemNotInActivePricelistBecomesInvalidItem() throws Exception {
         when(parser.parse(file)).thenReturn(List.of(new OrderDocumentItemDTO(202L, 10)));
-        when(catalogService.findActiveVariantsByIds(List.of(202L)))
-                .thenReturn(Map.of(202L, new CatalogVariantDTO(202L, "Medicine B 20mg", true)));
+        when(catalogService.findVariantsByIdsIncludingInactive(anyCollection()))
+                .thenReturn(Map.of(202L, catalogVariant(202L, "Medicine B 20mg", true, null, null)));
 
         ValidationResultDTO result = service.validateOrderDocument("buyer", file);
 
@@ -114,8 +116,8 @@ class OrderValidationServiceImplTest {
                 new OrderDocumentItemDTO(101L, 10),
                 new OrderDocumentItemDTO(101L, -1)
         ));
-        when(catalogService.findActiveVariantsByIds(List.of(101L, 101L)))
-                .thenReturn(Map.of(101L, new CatalogVariantDTO(101L, "Medicine A 10mg", true)));
+        when(catalogService.findVariantsByIdsIncludingInactive(anyCollection()))
+                .thenReturn(Map.of(101L, catalogVariant(101L, "Medicine A 10mg", true, null, null)));
 
         ValidationResultDTO result = service.validateOrderDocument("buyer", file);
 
@@ -128,10 +130,10 @@ class OrderValidationServiceImplTest {
     @Test
     void activePercentageOfferAppliesToSelectedThresholdPrice() throws Exception {
         when(parser.parse(file)).thenReturn(List.of(new OrderDocumentItemDTO(101L, 55)));
-        when(catalogService.findActiveVariantsByIds(List.of(101L)))
-                .thenReturn(Map.of(101L, new CatalogVariantDTO(101L, "Medicine A 10mg", true)));
+        when(catalogService.findVariantsByIdsIncludingInactive(anyCollection()))
+                .thenReturn(Map.of(101L, catalogVariant(101L, "Medicine A 10mg", true, null, null)));
         when(specialOfferRepository.findActiveOffersForPricelist(eq(10L), any()))
-                .thenReturn(List.of(offer(pricelist, DiscountType.PERCENTAGE, "10.00")));
+                .thenReturn(List.of(offer(pricelist, 101L, DiscountType.PERCENTAGE, "10.00")));
 
         ValidationResultDTO result = service.validateOrderDocument("buyer", file);
 
@@ -139,6 +141,81 @@ class OrderValidationServiceImplTest {
         assertEquals(DiscountType.PERCENTAGE, result.getValidatedItems().get(0).getDiscountType());
         assertEquals(new BigDecimal("81.00"), result.getValidatedItems().get(0).getFinalUnitPrice());
         assertEquals(new BigDecimal("4455.00"), result.getTotalPrice());
+    }
+
+    @Test
+    void discontinuedVariantWithValidSuccessorReturnsReplacementSuggestion() throws Exception {
+        when(parser.parse(file)).thenReturn(List.of(new OrderDocumentItemDTO(202L, 55)));
+        when(catalogService.findVariantsByIdsIncludingInactive(any()))
+                .thenReturn(
+                        Map.of(202L, catalogVariant(202L, "Old Medicine 10mg", false, 303L, "Replacement Medicine 20mg")),
+                        Map.of(303L, catalogVariant(303L, "Replacement Medicine 20mg", true, null, null))
+                );
+
+        ValidationResultDTO result = service.validateOrderDocument("buyer", file);
+
+        assertFalse(result.isValid());
+        assertEquals(0, result.getInvalidItems().size());
+        assertEquals(1, result.getReplacements().size());
+        ReplacementSuggestionDTO replacement = result.getReplacements().get(0);
+        assertEquals(202L, replacement.getOldVariantId());
+        assertEquals(303L, replacement.getNewVariantId());
+        assertEquals(new BigDecimal("80.00"), replacement.getCurrentUnitPrice());
+        assertEquals(new BigDecimal("80.00"), replacement.getFinalUnitPrice());
+        assertEquals(new BigDecimal("4400.00"), replacement.getLineTotal());
+        assertEquals(new BigDecimal("0.00"), result.getTotalPrice());
+    }
+
+    @Test
+    void successorNotInActivePricelistReturnsInvalidItem() throws Exception {
+        when(parser.parse(file)).thenReturn(List.of(new OrderDocumentItemDTO(202L, 10)));
+        when(catalogService.findVariantsByIdsIncludingInactive(any()))
+                .thenReturn(
+                        Map.of(202L, catalogVariant(202L, "Old Medicine 10mg", false, 404L, "Missing Replacement 20mg")),
+                        Map.of(404L, catalogVariant(404L, "Missing Replacement 20mg", true, null, null))
+                );
+
+        ValidationResultDTO result = service.validateOrderDocument("buyer", file);
+
+        assertFalse(result.isValid());
+        assertEquals(0, result.getReplacements().size());
+        assertEquals(1, result.getInvalidItems().size());
+        assertEquals("REPLACEMENT_NOT_IN_PRICELIST", result.getInvalidItems().get(0).getErrorCode());
+    }
+
+    @Test
+    void discontinuedVariantWithoutSuccessorReturnsInvalidItem() throws Exception {
+        when(parser.parse(file)).thenReturn(List.of(new OrderDocumentItemDTO(202L, 10)));
+        when(catalogService.findVariantsByIdsIncludingInactive(any()))
+                .thenReturn(Map.of(202L, catalogVariant(202L, "Old Medicine 10mg", false, null, null)));
+
+        ValidationResultDTO result = service.validateOrderDocument("buyer", file);
+
+        assertFalse(result.isValid());
+        assertEquals(0, result.getReplacements().size());
+        assertEquals(1, result.getInvalidItems().size());
+        assertEquals("DISCONTINUED_NO_REPLACEMENT", result.getInvalidItems().get(0).getErrorCode());
+    }
+
+    @Test
+    void replacementCalculationAppliesDiscount() throws Exception {
+        when(parser.parse(file)).thenReturn(List.of(new OrderDocumentItemDTO(202L, 55)));
+        when(catalogService.findVariantsByIdsIncludingInactive(any()))
+                .thenReturn(
+                        Map.of(202L, catalogVariant(202L, "Old Medicine 10mg", false, 303L, "Replacement Medicine 20mg")),
+                        Map.of(303L, catalogVariant(303L, "Replacement Medicine 20mg", true, null, null))
+                );
+        when(specialOfferRepository.findActiveOffersForPricelist(eq(10L), any()))
+                .thenReturn(List.of(offer(pricelist, 303L, DiscountType.PERCENTAGE, "10.00")));
+
+        ValidationResultDTO result = service.validateOrderDocument("buyer", file);
+
+        ReplacementSuggestionDTO replacement = result.getReplacements().get(0);
+        assertEquals(new BigDecimal("80.00"), replacement.getCurrentUnitPrice());
+        assertEquals(new BigDecimal("8.00"), replacement.getDiscountAmount());
+        assertEquals(new BigDecimal("10.00"), replacement.getDiscountPercentage());
+        assertEquals(new BigDecimal("72.00"), replacement.getFinalUnitPrice());
+        assertEquals(new BigDecimal("3960.00"), replacement.getLineTotal());
     }
 
     private User buyer(String username, Region region, String customerSegment) {
@@ -169,6 +246,15 @@ class OrderValidationServiceImplTest {
                 threshold(51, null, "90.00")
         ));
         pricelist.addItem(item);
+
+        PricelistItem replacementItem = new PricelistItem();
+        replacementItem.setVariantId(303L);
+        replacementItem.setVariantName("Replacement Medicine 20mg");
+        replacementItem.setThresholds(List.of(
+                threshold(1, 50, "85.00"),
+                threshold(51, null, "80.00")
+        ));
+        pricelist.addItem(replacementItem);
         return pricelist;
     }
 
@@ -180,15 +266,19 @@ class OrderValidationServiceImplTest {
         return threshold;
     }
 
-    private SpecialOffer offer(Pricelist pricelist, DiscountType type, String value) {
+    private SpecialOffer offer(Pricelist pricelist, Long variantId, DiscountType type, String value) {
         SpecialOffer offer = new SpecialOffer();
         offer.setPricelist(pricelist);
-        offer.setVariantId(101L);
-        offer.setVariantName("Medicine A 10mg");
+        offer.setVariantId(variantId);
+        offer.setVariantName(variantId.equals(303L) ? "Replacement Medicine 20mg" : "Medicine A 10mg");
         offer.setDiscountType(type);
         offer.setDiscountValue(new BigDecimal(value));
         offer.setStatus(SpecialOfferStatus.ACTIVE);
         return offer;
+    }
+
+    private CatalogVariantDTO catalogVariant(Long id, String name, boolean active, Long replacementVariantId, String replacementVariantName) {
+        return new CatalogVariantDTO(id, name, active, replacementVariantId, replacementVariantName);
     }
 
     private Region region(Long id, String name, String code) {
