@@ -15,6 +15,7 @@ import com.example.iisdrugcrm.repository.sales.workflow.SalesWorkflowRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.iisdrugcrm.domain.sales.SalesStage;
 
 import java.util.Comparator;
 import java.util.List;
@@ -130,6 +131,35 @@ public class SalesWorkflowService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public boolean isTransitionAllowed(SalesStage currentStage, SalesStage targetStage) {
+        SalesWorkflow workflow = findActiveWorkflowByRegion("GLOBAL");
+
+        SalesStageDefinition fromStage = findStageDefinition(workflow.getId(), currentStage);
+        SalesStageDefinition toStage = findStageDefinition(workflow.getId(), targetStage);
+
+        return transitionRepository
+                .findByWorkflow_IdAndFromStage_IdAndToStage_Id(
+                        workflow.getId(),
+                        fromStage.getId(),
+                        toStage.getId()
+                )
+                .isPresent();
+    }
+
+    @Transactional(readOnly = true)
+    public List<SalesStage> getAvailableTransitions(SalesStage currentStage) {
+        SalesWorkflow workflow = findActiveWorkflowByRegion("GLOBAL");
+
+        SalesStageDefinition fromStage = findStageDefinition(workflow.getId(), currentStage);
+
+        return transitionRepository.findByWorkflow_Id(workflow.getId())
+                .stream()
+                .filter(transition -> transition.getFromStage().getId().equals(fromStage.getId()))
+                .map(transition -> mapWorkflowStageNameToEnumStage(transition.getToStage().getName()))
+                .toList();
+    }
+
     private SalesWorkflow findWorkflow(Long workflowId) {
         return workflowRepository.findById(workflowId)
                 .orElseThrow(() -> new EntityNotFoundException("Sales workflow not found"));
@@ -151,5 +181,49 @@ public class SalesWorkflowService {
         if (request.successfulEnd() && !request.endStage()) {
             throw new IllegalArgumentException("Successful end stage must also be marked as end stage");
         }
+    }
+
+    private SalesWorkflow findActiveWorkflowByRegion(String region) {
+        return workflowRepository.findByRegionAndActiveTrue(region)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Active sales workflow for region " + region + " not found."
+                ));
+    }
+
+    private SalesStageDefinition findStageDefinition(Long workflowId, SalesStage stage) {
+        String stageName = mapEnumStageToWorkflowStageName(stage);
+
+        return stageRepository.findByWorkflow_IdOrderByStageOrderAsc(workflowId)
+                .stream()
+                .filter(definition -> definition.getName().equals(stageName))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Stage " + stageName + " is not defined in active workflow."
+                ));
+    }
+
+    private String mapEnumStageToWorkflowStageName(SalesStage stage) {
+        return switch (stage) {
+            case NEW -> "New";
+            case CONTACTED -> "Contacted";
+            case QUALIFIED -> "Qualified";
+            case PROPOSAL_SENT -> "Proposal Sent";
+            case NEGOTIATION -> "Negotiation";
+            case WON -> "Closed Won";
+            case LOST -> "Closed Lost";
+        };
+    }
+
+    private SalesStage mapWorkflowStageNameToEnumStage(String stageName) {
+        return switch (stageName) {
+            case "New" -> SalesStage.NEW;
+            case "Contacted" -> SalesStage.CONTACTED;
+            case "Qualified" -> SalesStage.QUALIFIED;
+            case "Proposal Sent" -> SalesStage.PROPOSAL_SENT;
+            case "Negotiation" -> SalesStage.NEGOTIATION;
+            case "Closed Won" -> SalesStage.WON;
+            case "Closed Lost" -> SalesStage.LOST;
+            default -> throw new IllegalStateException("Unknown workflow stage name: " + stageName);
+        };
     }
 }
