@@ -24,3 +24,9 @@ export interface CreateContractRequest {
   endDate: string;
   terms?: string;
 }
+
+export interface UpdateContractRequest {
+  startDate: string;
+  endDate: string;
+  terms?: string;
+}
