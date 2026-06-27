@@ -158,7 +158,9 @@ export class AdminReportsComponent implements OnInit {
     const link = document.createElement('a');
     link.href = url;
     link.download = 'team-performance-report.pdf';
+    document.body.appendChild(link);
     link.click();
+    link.remove();
     window.URL.revokeObjectURL(url);
   }
 }
