@@ -277,6 +277,8 @@ class PricelistServiceImplTest {
         assertEquals(99L, event.userId());
         assertEquals(PricelistActionType.STATUS_CHANGE, event.actionType());
         assertEquals("Promenjen status iz DRAFT u IN_REVIEW", event.description());
+        assertEquals(PricelistStatus.DRAFT, event.statusFrom());
+        assertEquals(PricelistStatus.IN_REVIEW, event.statusTo());
     }
 
     @Test

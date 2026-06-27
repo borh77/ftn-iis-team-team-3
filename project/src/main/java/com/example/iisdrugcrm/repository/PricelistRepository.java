@@ -103,4 +103,20 @@ public interface PricelistRepository extends JpaRepository<Pricelist, Long> {
             @Param("customerSegment") String customerSegment,
             @Param("now") OffsetDateTime now
     );
+
+    @Query("""
+            select count(distinct p.id)
+            from Pricelist p
+            where p.status = :status
+              and (:teamId is null or exists (
+                  select 1
+                  from PricelistActivityLog log
+                  where log.pricelistId = p.id
+                    and log.teamId = :teamId
+              ))
+            """)
+    Long countByStatusAndOptionalAuditTeamId(
+            @Param("status") PricelistStatus status,
+            @Param("teamId") Long teamId
+    );
 }

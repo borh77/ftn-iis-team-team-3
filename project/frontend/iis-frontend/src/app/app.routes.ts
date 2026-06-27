@@ -10,6 +10,7 @@ import { EditReportComponent } from './features/adverse-effects/pages/edit-repor
 import { LoginComponent } from './pages/login/login.component';
 import { AdminUsersPageComponent } from './pages/admin-users/admin-users-page.component';
 import { AdminLogsComponent } from './pages/admin-logs/admin-logs.component';
+import { AdminReportsComponent } from './pages/admin-reports/admin-reports.component';
 import { TeamManagementComponent } from './pages/team-management/team-management.component';
 import { AdminRegionsPageComponent } from './pages/admin-regions/admin-regions-page.component';
 import { RoleLandingComponent } from './pages/role-landing/role-landing.component';
@@ -59,6 +60,13 @@ export const routes: Routes = [
 		canActivate: [authGuard, passwordChangeGuard],
 		data: { roles: ['ROLE_ADMIN'] },
 		title: 'IIS Drug CRM | Activity Logs',
+	},
+	{
+		path: 'admin/reports',
+		component: AdminReportsComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_ADMIN'] },
+		title: 'IIS Drug CRM | Performance Reports',
 	},
 	{
 		path: 'profile',
