@@ -1,0 +1,123 @@
+<section class="page-shell">
+  <header class="page-hero">
+    <p class="kicker">Administrator</p>
+    <h2>Izveštaji o performansama</h2>
+    <p>Generate productivity reports for all pricelist teams or one selected team.</p>
+  </header>
+
+  <section class="panel">
+    <form class="filters" [formGroup]="form" (ngSubmit)="generateReport()">
+      <label>
+        <span>Tim</span>
+        <select formControlName="teamMode">
+          <option value="all">Svi timovi</option>
+          <option value="specific">Određeni tim</option>
+        </select>
+      </label>
+
+      @if (isSpecificTeam()) {
+        <label>
+          <span>Team ID</span>
+          <input type="number" min="1" formControlName="teamId" placeholder="Unesite ID tima" />
+        </label>
+      }
+
+      <label>
+        <span>Start date</span>
+        <input type="datetime-local" formControlName="start" />
+      </label>
+
+      <label>
+        <span>End date</span>
+        <input type="datetime-local" formControlName="end" />
+      </label>
+
+      <button type="submit" [disabled]="loading">Generiši izveštaj</button>
+    </form>
+
+    @if (submitted && form.invalid) {
+      <p class="error">Start and end dates are required.</p>
+    } @else if (submitted && isSpecificTeam() && !form.controls.teamId.value.trim()) {
+      <p class="error">Team ID is required for a specific team report.</p>
+    }
+  </section>
+
+  @if (loading) {
+    <section class="panel">
+      <p class="muted">Generating report...</p>
+    </section>
+  } @else if (errorMessage) {
+    <section class="panel">
+      <p class="error">{{ errorMessage }}</p>
+    </section>
+  } @else if (!report) {
+    <section class="panel empty-state">
+      <h3>No report generated yet</h3>
+      <p>Select a period and generate a report to review team performance metrics.</p>
+    </section>
+  } @else {
+    @if (report.teamFilterLimitation) {
+      <section class="notice">
+        {{ report.teamFilterLimitation }}
+      </section>
+    }
+
+    <section class="kpi-grid">
+      <article class="kpi-card">
+        <span>Prosečno vreme obrade</span>
+        <strong>{{ formatHours(report.averageTotalProcessingTimeHours) }}</strong>
+      </article>
+      <article class="kpi-card">
+        <span>Prosečno vreme u review fazi</span>
+        <strong>{{ formatHours(report.averageReviewTimeHours) }}</strong>
+      </article>
+      <article class="kpi-card">
+        <span>Broj aktiviranih cenovnika</span>
+        <strong>{{ report.activatedPricelistsCount }}</strong>
+      </article>
+      <article class="kpi-card warning">
+        <span>Broj zaglavljenih u DRAFT</span>
+        <strong>{{ report.stuckDraftCount }}</strong>
+      </article>
+      <article class="kpi-card warning">
+        <span>Broj zaglavljenih u IN_REVIEW</span>
+        <strong>{{ report.stuckInReviewCount }}</strong>
+      </article>
+    </section>
+
+    @if (showEmptyState()) {
+      <section class="panel empty-state">
+        <h3>No activated pricelists</h3>
+        <p>No pricelists reached ACTIVE during the selected period.</p>
+      </section>
+    }
+
+    <section class="panel">
+      <header class="panel-head">
+        <div>
+          <p class="kicker">Monthly trend</p>
+          <h3>Average total processing time</h3>
+        </div>
+      </header>
+
+      @if (report.monthlyTrend.length === 0) {
+        <p class="muted">No monthly trend data is available for the selected period.</p>
+      } @else {
+        <div class="trend-list">
+          @for (point of report.monthlyTrend; track point.month) {
+            <div class="trend-row">
+              <span class="trend-month">{{ point.month }}</span>
+              <div class="trend-bar-track">
+                <div class="trend-bar" [style.width]="trendWidth(point)"></div>
+              </div>
+              <span class="trend-value">
+                {{ formatHours(point.averageTotalProcessingTimeHours) }}
+                · {{ point.activatedPricelistsCount }} activated
+              </span>
+            </div>
+          }
+        </div>
+      }
+    </section>
+  }
+</section>
