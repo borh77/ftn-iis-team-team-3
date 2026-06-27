@@ -31,7 +31,9 @@ export class AdminReportsComponent implements OnInit {
   });
 
   loading = false;
+  pdfDownloading = false;
   errorMessage = '';
+  pdfErrorMessage = '';
   submitted = false;
   report: TeamPerformanceReport | null = null;
 
@@ -49,6 +51,7 @@ export class AdminReportsComponent implements OnInit {
   generateReport(): void {
     this.submitted = true;
     this.errorMessage = '';
+    this.pdfErrorMessage = '';
 
     if (this.form.invalid || !this.hasValidTeamFilter()) {
       this.form.markAllAsTouched();
@@ -66,6 +69,30 @@ export class AdminReportsComponent implements OnInit {
         this.loading = false;
         this.report = null;
         this.errorMessage = 'Unable to generate the report for the selected period.';
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  downloadPdf(): void {
+    this.submitted = true;
+    this.pdfErrorMessage = '';
+
+    if (this.form.invalid || !this.hasValidTeamFilter()) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    this.pdfDownloading = true;
+    this.analyticsService.downloadPerformanceReportPdf(this.buildFilters()).subscribe({
+      next: (blob) => {
+        this.pdfDownloading = false;
+        this.savePdf(blob);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.pdfDownloading = false;
+        this.pdfErrorMessage = 'Unable to download the PDF report for the selected period.';
         this.cdr.detectChanges();
       },
     });
@@ -124,5 +151,14 @@ export class AdminReportsComponent implements OnInit {
   private toDateTimeLocal(date: Date): string {
     const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
     return local.toISOString().slice(0, 16);
+  }
+
+  private savePdf(blob: Blob): void {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'team-performance-report.pdf';
+    link.click();
+    window.URL.revokeObjectURL(url);
   }
 }

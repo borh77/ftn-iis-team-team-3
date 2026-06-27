@@ -81,15 +81,30 @@ export class AnalyticsService {
   }
 
   getPerformanceReport(filters: PerformanceReportFilters): Observable<TeamPerformanceReport> {
+    const params = this.performanceReportParams(filters);
+
+    return this.http.get<TeamPerformanceReport>(
+      `${this.apiBaseUrl}/api/admin/analytics/performance`,
+      { params },
+    );
+  }
+
+  downloadPerformanceReportPdf(filters: PerformanceReportFilters): Observable<Blob> {
+    const params = this.performanceReportParams(filters);
+
+    return this.http.get(`${this.apiBaseUrl}/api/admin/analytics/performance/pdf`, {
+      params,
+      responseType: 'blob',
+    });
+  }
+
+  private performanceReportParams(filters: PerformanceReportFilters): HttpParams {
     let params = new HttpParams().set('start', filters.start).set('end', filters.end);
 
     if (filters.teamId !== null && filters.teamId !== undefined) {
       params = params.set('teamId', filters.teamId.toString());
     }
 
-    return this.http.get<TeamPerformanceReport>(
-      `${this.apiBaseUrl}/api/admin/analytics/performance`,
-      { params },
-    );
+    return params;
   }
 }

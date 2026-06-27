@@ -32,13 +32,22 @@
         <input type="datetime-local" formControlName="end" />
       </label>
 
-      <button type="submit" [disabled]="loading">Generate report</button>
+      <div class="actions">
+        <button type="submit" [disabled]="loading || pdfDownloading">Generate report</button>
+        <button type="button" class="secondary" [disabled]="loading || pdfDownloading" (click)="downloadPdf()">
+          {{ pdfDownloading ? 'Downloading...' : 'Preuzmi PDF' }}
+        </button>
+      </div>
     </form>
 
     @if (submitted && form.invalid) {
       <p class="error">Start and end dates are required.</p>
     } @else if (submitted && isSpecificTeam() && !form.controls.teamId.value.trim()) {
       <p class="error">Team ID is required for a specific team report.</p>
+    }
+
+    @if (pdfErrorMessage) {
+      <p class="error">{{ pdfErrorMessage }}</p>
     }
   </section>
 
@@ -112,7 +121,7 @@
               </div>
               <span class="trend-value">
                 {{ formatHours(point.averageTotalProcessingTimeHours) }}
-                · {{ point.activatedPricelistsCount }} activated
+                | {{ point.activatedPricelistsCount }} activated
               </span>
             </div>
           }
