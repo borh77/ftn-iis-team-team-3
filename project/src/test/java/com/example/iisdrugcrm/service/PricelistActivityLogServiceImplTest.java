@@ -89,7 +89,30 @@ class PricelistActivityLogServiceImplTest {
     }
 
     @Test
-    void getPerformanceReportMapsAveragesTeamFilterAndStuckCounts() {
+    void getPerformanceReportCalculatesTotalAndReviewTimeFromRepositoryProjection() {
+        OffsetDateTime start = OffsetDateTime.parse("2026-06-01T00:00:00Z");
+        OffsetDateTime end = OffsetDateTime.parse("2026-06-30T23:59:59Z");
+        PerformanceSummaryStub summary = new PerformanceSummaryStub(
+                1L,
+                new BigDecimal("60.00"),
+                new BigDecimal("36.00")
+        );
+        when(repository.findPerformanceSummary(null, start, end)).thenReturn(summary);
+        when(repository.findMonthlyPerformanceTrend(null, start, end))
+                .thenReturn(List.of(new MonthlyPerformanceStub("2026-06", new BigDecimal("60.00"), 1L)));
+        when(pricelistRepository.countByStatusAndOptionalAuditTeamId(PricelistStatus.DRAFT, null)).thenReturn(0L);
+        when(pricelistRepository.countByStatusAndOptionalAuditTeamId(PricelistStatus.IN_REVIEW, null)).thenReturn(0L);
+
+        TeamPerformanceReportDTO report = service.getPerformanceReport(null, start, end);
+
+        assertEquals(new BigDecimal("60.00"), report.getAverageTotalProcessingTimeHours());
+        assertEquals(new BigDecimal("36.00"), report.getAverageReviewTimeHours());
+        assertEquals(1L, report.getActivatedPricelistsCount());
+        assertEquals(new BigDecimal("60.00"), report.getMonthlyTrend().get(0).getAverageTotalProcessingTimeHours());
+    }
+
+    @Test
+    void getPerformanceReportMapsTeamFilterPeriodAndStuckCounts() {
         OffsetDateTime start = OffsetDateTime.parse("2026-06-01T00:00:00+02:00");
         OffsetDateTime end = OffsetDateTime.parse("2026-06-30T23:59:59+02:00");
         PerformanceSummaryStub summary = new PerformanceSummaryStub(
@@ -118,6 +141,26 @@ class PricelistActivityLogServiceImplTest {
         verify(repository).findPerformanceSummary(5L, OffsetDateTime.parse("2026-05-31T22:00:00Z"), OffsetDateTime.parse("2026-06-30T21:59:59Z"));
         verify(pricelistRepository).countByStatusAndOptionalAuditTeamId(PricelistStatus.DRAFT, 5L);
         verify(pricelistRepository).countByStatusAndOptionalAuditTeamId(PricelistStatus.IN_REVIEW, 5L);
+    }
+
+    @Test
+    void getPerformanceReportForAllTeamsPassesNullTeamFilterAndSelectedActivationPeriod() {
+        OffsetDateTime start = OffsetDateTime.parse("2026-07-01T00:00:00Z");
+        OffsetDateTime end = OffsetDateTime.parse("2026-07-31T23:59:59Z");
+        when(repository.findPerformanceSummary(null, start, end))
+                .thenReturn(new PerformanceSummaryStub(0L, BigDecimal.ZERO, BigDecimal.ZERO));
+        when(repository.findMonthlyPerformanceTrend(null, start, end)).thenReturn(List.of());
+        when(pricelistRepository.countByStatusAndOptionalAuditTeamId(PricelistStatus.DRAFT, null)).thenReturn(4L);
+        when(pricelistRepository.countByStatusAndOptionalAuditTeamId(PricelistStatus.IN_REVIEW, null)).thenReturn(2L);
+
+        TeamPerformanceReportDTO report = service.getPerformanceReport(null, start, end);
+
+        assertEquals(null, report.getTeamId());
+        assertEquals(4L, report.getStuckDraftCount());
+        assertEquals(2L, report.getStuckInReviewCount());
+        assertEquals(null, report.getTeamFilterLimitation());
+        verify(repository).findPerformanceSummary(null, start, end);
+        verify(repository).findMonthlyPerformanceTrend(null, start, end);
     }
 
     private record PerformanceSummaryStub(
