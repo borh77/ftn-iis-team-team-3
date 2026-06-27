@@ -17,6 +17,8 @@ import {
   VariantVersionStatusCountResponse,
   ProductCountByTherapeuticAreaResponse,
   RegionResponse,
+  MarketLicenseStatusCountResponse,
+  MarketProductCountByRegionResponse,
 } from '../../core/portfolio/portfolio.models';
 
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -78,6 +80,9 @@ export class PortfolioPageComponent implements OnInit {
     readonly loadingMarketLicenseHistory = signal(false);
     readonly loadingVariantLifecycleHistory = signal(false);
     readonly loadingAnalytics = signal(false);
+
+    readonly marketLicenseStatusCounts = signal<MarketLicenseStatusCountResponse[]>([]);
+    readonly marketProductsByRegion = signal<MarketProductCountByRegionResponse[]>([]);
 
 
     savingProduct = false;
@@ -631,6 +636,16 @@ loadAnalytics(): void {
     error: () => this.errorMessage.set('Failed to load therapeutic area analytics.'),
   });
 
+  this.portfolioService.getMarketLicenseStatusCount().subscribe({
+    next: (items) => this.marketLicenseStatusCounts.set(items),
+    error: () => this.errorMessage.set('Failed to load market license status analytics.'),
+  });
+
+  this.portfolioService.getMarketProductsByRegion().subscribe({
+    next: (items) => this.marketProductsByRegion.set(items),
+    error: () => this.errorMessage.set('Failed to load market products by region analytics.'),
+  });
+
   this.portfolioService.getLicensesExpiringUntil(this.expiringUntilDate()).subscribe({
     next: (items) => {
       this.expiringLicenses.set(items);
@@ -641,6 +656,27 @@ loadAnalytics(): void {
       this.errorMessage.set('Failed to load expiring licenses.');
     },
   });
+}
+
+downloadAnalyticsReport(): void {
+  this.portfolioService
+    .downloadPortfolioAnalyticsReport(this.expiringUntilDate())
+    .subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'portfolio-analytics-report.pdf';
+
+        link.click();
+
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.errorMessage.set('Failed to generate analytics report.');
+      },
+    });
 }
 
 loadVersionHistory(versionId: number): void {

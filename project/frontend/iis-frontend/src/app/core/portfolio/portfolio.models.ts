@@ -244,30 +244,14 @@ export interface RegionResponse {
   code: string;
 }
 
-export interface MarketLicenseResponse {
-  id: number;
+export interface MarketLicenseStatusCountResponse {
+  status: MarketLicenseStatus;
+  count: number;
+}
 
-  marketProductId: number;
-  productName: string;
-  variantForm: string;
-  variantDosage: string;
+export interface MarketProductCountByRegionResponse {
+  regionId: number;
   regionName: string;
-  variantVersionId: number;
-  versionLabel: string;
-  licenseNumber: string;
-  issuedAt: string | null;
-  validUntil: string | null;
-  status: MarketLicenseStatus;
-}
-
-export interface MarketLicenseRequest {
-  marketProductId: number;
-  variantVersionId: number;
-  licenseNumber: string;
-  issuedAt: string | null;
-  validUntil: string | null;
-}
-
-export interface MarketLicenseStatusRequest {
-  status: MarketLicenseStatus;
+  regionCode: string;
+  marketProductCount: number;
 }

@@ -798,7 +798,21 @@
         <p class="muted">Overview of lifecycle states, hierarchy distribution and expiring licenses.</p>
       </div>
 
-      <button type="button" class="secondary" (click)="loadAnalytics()">Refresh</button>
+      <div style="display:flex; gap:12px;">
+        <button
+          type="button"
+          class="secondary"
+          (click)="loadAnalytics()">
+          Refresh
+        </button>
+
+        <button
+          type="button"
+          class="primary"
+          (click)="downloadAnalyticsReport()">
+          Download PDF
+        </button>
+      </div>
     </div>
 
     @if (loadingAnalytics()) {
@@ -833,6 +847,34 @@
       </section>
 
       <section class="sub-panel">
+        <h4>Market licenses by status</h4>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Count</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (item of marketLicenseStatusCounts(); track item.status) {
+                <tr>
+                  <td>{{ item.status }}</td>
+                  <td>{{ item.count }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="2">No market license analytics found.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="sub-panel">
         <h4>Active products by therapeutic area</h4>
 
         <div class="table-wrap">
@@ -853,6 +895,36 @@
               } @empty {
                 <tr>
                   <td colspan="2">No therapeutic area analytics found.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="sub-panel">
+        <h4>Market products by region</h4>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Region</th>
+                <th>Region code</th>
+                <th>Market product count</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (item of marketProductsByRegion(); track item.regionId) {
+                <tr>
+                  <td>{{ item.regionName }}</td>
+                  <td>{{ item.regionCode }}</td>
+                  <td>{{ item.marketProductCount }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="3">No market products by region found.</td>
                 </tr>
               }
             </tbody>

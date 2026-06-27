@@ -8,6 +8,12 @@ import com.example.iisdrugcrm.repository.portfolio.VariantVersionLifecycleHistor
 import com.example.iisdrugcrm.repository.portfolio.VariantVersionRepository;
 import org.springframework.stereotype.Service;
 
+import com.example.iisdrugcrm.domain.portfolio.EntityStatus;
+import com.example.iisdrugcrm.dto.portfolio.MarketLicenseStatusCountDTO;
+import com.example.iisdrugcrm.dto.portfolio.MarketProductCountByRegionDTO;
+import com.example.iisdrugcrm.repository.portfolio.MarketLicenseRepository;
+import com.example.iisdrugcrm.repository.portfolio.MarketProductRepository;
+
 
 import java.util.List;
 
@@ -19,14 +25,21 @@ public class PortfolioAnalyticsServiceImpl implements PortfolioAnalyticsService 
 
     private final ProductRepository productRepository;
 
+    private final MarketLicenseRepository marketLicenseRepository;
+    private final MarketProductRepository marketProductRepository;
+
     public PortfolioAnalyticsServiceImpl(
-            VariantVersionRepository variantVersionRepository,
-            VariantVersionLifecycleHistoryRepository lifecycleHistoryRepository,
-            ProductRepository productRepository
+        VariantVersionRepository variantVersionRepository,
+        VariantVersionLifecycleHistoryRepository lifecycleHistoryRepository,
+        ProductRepository productRepository,
+        MarketLicenseRepository marketLicenseRepository,
+        MarketProductRepository marketProductRepository
     ) {
         this.variantVersionRepository = variantVersionRepository;
         this.lifecycleHistoryRepository = lifecycleHistoryRepository;
         this.productRepository = productRepository;
+        this.marketLicenseRepository = marketLicenseRepository;
+        this.marketProductRepository = marketProductRepository;
     }
 
     @Override
@@ -49,4 +62,15 @@ public class PortfolioAnalyticsServiceImpl implements PortfolioAnalyticsService 
     public List<ProductCountByTherapeuticAreaDTO> getActiveProductCountByTherapeuticArea() {
         return productRepository.countActiveProductsByTherapeuticArea();
     }
+
+    @Override
+    public List<MarketLicenseStatusCountDTO> getMarketLicenseStatusCount() {
+        return marketLicenseRepository.countByStatus();
+    }
+
+    @Override
+    public List<MarketProductCountByRegionDTO> getActiveMarketProductCountByRegion() {
+        return marketProductRepository.countActiveMarketProductsByRegion(EntityStatus.ACTIVE);
+    }
+
 }

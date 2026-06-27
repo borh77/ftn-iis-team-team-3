@@ -5,6 +5,8 @@ import com.example.iisdrugcrm.domain.portfolio.MarketLicenseStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import com.example.iisdrugcrm.dto.portfolio.MarketLicenseStatusCountDTO;
+
 import java.time.LocalDate;
 import java.util.List;
 
@@ -103,4 +105,16 @@ public interface MarketLicenseRepository extends JpaRepository<MarketLicense, Lo
           AND ml.status IN ('APPROVED', 'RENEWAL_IN_PROGRESS')
     """)
     List<MarketLicense> findLicensesExpiringUntil(LocalDate date);
+
+    @Query("""
+        SELECT new com.example.iisdrugcrm.dto.portfolio.MarketLicenseStatusCountDTO(
+            ml.status,
+            COUNT(ml)
+        )
+        FROM MarketLicense ml
+        GROUP BY ml.status
+        ORDER BY ml.status
+    """)
+    List<MarketLicenseStatusCountDTO> countByStatus();
+
 }
