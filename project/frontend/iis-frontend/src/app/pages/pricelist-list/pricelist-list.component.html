@@ -169,6 +169,81 @@
                 </div>
               </div>
 
+              <section class="suggestions-panel">
+                <div class="panel-head compact">
+                  <div>
+                    <h4>Sistemske preporuke za popuste</h4>
+                    <p class="muted">Generate system recommendations for the selected customer segment, then copy one into the offer form.</p>
+                  </div>
+                </div>
+
+                <div class="suggestion-controls">
+                  <label>
+                    <span>Customer segment</span>
+                    <input
+                      type="text"
+                      list="promotion-segments"
+                      [(ngModel)]="suggestionSegmentByPricelist[p.id]"
+                      [ngModelOptions]="{standalone: true}"
+                    />
+                    <datalist id="promotion-segments">
+                      @for (segment of segmentOptions(); track segment) {
+                        <option [value]="segment"></option>
+                      }
+                    </datalist>
+                  </label>
+
+                  <button type="button" class="secondary" (click)="generatePromotionSuggestions(p)" [disabled]="isLoadingSuggestions(p)">
+                    {{ isLoadingSuggestions(p) ? 'Generating...' : 'Generiši predloge' }}
+                  </button>
+                </div>
+
+                @if (suggestionErrorByPricelist[p.id]) {
+                  <p class="inline-error" role="alert">{{ suggestionErrorByPricelist[p.id] }}</p>
+                }
+
+                @if (isLoadingSuggestions(p)) {
+                  <p class="muted">Loading promotion suggestions...</p>
+                } @else if (promotionSuggestionsByPricelist[p.id]) {
+                  @if (promotionSuggestionsByPricelist[p.id].length) {
+                    <div class="suggestion-grid">
+                      @for (suggestion of promotionSuggestionsByPricelist[p.id]; track (suggestion.variantId ?? suggestion.brandId ?? 0) + '-' + $index) {
+                        <article class="suggestion-card">
+                          <div class="suggestion-card__head">
+                            <div>
+                              <span class="suggestion-type">{{ targetType(suggestion) }}</span>
+                              <h5>{{ suggestion.targetName }}</h5>
+                            </div>
+                            <strong>{{ suggestion.suggestedDiscountValue | number:'1.0-2' }}% off</strong>
+                          </div>
+
+                          <p>{{ suggestion.reason }}</p>
+
+                          @if (suggestion.expectedEffect) {
+                            <p class="muted">{{ suggestion.expectedEffect }}</p>
+                          }
+
+                          @if (suggestion.source) {
+                            <span class="source-badge">{{ suggestion.source }}</span>
+                          }
+
+                          <div class="suggestion-actions">
+                            <button type="button" class="primary" (click)="applyPromotionSuggestion(p, suggestion)">
+                              Kreiraj ponudu na osnovu predloga
+                            </button>
+                            <button type="button" class="ghost" (click)="dismissPromotionSuggestion(p, suggestion)">
+                              Odbaci
+                            </button>
+                          </div>
+                        </article>
+                      }
+                    </div>
+                  } @else {
+                    <p class="muted">Nema dostupnih predloga za izabrani segment.</p>
+                  }
+                }
+              </section>
+
               <div class="offer-form">
                 <label>
                   <span>Variant</span>
