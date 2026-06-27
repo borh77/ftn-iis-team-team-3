@@ -5,6 +5,8 @@ import com.example.iisdrugcrm.domain.portfolio.MarketProduct;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import com.example.iisdrugcrm.dto.portfolio.MarketProductCountByRegionDTO;
+
 import java.util.List;
 
 public interface MarketProductRepository extends JpaRepository<MarketProduct, Long> {
@@ -70,4 +72,20 @@ public interface MarketProductRepository extends JpaRepository<MarketProduct, Lo
            OR LOWER(r.name) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
     """)
     List<MarketProduct> searchByTextWithRelations(String search);
+
+    @Query("""
+        SELECT new com.example.iisdrugcrm.dto.portfolio.MarketProductCountByRegionDTO(
+            r.id,
+            r.name,
+            r.code,
+            COUNT(mp)
+        )
+        FROM MarketProduct mp
+        JOIN mp.region r
+        WHERE mp.status = :status
+        GROUP BY r.id, r.name, r.code
+        ORDER BY r.name
+    """)
+    List<MarketProductCountByRegionDTO> countActiveMarketProductsByRegion(EntityStatus status);
+
 }

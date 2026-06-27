@@ -5,6 +5,9 @@ import com.example.iisdrugcrm.dto.portfolio.VariantVersionStatusCountDTO;
 
 import com.example.iisdrugcrm.dto.portfolio.ProductCountByTherapeuticAreaDTO;
 
+import com.example.iisdrugcrm.dto.portfolio.MarketLicenseStatusCountDTO;
+import com.example.iisdrugcrm.dto.portfolio.MarketProductCountByRegionDTO;
+
 import java.util.List;
 
 public interface PortfolioAnalyticsService {
@@ -15,4 +18,8 @@ public interface PortfolioAnalyticsService {
     getVariantLifecycleHistory(Long variantId);
 
     List<ProductCountByTherapeuticAreaDTO> getActiveProductCountByTherapeuticArea();
+
+    List<MarketLicenseStatusCountDTO> getMarketLicenseStatusCount();
+
+    List<MarketProductCountByRegionDTO> getActiveMarketProductCountByRegion();
 }

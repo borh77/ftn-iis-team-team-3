@@ -7,6 +7,9 @@ import org.springframework.web.bind.annotation.*;
 import com.example.iisdrugcrm.dto.portfolio.VariantVersionLifecycleHistoryResponseDTO;
 import com.example.iisdrugcrm.dto.portfolio.ProductCountByTherapeuticAreaDTO;
 
+import com.example.iisdrugcrm.dto.portfolio.MarketLicenseStatusCountDTO;
+import com.example.iisdrugcrm.dto.portfolio.MarketProductCountByRegionDTO;
+
 import java.util.List;
 
 @RestController
@@ -40,4 +43,15 @@ public class PortfolioAnalyticsController {
     public List<ProductCountByTherapeuticAreaDTO> getActiveProductCountByTherapeuticArea() {
         return portfolioAnalyticsService.getActiveProductCountByTherapeuticArea();
     }
+
+    @GetMapping("/market-license-status-count")
+    public List<MarketLicenseStatusCountDTO> getMarketLicenseStatusCount() {
+        return portfolioAnalyticsService.getMarketLicenseStatusCount();
+    }
+
+    @GetMapping("/market-products/by-region")
+    public List<MarketProductCountByRegionDTO> getActiveMarketProductCountByRegion() {
+        return portfolioAnalyticsService.getActiveMarketProductCountByRegion();
+    }
+
 }
