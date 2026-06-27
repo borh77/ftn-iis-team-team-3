@@ -105,6 +105,23 @@ public class SalesProcessService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<SalesStage> getAvailableTransitions(Long processId) {
+        SalesProcess process = salesProcessRepository.findWithCustomerById(processId)
+                .orElseThrow(() -> new IllegalArgumentException("Sales process not found."));
+
+        SalesWorkflow workflow = salesWorkflowRepository.findByRegionAndActiveTrue("GLOBAL")
+                .orElseThrow(() -> new IllegalStateException("Active sales workflow for GLOBAL region not found."));
+
+        SalesStageDefinition currentStage = findStageDefinition(workflow.getId(), process.getStage());
+
+        return salesStageTransitionRepository.findByWorkflow_Id(workflow.getId())
+                .stream()
+                .filter(transition -> transition.getFromStage().getId().equals(currentStage.getId()))
+                .map(transition -> mapWorkflowStageNameToEnumStage(transition.getToStage().getName()))
+                .toList();
+    }
+
     private void validateWorkflowTransition(SalesStage currentStage, SalesStage targetStage) {
         SalesWorkflow workflow = salesWorkflowRepository.findByRegionAndActiveTrue("GLOBAL")
                 .orElseThrow(() -> new IllegalStateException("Active sales workflow for GLOBAL region not found."));
@@ -144,6 +161,19 @@ public class SalesProcessService {
             case NEGOTIATION -> "Negotiation";
             case WON -> "Closed Won";
             case LOST -> "Closed Lost";
+        };
+    }
+
+    private SalesStage mapWorkflowStageNameToEnumStage(String stageName) {
+        return switch (stageName) {
+            case "New" -> SalesStage.NEW;
+            case "Contacted" -> SalesStage.CONTACTED;
+            case "Qualified" -> SalesStage.QUALIFIED;
+            case "Proposal Sent" -> SalesStage.PROPOSAL_SENT;
+            case "Negotiation" -> SalesStage.NEGOTIATION;
+            case "Closed Won" -> SalesStage.WON;
+            case "Closed Lost" -> SalesStage.LOST;
+            default -> throw new IllegalStateException("Unknown workflow stage name: " + stageName);
         };
     }
 
