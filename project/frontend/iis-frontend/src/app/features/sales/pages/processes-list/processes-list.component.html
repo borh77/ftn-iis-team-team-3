@@ -78,7 +78,11 @@
                 [ngModel]="process.stage"
                 (ngModelChange)="updateStage(process, $event)"
                 name="stage-{{ process.id }}">
-                <option *ngFor="let stage of stages" [ngValue]="stage">
+                <option [ngValue]="process.stage">
+                  {{ process.stage }}
+                </option>
+
+                <option *ngFor="let stage of getAvailableStages(process)" [ngValue]="stage">
                   {{ stage }}
                 </option>
               </select>

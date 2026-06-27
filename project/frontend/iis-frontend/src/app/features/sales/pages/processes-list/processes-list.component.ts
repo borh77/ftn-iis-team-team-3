@@ -25,6 +25,7 @@ export class ProcessesListComponent implements OnInit {
   private readonly router = inject(Router);
 
   processes: SalesProcess[] = [];
+  availableTransitionsByProcessId: Record<number, SalesStage[]> = {};
   customers: Customer[] = [];
 
   loading = true;
@@ -96,6 +97,7 @@ export class ProcessesListComponent implements OnInit {
     this.salesApiService.getSalesProcesses().subscribe({
       next: (response) => {
         this.processes = response ?? [];
+        this.loadAvailableTransitions();
         this.loading = false;
         this.cdr.detectChanges();
       },
@@ -179,6 +181,28 @@ export class ProcessesListComponent implements OnInit {
         },
       ],
     };
+  }
+
+  loadAvailableTransitions(): void {
+    this.availableTransitionsByProcessId = {};
+
+    this.processes.forEach((process) => {
+      this.salesApiService.getAvailableStageTransitions(process.id).subscribe({
+        next: (stages) => {
+          this.availableTransitionsByProcessId[process.id] = stages ?? [];
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error(`Failed to load available transitions for process ${process.id}:`, error);
+          this.availableTransitionsByProcessId[process.id] = [];
+          this.cdr.detectChanges();
+        },
+      });
+    });
+  }
+
+  getAvailableStages(process: SalesProcess): SalesStage[] {
+    return this.availableTransitionsByProcessId[process.id] ?? [];
   }
 
   createOffer(): void {

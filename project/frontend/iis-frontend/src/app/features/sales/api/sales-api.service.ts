@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../../../core/api.token';
 import { Lead, LeadRequest } from '../models/lead.model';
 import { Customer, CustomerRequest } from '../models/customer.model';
-import { SalesProcess, SalesProcessRequest, UpdateSalesStageRequest } from '../models/sales-process.model';
+import { SalesProcess, SalesProcessRequest, UpdateSalesStageRequest, SalesStage } from '../models/sales-process.model';
 import { CustomerCommunication, CustomerCommunicationRequest } from '../models/customer-communication.model';
 import { CustomerNeed, CreateCustomerNeedRequest } from '../models/customer-need.model';
 import { Offer, CreateOfferRequest } from '../models/offer.model';
@@ -169,6 +169,12 @@ export class SalesApiService {
   getContractById(id: number): Observable<Contract> {
     return this.http.get<Contract>(
       `${this.apiBaseUrl}/api/contracts/${id}`,
+    );
+  }
+
+  getAvailableStageTransitions(processId: number): Observable<SalesStage[]> {
+    return this.http.get<SalesStage[]>(
+      `${this.apiBaseUrl}/api/sales/processes/${processId}/available-transitions`,
     );
   }
 }
