@@ -104,6 +104,21 @@ public interface PricelistRepository extends JpaRepository<Pricelist, Long> {
             @Param("now") OffsetDateTime now
     );
 
+    @EntityGraph(attributePaths = {"region", "items"})
+    @Query("""
+            select p
+            from Pricelist p
+            where p.status = com.example.iisdrugcrm.domain.PricelistStatus.ACTIVE
+              and lower(p.customerSegment) = lower(:customerSegment)
+              and p.periodStart <= :now
+              and p.periodEnd >= :now
+            order by p.periodStart desc, p.id desc
+            """)
+    List<Pricelist> findActivePricelistsByCustomerSegment(
+            @Param("customerSegment") String customerSegment,
+            @Param("now") OffsetDateTime now
+    );
+
     @Query("""
             select count(distinct p.id)
             from Pricelist p

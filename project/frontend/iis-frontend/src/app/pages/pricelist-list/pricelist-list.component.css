@@ -138,6 +138,81 @@
 	border-top: 1px solid rgba(15, 23, 42, 0.08);
 }
 
+.suggestions-panel {
+	margin-top: 1rem;
+	padding: 0.85rem;
+	border: 1px solid rgba(14, 116, 144, 0.16);
+	border-radius: 12px;
+}
+
+.suggestion-controls {
+	display: grid;
+	grid-template-columns: minmax(220px, 1fr) auto;
+	gap: .75rem;
+	align-items: end;
+	margin-top: .75rem;
+}
+
+.suggestion-controls label {
+	display: grid;
+	gap: 0.3rem;
+	font-weight: 600;
+}
+
+.suggestion-controls input {
+	width: 100%;
+	border: 1px solid rgba(15, 23, 42, 0.12);
+	border-radius: 10px;
+	padding: 0.65rem 0.75rem;
+}
+
+.suggestion-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: .75rem;
+	margin-top: 0.9rem;
+}
+
+.suggestion-card {
+	display: grid;
+	gap: 0.55rem;
+	padding: 0.9rem;
+	border: 1px solid rgba(15, 23, 42, 0.08);
+	border-radius: 12px;
+	background: #fff;
+}
+
+.suggestion-card__head {
+	display: flex;
+	justify-content: space-between;
+	gap: 0.75rem;
+	align-items: flex-start;
+}
+
+.suggestion-card__head strong {
+	white-space: nowrap;
+}
+
+.suggestion-type,
+.source-badge {
+	font-size: 0.72rem;
+	font-weight: 700;
+}
+
+.suggestion-type {
+	color: #075985;
+}
+
+.source-badge {
+	color: #047857;
+}
+
+.suggestion-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
 .offer-form {
 	display: grid;
 	grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
@@ -204,6 +279,10 @@
 	}
 
 	.offer-form {
+		grid-template-columns: 1fr;
+	}
+
+	.suggestion-controls {
 		grid-template-columns: 1fr;
 	}
 

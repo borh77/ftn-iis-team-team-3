@@ -6,7 +6,7 @@ import { Router } from '@angular/router';
 import { PricelistService } from '../../core/pricelist.service';
 import { Pricelist, PricelistItem } from '../../core/pricelist.models';
 import { SpecialOfferService } from '../../core/special-offer.service';
-import { DiscountType, SpecialOffer } from '../../core/special-offer.models';
+import { DiscountType, PromotionSuggestion, SpecialOffer } from '../../core/special-offer.models';
 import { CatalogService } from '../../core/catalog.service';
 import { CatalogVariant } from '../../core/catalog.model';
 
@@ -37,6 +37,10 @@ export class PricelistListComponent implements OnInit {
   activationErrorByOfferId: Record<number, string> = {};
   loadingOffersId: number | null = null;
   changingOfferId: number | null = null;
+  loadingSuggestionsId: number | null = null;
+  promotionSuggestionsByPricelist: Record<number, PromotionSuggestion[]> = {};
+  suggestionSegmentByPricelist: Record<number, string> = {};
+  suggestionErrorByPricelist: Record<number, string> = {};
   replacingItemId: number | null = null;
   replacementVariantIds: Record<number, number | null> = {};
   activeVariants: CatalogVariant[] = [];
@@ -202,8 +206,67 @@ export class PricelistListComponent implements OnInit {
     this.expandedOffers[pricelist.id] = !this.expandedOffers[pricelist.id];
     if (this.expandedOffers[pricelist.id]) {
       this.ensureOfferForm(pricelist);
+      this.ensureSuggestionSegment(pricelist);
       this.loadOffers(pricelist.id);
     }
+  }
+
+  generatePromotionSuggestions(pricelist: Pricelist): void {
+    const segment = this.ensureSuggestionSegment(pricelist).trim();
+    if (!segment) {
+      this.suggestionErrorByPricelist[pricelist.id] = 'Customer segment is required.';
+      return;
+    }
+
+    this.loadingSuggestionsId = pricelist.id;
+    this.suggestionErrorByPricelist[pricelist.id] = '';
+    this.offerService.getPromotionSuggestions(segment).subscribe({
+      next: (suggestions) => {
+        this.loadingSuggestionsId = null;
+        this.promotionSuggestionsByPricelist[pricelist.id] = suggestions
+          .filter((suggestion) => this.canApplySuggestionToPricelist(pricelist, suggestion))
+          .slice(0, 5);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadingSuggestionsId = null;
+        this.promotionSuggestionsByPricelist[pricelist.id] = [];
+        this.suggestionErrorByPricelist[pricelist.id] = 'Promotion suggestions could not be loaded.';
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  applyPromotionSuggestion(pricelist: Pricelist, suggestion: PromotionSuggestion): void {
+    const form = this.ensureOfferForm(pricelist);
+    form.variantId = suggestion.variantId ?? form.variantId;
+    form.discountType = suggestion.suggestedDiscountType;
+    form.discountValue = suggestion.suggestedDiscountValue;
+    this.successMessage = 'Promotion suggestion was copied to the offer form. Review dates before saving.';
+  }
+
+  dismissPromotionSuggestion(pricelist: Pricelist, suggestion: PromotionSuggestion): void {
+    this.promotionSuggestionsByPricelist[pricelist.id] = (this.promotionSuggestionsByPricelist[pricelist.id] ?? [])
+      .filter((candidate) => candidate !== suggestion);
+  }
+
+  isLoadingSuggestions(pricelist: Pricelist): boolean {
+    return this.loadingSuggestionsId === pricelist.id;
+  }
+
+  segmentOptions(): string[] {
+    return Array.from(new Set(
+      this.pricelists
+        .map((pricelist) => pricelist.customerSegment?.trim())
+        .filter((segment): segment is string => !!segment)
+    )).sort((first, second) => first.localeCompare(second));
+  }
+
+  targetType(suggestion: PromotionSuggestion): string {
+    if (suggestion.brandId) {
+      return 'Brand';
+    }
+    return 'Variant';
   }
 
   createOffer(pricelist: Pricelist): void {
@@ -454,6 +517,20 @@ export class PricelistListComponent implements OnInit {
       this.offerForms[pricelist.id] = this.defaultOfferForm(pricelist);
     }
     return this.offerForms[pricelist.id];
+  }
+
+  private ensureSuggestionSegment(pricelist: Pricelist): string {
+    if (!this.suggestionSegmentByPricelist[pricelist.id]) {
+      this.suggestionSegmentByPricelist[pricelist.id] = pricelist.customerSegment ?? '';
+    }
+    return this.suggestionSegmentByPricelist[pricelist.id];
+  }
+
+  private canApplySuggestionToPricelist(pricelist: Pricelist, suggestion: PromotionSuggestion): boolean {
+    if (!suggestion.variantId) {
+      return false;
+    }
+    return pricelist.items.some((item) => item.variantId === suggestion.variantId);
   }
 
   private defaultOfferForm(pricelist: Pricelist): OfferForm {

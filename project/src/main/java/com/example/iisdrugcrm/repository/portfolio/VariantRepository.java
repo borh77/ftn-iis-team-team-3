@@ -4,7 +4,9 @@ import com.example.iisdrugcrm.domain.portfolio.EntityStatus;
 import com.example.iisdrugcrm.domain.portfolio.Variant;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface VariantRepository extends JpaRepository<Variant, Long> {
@@ -26,6 +28,8 @@ public interface VariantRepository extends JpaRepository<Variant, Long> {
     SELECT v
     FROM Variant v
     JOIN FETCH v.product p
+    LEFT JOIN FETCH v.replacementVariant rv
+    LEFT JOIN FETCH rv.product rvp
     WHERE (:includeArchived = true OR v.status = :activeStatus)
       AND (:productId IS NULL OR p.id = :productId)
       AND (
@@ -41,6 +45,16 @@ public interface VariantRepository extends JpaRepository<Variant, Long> {
         Long productId, 
         String search
     );
+
+    @Query("""
+        SELECT v
+        FROM Variant v
+        JOIN FETCH v.product p
+        LEFT JOIN FETCH v.replacementVariant rv
+        LEFT JOIN FETCH rv.product rvp
+        WHERE v.id IN :ids
+    """)
+    List<Variant> findByIdInWithRelationsIncludingReplacement(@Param("ids") Collection<Long> ids);
 
     @Query("""
         SELECT v
@@ -65,6 +79,8 @@ public interface VariantRepository extends JpaRepository<Variant, Long> {
         SELECT v
         FROM Variant v
         JOIN FETCH v.product p
+        LEFT JOIN FETCH v.replacementVariant rv
+        LEFT JOIN FETCH rv.product rvp
     """)
     List<Variant> findAllWithRelations();
 }

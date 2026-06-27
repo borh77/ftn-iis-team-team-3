@@ -17,6 +17,12 @@
           <a routerLink="/admin/reports">Reports</a>
         </nav>
       }
+      @if (session.roles.includes('ROLE_BUYER')) {
+        <nav class="buyer-nav" aria-label="Buyer navigation">
+          <a routerLink="/catalog">Catalog</a>
+          <a routerLink="/buyer/order-validation">Order validation</a>
+        </nav>
+      }
       <a class="profile profile-link-card" routerLink="/profile" aria-label="My Profile">
         <div class="avatar">{{ session.username.charAt(0).toUpperCase() }}</div>
         <div class="profile-meta">
