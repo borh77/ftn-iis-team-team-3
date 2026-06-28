@@ -18,6 +18,7 @@ import { ForcePasswordChangeComponent } from './pages/force-password-change/forc
 import { ProfileComponent } from './pages/profile/profile.component';
 import { PortfolioPageComponent } from './pages/portfolio/portfolio-page.component';
 import { PricelistCreateComponent } from './pages/pricelist-create/pricelist-create.component';
+import { PricelistCreateWizardComponent } from './pages/pricelist-create-wizard/pricelist-create-wizard.component';
 import { SalesDashboardComponent } from './pages/sales-dashboard/sales-dashboard.component';
 import { BuyerCatalogComponent } from './pages/buyer-catalog/buyer-catalog.component';
 import { OrderUploadComponent } from './pages/order-upload/order-upload.component';
@@ -102,10 +103,24 @@ export const routes: Routes = [
 	},
 	{
 		path: 'content/new',
-		component: PricelistCreateComponent,
+		component: PricelistCreateWizardComponent,
 		canActivate: [authGuard, passwordChangeGuard],
 		data: { roles: ['ROLE_PRICELIST_CREATOR'] },
 		title: 'IIS Drug CRM | New Pricelist',
+	},
+	{
+		path: 'pricelists/create',
+		component: PricelistCreateWizardComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_PRICELIST_CREATOR'] },
+		title: 'IIS Drug CRM | New Pricelist',
+	},
+	{
+		path: 'pricelists/create/:id',
+		component: PricelistCreateWizardComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_PRICELIST_CREATOR'] },
+		title: 'IIS Drug CRM | Continue Pricelist',
 	},
 	{
 		path: 'pricelists/:id/edit',

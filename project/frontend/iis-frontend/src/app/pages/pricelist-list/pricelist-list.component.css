@@ -82,10 +82,72 @@
 	gap: 1rem;
 }
 
+.hero-actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 0.6rem;
+}
+
+.primary,
+.secondary {
+	border: 0;
+	border-radius: 8px;
+	padding: 0.7rem 1rem;
+	cursor: pointer;
+	font-weight: 700;
+}
+
+.primary {
+	background: var(--color-primary);
+	color: #fff;
+}
+
 .secondary {
 	border: 1px solid rgba(15, 23, 42, 0.08);
 	background: rgba(255, 255, 255, 0.72);
 	color: var(--color-text);
+}
+
+.drafts-panel {
+	margin-top: 1rem;
+}
+
+.draft-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 0.85rem;
+	margin-top: 1rem;
+}
+
+.draft-card {
+	display: grid;
+	gap: 0.8rem;
+	padding: 1rem;
+	border: 1px solid rgba(15, 23, 42, 0.08);
+	border-radius: 8px;
+	background: #fff;
+}
+
+.draft-card h4 {
+	margin: 0.2rem 0;
+}
+
+.draft-meta {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.75rem;
+	margin: 0;
+}
+
+.draft-meta dt {
+	color: #64748b;
+	font-size: 0.8rem;
+}
+
+.draft-meta dd {
+	margin: 0.15rem 0 0;
+	font-weight: 700;
 }
 
 .status-actions {
@@ -276,6 +338,12 @@
 	.pricelist-item__title {
 		flex-direction: column;
 		align-items: stretch;
+	}
+
+	.hero-actions,
+	.draft-meta {
+		grid-template-columns: 1fr;
+		justify-content: stretch;
 	}
 
 	.offer-form {

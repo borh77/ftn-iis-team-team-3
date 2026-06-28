@@ -12,10 +12,61 @@
       <p class="lede">Create and manage your pricelists before publishing.</p>
     </div>
 
-    <button type="button" class="secondary" (click)="reload()" [disabled]="loading">
-      {{ loading ? 'Refreshing...' : 'Refresh' }}
-    </button>
+    <div class="hero-actions">
+      <button type="button" class="primary" (click)="createWizard()">
+        Create new pricelist
+      </button>
+      <button type="button" class="secondary" (click)="reload()" [disabled]="loading || loadingDrafts">
+        {{ loading || loadingDrafts ? 'Refreshing...' : 'Refresh' }}
+      </button>
+    </div>
   </div>
+</section>
+
+<section class="panel drafts-panel">
+  <div class="panel-head">
+    <div>
+      <h3>Unfinished drafts</h3>
+      <p class="muted">Continue wizard drafts saved on the backend.</p>
+    </div>
+  </div>
+
+  @if (draftsErrorMessage) {
+    <p class="error-box">{{ draftsErrorMessage }}</p>
+  }
+
+  @if (loadingDrafts) {
+    <p class="muted">Loading unfinished drafts...</p>
+  } @else if (!wizardDrafts.length) {
+    <p class="muted">No unfinished wizard drafts.</p>
+  } @else {
+    <div class="draft-grid">
+      @for (draft of wizardDrafts; track draft.pricelistId) {
+        <article class="draft-card">
+          <div>
+            <p class="kicker">Draft #{{ draft.pricelistId }}</p>
+            <h4>{{ draft.pricelist?.regionName || 'Pricelist draft' }}</h4>
+            <p class="muted">{{ draft.pricelist?.customerSegment || 'Basic info not completed' }}</p>
+          </div>
+
+          <dl class="draft-meta">
+            <div>
+              <dt>Current step</dt>
+              <dd>{{ draftStepLabel(draft.creationStep) }}</dd>
+            </div>
+            <div>
+              <dt>Last edited</dt>
+              <dd>{{ draft.lastEditedAt ? (draft.lastEditedAt | date:'dd.MM.yyyy HH:mm') : '-' }}</dd>
+            </div>
+          </dl>
+
+          <button type="button" class="primary" (click)="continueDraft(draft)">
+            Nastavi kreiranje
+          </button>
+        </article>
+      }
+    </div>
+  }
 </section>
 
 <section class="panel">
