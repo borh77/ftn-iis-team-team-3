@@ -25,6 +25,8 @@ export class CustomersListComponent implements OnInit {
   saving = false;
   showCreateForm = false;
   canManageCustomers = false;
+  customerSearchTerm = '';
+  customerStatusFilter = '';
 
   editingCustomerId: number | null = null;
 
@@ -123,5 +125,29 @@ export class CustomersListComponent implements OnInit {
         this.cdr.detectChanges();
       },
     });
+  }
+
+  get filteredCustomers(): Customer[] {
+    const search = this.customerSearchTerm.trim().toLowerCase();
+
+    return this.customers.filter((customer) => {
+      const matchesSearch =
+        !search ||
+        customer.name.toLowerCase().includes(search) ||
+        customer.email.toLowerCase().includes(search) ||
+        (customer.phone ?? '').toLowerCase().includes(search) ||
+        (customer.website ?? '').toLowerCase().includes(search) ||
+        (customer.address ?? '').toLowerCase().includes(search);
+
+      const matchesStatus =
+        !this.customerStatusFilter || customer.status === this.customerStatusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  }
+
+  clearCustomerFilters(): void {
+    this.customerSearchTerm = '';
+    this.customerStatusFilter = '';
   }
 }

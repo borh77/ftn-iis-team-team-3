@@ -29,6 +29,9 @@ export class LeadsListComponent implements OnInit {
 
   editingLeadId: number | null = null;
 
+  leadSearchTerm = '';
+  leadStatusFilter = '';
+
   newLead: LeadRequest = {
     name: '',
     email: '',
@@ -135,4 +138,24 @@ export class LeadsListComponent implements OnInit {
         },
       });
     }
+
+  get filteredLeads(): Lead[] {
+    const search = this.leadSearchTerm.trim().toLowerCase();
+    return this.leads.filter((lead) => {
+      const matchesSearch =
+        !search ||
+        lead.name.toLowerCase().includes(search) ||
+        lead.email.toLowerCase().includes(search) ||
+        (lead.address ?? '').toLowerCase().includes(search) ||
+        (lead.source ?? '').toLowerCase().includes(search);
+      const matchesStatus =
+        !this.leadStatusFilter || lead.status === this.leadStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }
+
+  clearLeadFilters(): void {
+    this.leadSearchTerm = '';
+    this.leadStatusFilter = '';
+  }
 }

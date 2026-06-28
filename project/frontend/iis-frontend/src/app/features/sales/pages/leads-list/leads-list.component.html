@@ -61,8 +61,26 @@
       Loading leads...
     </div>
 
-    <table *ngIf="!loading && leads.length > 0">
-      <thead>
+    <div *ngIf="!loading" class="filters-bar">
+      <input
+        type="text"
+        placeholder="Search leads..."
+        [(ngModel)]="leadSearchTerm"
+      />
+
+      <select [(ngModel)]="leadStatusFilter">
+        <option value="">All statuses</option>
+        <option value="NEW">NEW</option>
+        <option value="QUALIFIED">QUALIFIED</option>
+        <option value="CONVERTED">CONVERTED</option>
+      </select>
+
+      <button type="button" class="secondary-button" (click)="clearLeadFilters()">
+        Clear
+      </button>
+    </div>
+
+    <table *ngIf="!loading && filteredLeads.length > 0">      <thead>
         <tr>
           <th>Name</th>
           <th>Email</th>
@@ -75,8 +93,7 @@
       </thead>
 
       <tbody>
-        <ng-container *ngFor="let lead of leads">
-          <tr>
+        <ng-container *ngFor="let lead of filteredLeads">          <tr>
             <td>{{ lead.name }}</td>
             <td>{{ lead.email }}</td>
             <td>{{ lead.address || '-' }}</td>
@@ -160,8 +177,8 @@
       </tbody>
     </table>
 
-    <div *ngIf="!loading && leads.length === 0" class="loading">
-      No leads found.
+    <div *ngIf="!loading && filteredLeads.length === 0" class="loading">
+      No leads match selected filters.
     </div>
   </section>
 </main>

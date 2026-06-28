@@ -61,8 +61,26 @@
       Loading customers...
     </div>
 
-    <table *ngIf="!loading && customers.length > 0">
-      <thead>
+    <div *ngIf="!loading" class="filters-bar">
+      <input
+        type="text"
+        placeholder="Search customers..."
+        [(ngModel)]="customerSearchTerm"
+      />
+
+      <select [(ngModel)]="customerStatusFilter">
+        <option value="">All statuses</option>
+        <option value="ACTIVE">ACTIVE</option>
+        <option value="INACTIVE">INACTIVE</option>
+        <option value="ARCHIVED">ARCHIVED</option>
+      </select>
+
+      <button type="button" class="secondary-button" (click)="clearCustomerFilters()">
+        Clear
+      </button>
+    </div>
+
+    <table *ngIf="!loading && filteredCustomers.length > 0">      <thead>
         <tr>
           <th>Name</th>
           <th>Email</th>
@@ -75,8 +93,7 @@
       </thead>
 
       <tbody>
-        <ng-container *ngFor="let customer of customers">
-          <tr>
+        <ng-container *ngFor="let customer of filteredCustomers">          <tr>
             <td>{{ customer.name }}</td>
             <td>{{ customer.email }}</td>
             <td>{{ customer.phone || '-' }}</td>
@@ -157,8 +174,8 @@
       </tbody>
     </table>
 
-    <div *ngIf="!loading && customers.length === 0" class="loading">
-      No customers found.
+    <div *ngIf="!loading && filteredCustomers.length === 0" class="loading">
+      No customers match selected filters.
     </div>
   </section>
 </main>
