@@ -13,6 +13,26 @@ import { Contract, CreateContractRequest, UpdateContractRequest } from '../model
 import { SalesProcessHistory } from '../models/sales-process-history.model';
 import { CreateSalesStageRequest, CreateSalesStageTransitionRequest, CreateSalesWorkflowRequest, SalesStageDefinition, SalesStageTransition, SalesWorkflow, } from '../models/sales-workflow.model';
 
+export interface SalesAnalyticsSummary {
+  totalLeads: number;
+  qualifiedLeads: number;
+  convertedLeads: number;
+  totalCustomers: number;
+  totalProcesses: number;
+  activeProcesses: number;
+  wonProcesses: number;
+  lostProcesses: number;
+  totalOffers: number;
+  acceptedOffers: number;
+  totalOfferValue: number;
+  totalContracts: number;
+  signedContracts: number;
+  totalContractValue: number;
+  processesByStage: Record<string, number>;
+  offersByStatus: Record<string, number>;
+  contractsByStatus: Record<string, number>;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -249,6 +269,19 @@ export class SalesApiService {
     return this.http.post<SalesStageTransition>(
       `${this.apiBaseUrl}/api/sales/workflows/${workflowId}/transitions`,
       request,
+    );
+  }
+
+  getSalesAnalyticsSummary(): Observable<SalesAnalyticsSummary> {
+    return this.http.get<SalesAnalyticsSummary>(
+      `${this.apiBaseUrl}/api/sales/analytics/summary`,
+    );
+  }
+
+  downloadSalesAnalyticsReport(): Observable<Blob> {
+    return this.http.get(
+      `${this.apiBaseUrl}/api/sales/analytics/report`,
+      { responseType: 'blob' },
     );
   }
 }
