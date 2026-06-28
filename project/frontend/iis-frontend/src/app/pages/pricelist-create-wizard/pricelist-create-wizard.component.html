@@ -1,0 +1,116 @@
+<section class="page-shell">
+  <header class="page-hero wizard-hero">
+    <div>
+      <p class="kicker">Pricelist wizard</p>
+      <h2>Create pricelist</h2>
+      <p>Build the draft step by step. Every step is saved to the backend and can be continued later.</p>
+    </div>
+
+    <a class="ghost hero-action" routerLink="/content/mine">Back to pricelists</a>
+  </header>
+
+  <section class="panel wizard-panel">
+    @if (loadingState || starting) {
+      <p class="muted">Loading wizard...</p>
+    } @else {
+      <nav class="wizard-progress" aria-label="Pricelist creation steps">
+        @for (step of steps; track step.id; let stepIndex = $index) {
+          <div class="progress-step" [class]="stepClass(stepIndex)">
+            <span>{{ stepIndex + 1 }}</span>
+            <strong>{{ step.label }}</strong>
+          </div>
+        }
+      </nav>
+
+      <div class="wizard-meta">
+        <span>Draft #{{ wizardId || '-' }}</span>
+        <span>Current step: {{ activeStep.label }}</span>
+        @if (state?.lastEditedAt) {
+          <span>Last edited: {{ state?.lastEditedAt | date:'dd.MM.yyyy HH:mm' }}</span>
+        }
+      </div>
+
+      @if (errorMessage) {
+        <p class="error-box" role="alert">{{ errorMessage }}</p>
+      }
+
+      @if (successMessage) {
+        <p class="success-box">{{ successMessage }}</p>
+      }
+
+      <section class="step-panel">
+        @switch (activeStep.id) {
+          @case ('BASIC_INFO') {
+            <app-pricelist-wizard-basic-info-step
+              [form]="basicInfoForm"
+              [regions]="regions"
+            />
+          }
+          @case ('TEAM_ACCESS') {
+            <app-pricelist-wizard-team-access-step
+              [form]="teamAccessForm"
+              [teams]="teams"
+            />
+          }
+          @case ('ITEMS') {
+            <app-pricelist-wizard-items-step
+              [form]="itemsForm"
+              [categories]="categories"
+              [subcategoriesByItem]="subcategoriesByItem"
+              [productsByItem]="productsByItem"
+              [variantsByItem]="variantsByItem"
+              [duplicateVariantMessage]="duplicateVariantMessage"
+              (addItem)="addItem()"
+              (removeItem)="removeItem($event)"
+              (categoryChanged)="onCategoryChange($event)"
+              (subcategoryChanged)="onSubcategoryChange($event)"
+              (productChanged)="onProductChange($event)"
+            />
+          }
+          @case ('THRESHOLDS') {
+            <app-pricelist-wizard-thresholds-step
+              [form]="thresholdsForm"
+              (addThreshold)="addThreshold($event)"
+              (removeThreshold)="removeThreshold($event)"
+            />
+          }
+          @case ('REVIEW') {
+            <app-pricelist-wizard-review-step
+              [summary]="summary"
+              [loading]="loadingSummary"
+            />
+          }
+        }
+      </section>
+
+      <div class="wizard-actions">
+        <button type="button" class="ghost" (click)="goBack()" [disabled]="activeStepIndex === 0 || saving">
+          Nazad
+        </button>
+
+        @if (activeStep.id !== 'REVIEW') {
+          <button type="button" class="secondary" (click)="saveCurrentStep(false)" [disabled]="saving">
+            {{ saving ? 'Čuvanje...' : 'Sačuvaj' }}
+          </button>
+
+          <button type="button" class="primary" (click)="saveCurrentStep(true)" [disabled]="saving">
+            {{ saving ? 'Čuvanje...' : 'Sačuvaj i nastavi' }}
+          </button>
+        } @else {
+          <button type="button" class="secondary" (click)="saveCurrentStep(false)" [disabled]="loadingSummary">
+            {{ loadingSummary ? 'Osvežavanje...' : 'Osveži pregled' }}
+          </button>
+
+          <button
+            type="button"
+            class="primary"
+            (click)="finish()"
+            [disabled]="saving || loadingSummary || summary?.readyToFinish === false"
+          >
+            {{ saving ? 'Završavanje...' : 'Završi' }}
+          </button>
+        }
+      </div>
+    }
+  </section>
+</section>

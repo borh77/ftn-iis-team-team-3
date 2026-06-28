@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RegionRepository extends JpaRepository<Region, Long> {
 
+    java.util.Optional<Region> findFirstByOrderByIdAsc();
+
     boolean existsByName(String name);
 
     boolean existsByCode(String code);

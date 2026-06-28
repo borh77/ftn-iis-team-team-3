@@ -4,7 +4,8 @@ import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { PricelistService } from '../../core/pricelist.service';
-import { Pricelist, PricelistItem } from '../../core/pricelist.models';
+import { Pricelist, PricelistCreationStep, PricelistItem, PricelistWizardState } from '../../core/pricelist.models';
+import { PricelistWizardService } from '../../core/pricelist-wizard.service';
 import { SpecialOfferService } from '../../core/special-offer.service';
 import { DiscountType, PromotionSuggestion, SpecialOffer } from '../../core/special-offer.models';
 import { CatalogService } from '../../core/catalog.service';
@@ -19,18 +20,22 @@ import { CatalogVariant } from '../../core/catalog.model';
 })
 export class PricelistListComponent implements OnInit {
   private readonly service = inject(PricelistService);
+  private readonly wizardService = inject(PricelistWizardService);
   private readonly offerService = inject(SpecialOfferService);
   private readonly catalogService = inject(CatalogService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
 
   loading = false;
+  loadingDrafts = false;
   changingStatusId: number | null = null;
   creatingVersionId: number | null = null;
   successMessage = '';
   errorMessage = '';
+  draftsErrorMessage = '';
   toastErrorMessage = '';
   pricelists: Pricelist[] = [];
+  wizardDrafts: PricelistWizardState[] = [];
   expandedOffers: Record<number, boolean> = {};
   offersByPricelist: Record<number, SpecialOffer[]> = {};
   offerForms: Record<number, OfferForm> = {};
@@ -46,7 +51,12 @@ export class PricelistListComponent implements OnInit {
   activeVariants: CatalogVariant[] = [];
 
   ngOnInit(): void {
+    const navigationSuccess = globalThis.history?.state?.successMessage;
+    if (navigationSuccess) {
+      this.successMessage = navigationSuccess;
+    }
     this.loadActiveVariants();
+    this.loadDrafts();
     this.load();
   }
 
@@ -69,7 +79,34 @@ export class PricelistListComponent implements OnInit {
   }
 
   reload(): void {
+    this.loadDrafts();
     this.load();
+  }
+
+  loadDrafts(): void {
+    this.loadingDrafts = true;
+    this.draftsErrorMessage = '';
+    this.wizardService.getDrafts().subscribe({
+      next: (drafts) => {
+        this.loadingDrafts = false;
+        this.wizardDrafts = drafts;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadingDrafts = false;
+        this.wizardDrafts = [];
+        this.draftsErrorMessage = 'Unfinished drafts could not be loaded.';
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  continueDraft(draft: PricelistWizardState): void {
+    this.router.navigate(['/pricelists/create', draft.pricelistId]);
+  }
+
+  createWizard(): void {
+    this.router.navigate(['/pricelists/create']);
   }
 
   submitForReview(pricelist: Pricelist): void {
@@ -339,6 +376,18 @@ export class PricelistListComponent implements OnInit {
 
   statusLabel(status: Pricelist['status']): string {
     return status.replace('_', ' ');
+  }
+
+  draftStepLabel(step: PricelistCreationStep): string {
+    const labels: Record<PricelistCreationStep, string> = {
+      BASIC_INFO: 'Osnovni podaci',
+      TEAM_ACCESS: 'Tim',
+      ITEMS: 'Stavke',
+      THRESHOLDS: 'Pragovi',
+      REVIEW: 'Pregled',
+      COMPLETED: 'Završeno',
+    };
+    return labels[step] ?? step;
   }
 
   private changeStatus(pricelist: Pricelist, targetStatus: Pricelist['status'], reason?: string): void {

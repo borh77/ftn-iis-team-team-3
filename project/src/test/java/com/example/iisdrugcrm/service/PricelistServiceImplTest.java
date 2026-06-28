@@ -266,6 +266,33 @@ class PricelistServiceImplTest {
     }
 
     @Test
+    void unfinishedWizardDraftCannotMoveToInReview() {
+        Pricelist pricelist = pricelist(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        pricelist.setCreationCompleted(false);
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> service.changeStatus(100L, statusDto(PricelistStatus.IN_REVIEW, null)));
+
+        assertEquals("Cenovnik nije kompletiran kroz wizard i ne moze biti poslat na proveru.", exception.getMessage());
+        assertEquals(PricelistStatus.DRAFT, pricelist.getStatus());
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
+    }
+
+    @Test
+    void finishedWizardDraftCanMoveToInReview() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        pricelist.setCreationCompleted(true);
+        pricelist.setCreationStep(PricelistCreationStep.COMPLETED);
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+
+        service.changeStatus(100L, statusDto(PricelistStatus.IN_REVIEW, null));
+
+        assertEquals(PricelistStatus.IN_REVIEW, pricelist.getStatus());
+        verify(pricelistRepository).save(pricelist);
+    }
+
+    @Test
     void statusChangePublishesActivityEvent() {
         Pricelist pricelist = pricelist(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
