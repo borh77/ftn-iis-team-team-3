@@ -14,16 +14,20 @@ public class CustomerResponseDTO {
     private CustomerStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Long regionId;
+    private String regionName;
 
     public CustomerResponseDTO(Long id, String name, String email, String phone, String website,
-                               String address, CustomerStatus status,
-                               LocalDateTime createdAt, LocalDateTime updatedAt) {
+                            String address, Long regionId, String regionName, CustomerStatus status,
+                            LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.name = name;
         this.email = email;
         this.phone = phone;
         this.website = website;
         this.address = address;
+        this.regionId = regionId;
+        this.regionName = regionName;
         this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -38,4 +42,6 @@ public class CustomerResponseDTO {
     public CustomerStatus getStatus() { return status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Long getRegionId() { return regionId; }
+    public String getRegionName() { return regionName; }
 }

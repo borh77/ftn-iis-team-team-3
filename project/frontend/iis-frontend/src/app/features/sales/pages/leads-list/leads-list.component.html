@@ -35,6 +35,16 @@
       </label>
 
       <label>
+        Region
+        <select name="lead-region" [(ngModel)]="newLead.regionId">
+          <option [ngValue]="null">No region selected</option>
+          <option *ngFor="let region of regions" [ngValue]="region.id">
+            {{ region.name }}
+          </option>
+        </select>
+      </label>
+
+      <label>
         Source
         <input name="source" [(ngModel)]="newLead.source" required />
       </label>
@@ -85,6 +95,7 @@
           <th>Name</th>
           <th>Email</th>
           <th>Address</th>
+          <th>Region</th>
           <th>Source</th>
           <th>Score</th>
           <th>Status</th>
@@ -97,6 +108,7 @@
             <td>{{ lead.name }}</td>
             <td>{{ lead.email }}</td>
             <td>{{ lead.address || '-' }}</td>
+            <td>{{ lead.regionName || '-' }}</td>
             <td>{{ lead.source || '-' }}</td>
             <td>{{ lead.score }}</td>
             <td>
@@ -135,7 +147,7 @@
           </tr>
 
           <tr *ngIf="editingLeadId === lead.id">
-            <td colspan="7">
+            <td colspan="8">
               <form (ngSubmit)="updateLead(lead.id)" class="lead-form edit-form">
                 <label>
                   Name
@@ -150,6 +162,16 @@
                 <label>
                   Address
                   <input name="edit-address-{{ lead.id }}" [(ngModel)]="editLead.address" />
+                </label>
+
+                <label>
+                  Region
+                  <select name="edit-lead-region-{{ lead.id }}" [(ngModel)]="editLead.regionId">
+                    <option [ngValue]="null">No region selected</option>
+                    <option *ngFor="let region of regions" [ngValue]="region.id">
+                      {{ region.name }}
+                    </option>
+                  </select>
                 </label>
 
                 <label>

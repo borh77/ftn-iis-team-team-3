@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 
+import { RegionService } from '../../../../core/region.service';
+import { Region } from '../../../../core/region.model';
 import { SalesApiService } from '../../api/sales-api.service';
 import { FormsModule } from '@angular/forms';
 import { Lead, LeadRequest } from '../../models/lead.model';
@@ -16,7 +18,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
 export class LeadsListComponent implements OnInit {
   private readonly salesApiService = inject(SalesApiService);
   private readonly authService = inject(AuthService);
-
+  private readonly regionService = inject(RegionService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   leads: Lead[] = [];
@@ -31,6 +33,7 @@ export class LeadsListComponent implements OnInit {
 
   leadSearchTerm = '';
   leadStatusFilter = '';
+  regions: Region[] = [];
 
   newLead: LeadRequest = {
     name: '',
@@ -38,6 +41,7 @@ export class LeadsListComponent implements OnInit {
     address: '',
     source: '',
     score: 0,
+    regionId: null,
   };
 
   editLead: LeadRequest = {
@@ -46,6 +50,7 @@ export class LeadsListComponent implements OnInit {
     address: '',
     source: '',
     score: 0,
+    regionId: null,
   };
 
   loadLeads(): void {
@@ -68,6 +73,7 @@ export class LeadsListComponent implements OnInit {
   ngOnInit(): void {
     this.canManageLeads = this.authService.hasRole('ROLE_SALES_REPRESENTATIVE');
     this.loadLeads();
+    this.loadRegions();
   }
 
     createLead(): void {
@@ -81,6 +87,7 @@ export class LeadsListComponent implements OnInit {
             address: '',
             source: '',
             score: 0,
+            regionId: null,
         };
         this.showCreateForm = false;
         this.saving = false;
@@ -116,6 +123,7 @@ export class LeadsListComponent implements OnInit {
         address: lead.address,
         source: lead.source,
         score: lead.score,
+        regionId: lead.regionId,
       };
     }
 
@@ -147,7 +155,8 @@ export class LeadsListComponent implements OnInit {
         lead.name.toLowerCase().includes(search) ||
         lead.email.toLowerCase().includes(search) ||
         (lead.address ?? '').toLowerCase().includes(search) ||
-        (lead.source ?? '').toLowerCase().includes(search);
+        (lead.source ?? '').toLowerCase().includes(search) ||
+        (lead.regionName ?? '').toLowerCase().includes(search);
       const matchesStatus =
         !this.leadStatusFilter || lead.status === this.leadStatusFilter;
       return matchesSearch && matchesStatus;
@@ -157,5 +166,17 @@ export class LeadsListComponent implements OnInit {
   clearLeadFilters(): void {
     this.leadSearchTerm = '';
     this.leadStatusFilter = '';
+  }
+
+  loadRegions(): void {
+    this.regionService.list().subscribe({
+      next: (response) => {
+        this.regions = response ?? [];
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Failed to load regions:', error);
+      },
+    });
   }
 }

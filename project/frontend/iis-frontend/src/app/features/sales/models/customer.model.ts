@@ -7,6 +7,8 @@ export interface Customer {
   phone: string | null;
   website: string | null;
   address: string | null;
+  regionId: number | null;
+  regionName: string | null;
   status: CustomerStatus;
   createdAt?: string;
   updatedAt?: string;
@@ -18,4 +20,5 @@ export interface CustomerRequest {
   phone: string;
   website: string;
   address: string;
+  regionId: number | null;
 }

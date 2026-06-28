@@ -33,6 +33,30 @@ export interface SalesAnalyticsSummary {
   contractsByStatus: Record<string, number>;
 }
 
+export interface SalesMarketProduct {
+  id: number;
+  productId: number;
+  variantId: number;
+  productName: string;
+  variantForm: string;
+  variantDosage: string;
+  regionId: number;
+  regionName: string;
+  localName: string;
+  packagingDescription?: string;
+  barcode?: string;
+  status: string;
+}
+
+export interface SalesPriceResponse {
+  regionId: number;
+  variantId: number;
+  quantity: number;
+  unitPrice: number;
+  currency: string;
+  pricelistId: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -282,6 +306,18 @@ export class SalesApiService {
     return this.http.get(
       `${this.apiBaseUrl}/api/sales/analytics/report`,
       { responseType: 'blob' },
+    );
+  }
+
+  getMarketProductsByRegion(regionId: number): Observable<SalesMarketProduct[]> {
+    return this.http.get<SalesMarketProduct[]>(
+      `${this.apiBaseUrl}/api/market-products?regionId=${regionId}`,
+    );
+  }
+
+  getSalesPrice(regionId: number, variantId: number, quantity: number): Observable<SalesPriceResponse> {
+    return this.http.get<SalesPriceResponse>(
+      `${this.apiBaseUrl}/api/sales/pricing/price?regionId=${regionId}&variantId=${variantId}&quantity=${quantity}`,
     );
   }
 }

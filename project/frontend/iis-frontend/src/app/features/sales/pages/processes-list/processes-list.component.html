@@ -94,7 +94,8 @@
                   View Details
                 </button>
 
-                  <ng-container *ngIf="process.status === 'ACTIVE' && canCreateNeedsAndOffers; else closedProcess">                  <button type="button" class="secondary-button" (click)="openNeedForm(process)">
+                <ng-container *ngIf="process.status === 'ACTIVE' && canCreateNeedsAndOffers; else closedProcess">
+                  <button type="button" class="secondary-button" (click)="openNeedForm(process)">
                     Add Need
                   </button>
 
@@ -150,13 +151,17 @@
                 </label>
 
                 <label>
-                  Product ID
-                  <input
-                    type="number"
+                  Product
+                  <select
                     name="offer-product-{{ process.id }}"
-                    [(ngModel)]="newOffer.items[0].productId"
-                    required
-                  />
+                    [(ngModel)]="selectedOfferVariantId"
+                    (ngModelChange)="onOfferVariantChanged(process, $event)"
+                    required>
+                    <option [ngValue]="0" disabled>Select product</option>
+                    <option *ngFor="let item of offerMarketProducts" [ngValue]="item.variantId">
+                      {{ item.localName }} — {{ item.variantForm }} {{ item.variantDosage }}
+                    </option>
+                  </select>
                 </label>
 
                 <label>
@@ -165,6 +170,7 @@
                     type="number"
                     name="offer-quantity-{{ process.id }}"
                     [(ngModel)]="newOffer.items[0].quantity"
+                    (ngModelChange)="onOfferQuantityChanged(process, $event)"
                     required
                   />
                 </label>
@@ -175,9 +181,14 @@
                     type="number"
                     name="offer-price-{{ process.id }}"
                     [(ngModel)]="newOffer.items[0].unitPrice"
+                    readonly
                     required
                   />
                 </label>
+
+                <p *ngIf="offerPriceMessage" class="muted-text">
+                  {{ offerPriceMessage }}
+                </p>
 
                 <label>
                   Notes
@@ -187,7 +198,12 @@
                   />
                 </label>
 
-                <button type="submit" class="primary-button">Save Offer</button>
+                <button
+                  type="submit"
+                  class="primary-button"
+                  [disabled]="newOffer.items[0].productId === 0 || newOffer.items[0].unitPrice === 0">
+                  Save Offer
+                </button>
               </form>
             </td>
           </tr>

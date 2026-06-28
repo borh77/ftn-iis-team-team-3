@@ -1,7 +1,4 @@
-export type LeadStatus =
-  | 'NEW'
-  | 'QUALIFIED'
-  | 'CONVERTED';
+export type LeadStatus = 'NEW' | 'QUALIFIED' | 'CONVERTED';
 
 export interface Lead {
   id: number;
@@ -10,6 +7,8 @@ export interface Lead {
   address: string;
   source: string;
   score: number;
+  regionId: number | null;
+  regionName: string | null;
   status: LeadStatus;
   createdAt?: string;
   updatedAt?: string;
@@ -21,4 +20,5 @@ export interface LeadRequest {
   address: string;
   source: string;
   score: number;
+  regionId: number | null;
 }

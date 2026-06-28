@@ -44,6 +44,16 @@
         <input name="address" [(ngModel)]="newCustomer.address" />
       </label>
 
+      <label>
+        Region
+        <select name="regionId" [(ngModel)]="newCustomer.regionId">
+          <option [ngValue]="null">No region selected</option>
+          <option *ngFor="let region of regions" [ngValue]="region.id">
+            {{ region.name }}
+          </option>
+        </select>
+      </label>
+
       <div class="form-actions">
         <button type="button" class="secondary-button" (click)="showCreateForm = false">
           Cancel
@@ -88,6 +98,7 @@
           <th>Website</th>
           <th>Address</th>
           <th>Status</th>
+          <th>Region</th>
           <th class="actions-column">Actions</th>
         </tr>
       </thead>
@@ -104,6 +115,7 @@
                 {{ customer.status }}
               </span>
             </td>
+            <td>{{ customer.regionName || '-' }}</td>
 
             <td class="actions-cell">
               <div class="action-buttons">
@@ -127,7 +139,7 @@
           </tr>
 
           <tr *ngIf="editingCustomerId === customer.id">
-            <td colspan="7">
+            <td colspan="8">
               <form (ngSubmit)="updateCustomer(customer.id)" class="customer-form edit-form">
                 <label>
                   Name
@@ -157,6 +169,16 @@
                 <label>
                   Address
                   <input name="edit-customer-address-{{ customer.id }}" [(ngModel)]="editCustomer.address" />
+                </label>
+
+                <label>
+                  Region
+                  <select name="edit-customer-region-{{ customer.id }}" [(ngModel)]="editCustomer.regionId">
+                    <option [ngValue]="null">No region selected</option>
+                    <option *ngFor="let region of regions" [ngValue]="region.id">
+                      {{ region.name }}
+                    </option>
+                  </select>
                 </label>
 
                 <div class="form-actions">

@@ -2,6 +2,8 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { RegionService } from '../../../../core/region.service';
+import { Region } from '../../../../core/region.model';
 import { SalesApiService } from '../../api/sales-api.service';
 import { Customer, CustomerRequest } from '../../models/customer.model';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -19,8 +21,10 @@ export class CustomersListComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
+  private readonly regionService = inject(RegionService);
 
   customers: Customer[] = [];
+  regions: Region[] = [];
   loading = true;
   saving = false;
   showCreateForm = false;
@@ -36,6 +40,7 @@ export class CustomersListComponent implements OnInit {
     phone: '',
     website: '',
     address: '',
+    regionId: null,
   };
 
   editCustomer: CustomerRequest = {
@@ -44,11 +49,13 @@ export class CustomersListComponent implements OnInit {
     phone: '',
     website: '',
     address: '',
+    regionId: null,
   };
 
   ngOnInit(): void {
     this.canManageCustomers = this.authService.hasRole('ROLE_SALES_REPRESENTATIVE');
     this.loadCustomers();
+    this.loadRegions();
   }
 
   loadCustomers(): void {
@@ -68,6 +75,18 @@ export class CustomersListComponent implements OnInit {
     });
   }
 
+  loadRegions(): void {
+    this.regionService.list().subscribe({
+      next: (response) => {
+        this.regions = response ?? [];
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Failed to load regions:', error);
+      },
+    });
+  }
+
   viewDetails(customer: Customer): void {
     this.router.navigate(['/sales/customers', customer.id]);
   }
@@ -83,6 +102,7 @@ export class CustomersListComponent implements OnInit {
           phone: '',
           website: '',
           address: '',
+          regionId: null,
         };
         this.showCreateForm = false;
         this.saving = false;
@@ -104,6 +124,7 @@ export class CustomersListComponent implements OnInit {
       phone: customer.phone ?? '',
       website: customer.website ?? '',
       address: customer.address ?? '',
+      regionId: customer.regionId,
     };
   }
 

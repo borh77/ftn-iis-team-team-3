@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { SalesApiService } from '../../api/sales-api.service';
 import { Customer } from '../../models/customer.model';
 import { SalesProcess, SalesProcessRequest, SalesStage, } from '../../models/sales-process.model';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -10,6 +9,7 @@ import { CreateCustomerNeedRequest } from '../../models/customer-need.model';
 import { CreateOfferRequest } from '../../models/offer.model';
 import { CreateContractRequest } from '../../models/contract.model';
 import { Router } from '@angular/router';
+import { SalesApiService, SalesMarketProduct } from '../../api/sales-api.service';
 
 @Component({
   selector: 'app-processes-list',
@@ -27,6 +27,9 @@ export class ProcessesListComponent implements OnInit {
   processes: SalesProcess[] = [];
   availableTransitionsByProcessId: Record<number, SalesStage[]> = {};
   customers: Customer[] = [];
+  offerMarketProducts: SalesMarketProduct[] = [];
+  selectedOfferVariantId = 0;
+  offerPriceMessage = '';
 
   loading = true;
   saving = false;
@@ -166,23 +169,6 @@ export class ProcessesListComponent implements OnInit {
     });
   }
 
-  openOfferForm(process: SalesProcess): void {
-    this.showOfferFormForProcessId = process.id;
-    this.newOffer = {
-      customerId: process.customerId,
-      salesProcessId: process.id,
-      validUntil: '',
-      notes: '',
-      items: [
-        {
-          productId: 1,
-          quantity: 1,
-          unitPrice: 1000,
-        },
-      ],
-    };
-  }
-
   loadAvailableTransitions(): void {
     this.availableTransitionsByProcessId = {};
 
@@ -217,5 +203,91 @@ export class ProcessesListComponent implements OnInit {
 
   viewDetails(process: SalesProcess): void {
     this.router.navigate(['/sales/processes', process.id]);
+  }
+
+  getCustomerRegionId(process: SalesProcess): number | null {
+    const customer = this.customers.find((item) => item.id === process.customerId);
+    return customer?.regionId ?? null;
+  }
+
+  openOfferForm(process: SalesProcess): void {
+    this.showOfferFormForProcessId = process.id;
+    this.offerMarketProducts = [];
+    this.selectedOfferVariantId = 0;
+    this.offerPriceMessage = '';
+
+    this.newOffer = {
+      customerId: process.customerId,
+      salesProcessId: process.id,
+      validUntil: '',
+      notes: '',
+      items: [
+        {
+          productId: 0,
+          quantity: 1,
+          unitPrice: 0,
+        },
+      ],
+    };
+
+    const regionId = this.getCustomerRegionId(process);
+
+    if (!regionId) {
+      this.offerPriceMessage = 'Customer does not have a region selected.';
+      return;
+    }
+
+    this.salesApiService.getMarketProductsByRegion(regionId).subscribe({
+      next: (response) => {
+        this.offerMarketProducts = response ?? [];
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Failed to load market products:', error);
+        this.offerPriceMessage = 'Failed to load products for customer region.';
+      },
+    });
+  }
+
+  onOfferVariantChanged(process: SalesProcess, variantId: number): void {
+    this.selectedOfferVariantId = Number(variantId);
+
+    const selected = this.offerMarketProducts.find((item) => item.variantId === this.selectedOfferVariantId);
+
+    if (!selected) {
+      return;
+    }
+
+    this.newOffer.items[0].productId = selected.productId;
+    this.refreshOfferPrice(process);
+  }
+
+  onOfferQuantityChanged(process: SalesProcess, quantity: number): void {
+    this.newOffer.items[0].quantity = Number(quantity);
+    this.refreshOfferPrice(process);
+  }
+
+  refreshOfferPrice(process: SalesProcess): void {
+    const regionId = this.getCustomerRegionId(process);
+
+    if (!regionId || !this.selectedOfferVariantId || this.newOffer.items[0].quantity <= 0) {
+      return;
+    }
+
+    this.salesApiService
+      .getSalesPrice(regionId, this.selectedOfferVariantId, this.newOffer.items[0].quantity)
+      .subscribe({
+        next: (response) => {
+          this.newOffer.items[0].unitPrice = response.unitPrice;
+          this.offerPriceMessage = `Price loaded from pricelist: ${response.unitPrice} ${response.currency}`;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('Failed to load price:', error);
+          this.offerPriceMessage = 'No active price found for selected product and quantity.';
+          this.newOffer.items[0].unitPrice = 0;
+          this.cdr.detectChanges();
+        },
+      });
   }
 }

@@ -228,3 +228,19 @@ td {
   -webkit-appearance: none;
   -moz-appearance: none;
 }
+
+.customer-form input,
+.customer-form select {
+  width: 100%;
+  height: 52px;
+  padding: 0 16px;
+  border: 1px solid #d8dee9;
+  border-radius: 14px;
+  font: inherit;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.customer-form select {
+  line-height: 52px;
+}

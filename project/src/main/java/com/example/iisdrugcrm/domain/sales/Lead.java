@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotBlank;
 
 import java.time.LocalDateTime;
 
+import com.example.iisdrugcrm.domain.Region;
+
 @Entity
 @Table(name = "leads")
 public class Lead {
@@ -42,15 +44,20 @@ public class Lead {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "region_id")
+    private Region region;
+
     protected Lead() {
     }
 
-    public Lead(String name, String email, String address, String source, Integer score) {
+    public Lead(String name, String email, String address, Region region, String source, Integer score) {
         this.name = name;
         this.email = email;
         this.address = address;
+        this.region = region;
         this.source = source;
-        this.score = score == null ? 0 : score;
+        this.score = score;
         this.status = LeadStatus.NEW;
     }
 
@@ -66,12 +73,13 @@ public class Lead {
         updatedAt = LocalDateTime.now();
     }
 
-    public void update(String name, String email, String address, String source, Integer score) {
+    public void update(String name, String email, String address, Region region, String source, Integer score) {
         this.name = name;
         this.email = email;
         this.address = address;
+        this.region = region;
         this.source = source;
-        this.score = score == null ? 0 : score;
+        this.score = score;
     }
 
     public void qualify() {
@@ -93,6 +101,7 @@ public class Lead {
     public String getName() { return name; }
     public String getEmail() { return email; }
     public String getAddress() { return address; }
+    public Region getRegion() { return region; }
     public String getSource() { return source; }
     public Integer getScore() { return score; }
     public LeadStatus getStatus() { return status; }
