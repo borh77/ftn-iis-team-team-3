@@ -159,6 +159,15 @@ class PricelistWizardServiceImplTest {
     }
 
     @Test
+    void userCannotLoadSomeoneElsesDraftState() {
+        Pricelist draft = draft(100L);
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(draft));
+        when(accessService.canCollaborate(draft, 7L)).thenReturn(false);
+
+        assertThrows(AccessDeniedException.class, () -> service.getWizardState(100L, 7L));
+    }
+
+    @Test
     void draftsEndpointReturnsOnlyCurrentUsersUnfinishedDraftsFromRepository() {
         Pricelist draft = draft(100L);
         when(pricelistRepository.findAllByCreatedByAndCreationCompletedFalseOrderByLastEditedAtDescIdDesc(99L))
@@ -168,6 +177,19 @@ class PricelistWizardServiceImplTest {
 
         assertEquals(1, drafts.size());
         assertEquals(100L, drafts.get(0).getPricelistId());
+    }
+
+    @Test
+    void draftContinuationReturnsCurrentStep() {
+        Pricelist draft = draftWithItem(100L);
+        draft.setCreationStep(PricelistCreationStep.THRESHOLDS);
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(draft));
+
+        var state = service.getWizardState(100L, 99L);
+
+        assertEquals(100L, state.getPricelistId());
+        assertEquals(PricelistCreationStep.THRESHOLDS, state.getCreationStep());
+        assertFalse(state.isCreationCompleted());
     }
 
     @Test

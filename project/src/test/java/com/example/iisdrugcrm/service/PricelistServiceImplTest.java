@@ -280,6 +280,19 @@ class PricelistServiceImplTest {
     }
 
     @Test
+    void finishedWizardDraftCanMoveToInReview() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        pricelist.setCreationCompleted(true);
+        pricelist.setCreationStep(PricelistCreationStep.COMPLETED);
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+
+        service.changeStatus(100L, statusDto(PricelistStatus.IN_REVIEW, null));
+
+        assertEquals(PricelistStatus.IN_REVIEW, pricelist.getStatus());
+        verify(pricelistRepository).save(pricelist);
+    }
+
+    @Test
     void statusChangePublishesActivityEvent() {
         Pricelist pricelist = pricelist(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
