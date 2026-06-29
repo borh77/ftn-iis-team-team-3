@@ -3,11 +3,11 @@
   top: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: minmax(12rem, 18rem) minmax(16rem, 1fr) auto auto;
+  grid-template-columns: minmax(12rem, 1fr) auto auto;
   align-items: center;
-  gap: 1rem;
-  min-height: 4.5rem;
-  padding: 0.85rem 1.5rem;
+  gap: 0.75rem;
+  min-height: 3.75rem;
+  padding: 0.6rem 1.5rem;
   border-bottom: 1px solid var(--color-border);
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(14px);
@@ -33,37 +33,11 @@
   line-height: 1.2;
 }
 
-.header-search {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  min-height: 2.55rem;
-  padding: 0 0.85rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-strong);
-  color: var(--color-muted);
-}
-
-.header-search input {
-  width: 100%;
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  color: var(--color-text);
-  background: transparent;
-}
-
-.header-search input::placeholder {
-  color: #94a3b8;
-}
-
 .profile {
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  min-height: 2.7rem;
+  min-height: 2.45rem;
   padding: 0.35rem 0.5rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -111,7 +85,8 @@
 }
 
 .logout-button {
-  min-height: 2.7rem;
+  width: auto;
+  min-height: 2.45rem;
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -133,12 +108,7 @@
 @media (max-width: 1020px) {
   .app-header {
     position: static;
-    grid-template-columns: 1fr auto;
-  }
-
-  .header-search {
-    grid-column: 1 / -1;
-    order: 3;
+    grid-template-columns: minmax(0, 1fr) auto auto;
   }
 }
 

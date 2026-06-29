@@ -4,11 +4,6 @@
     <strong>Operational workspace</strong>
   </div>
 
-  <label class="header-search">
-    <lucide-icon [img]="icons.Search" size="18"></lucide-icon>
-    <input type="search" placeholder="Search records, customers, pricelists..." />
-  </label>
-
   @if (authService.session$ | async; as session) {
     <a class="profile profile-link-card" routerLink="/profile" aria-label="My Profile">
       <div class="avatar">{{ session.username.charAt(0).toUpperCase() }}</div>

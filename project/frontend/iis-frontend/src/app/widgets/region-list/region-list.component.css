@@ -6,6 +6,25 @@ table {
   min-width: 760px;
 }
 
+.list-toolbar {
+  display: grid;
+  grid-template-columns: minmax(14rem, 24rem) auto;
+  align-items: end;
+  justify-content: start;
+  gap: 0.75rem;
+}
+
+.list-toolbar label {
+  display: grid;
+  gap: 0.35rem;
+}
+
 .actions {
   justify-content: flex-start;
+}
+
+@media (max-width: 640px) {
+  .list-toolbar {
+    grid-template-columns: 1fr;
+  }
 }

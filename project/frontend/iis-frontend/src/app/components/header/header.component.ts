@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { LogOut, Search, LucideAngularModule } from 'lucide-angular';
+import { LogOut, LucideAngularModule } from 'lucide-angular';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { UserService } from '../../core/user.service';
@@ -21,7 +21,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   private profileSub: Subscription | null = null;
 
   displayName: string | null = null;
-  readonly icons = { LogOut, Search };
+  readonly icons = { LogOut };
 
   ngOnInit(): void {
     this.profileSub = this.userService.profile$.subscribe((profile) => {
