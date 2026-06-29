@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 public class PricelistWizardStateDTO {
 
     private Long pricelistId;
+    private PricelistCreationStep currentStep;
     private PricelistCreationStep creationStep;
     private boolean creationCompleted;
     private PricelistStatus status;
@@ -19,6 +20,7 @@ public class PricelistWizardStateDTO {
     public static PricelistWizardStateDTO fromEntity(Pricelist pricelist, PricelistResponseDTO response) {
         PricelistWizardStateDTO dto = new PricelistWizardStateDTO();
         dto.setPricelistId(pricelist.getId());
+        dto.setCurrentStep(pricelist.getCreationStep());
         dto.setCreationStep(pricelist.getCreationStep());
         dto.setCreationCompleted(pricelist.isCreationCompleted());
         dto.setStatus(pricelist.getStatus());
@@ -37,6 +39,14 @@ public class PricelistWizardStateDTO {
 
     public void setPricelistId(Long pricelistId) {
         this.pricelistId = pricelistId;
+    }
+
+    public PricelistCreationStep getCurrentStep() {
+        return currentStep;
+    }
+
+    public void setCurrentStep(PricelistCreationStep currentStep) {
+        this.currentStep = currentStep;
     }
 
     public PricelistCreationStep getCreationStep() {

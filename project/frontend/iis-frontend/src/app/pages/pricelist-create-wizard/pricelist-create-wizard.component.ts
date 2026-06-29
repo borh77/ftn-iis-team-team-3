@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, NgZone, OnDestroy, OnInit, inject } from '@angular/core';
 import {
   AbstractControl,
   ReactiveFormsModule,
@@ -12,7 +12,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { finalize, Observable, timeout } from 'rxjs';
+import { finalize, Observable, Subscription, timeout } from 'rxjs';
 import { extractBackendErrorMessage } from '../../core/http-error-message';
 import { PortfolioService } from '../../core/portfolio.service';
 import { Category, Product, Subcategory, Variant } from '../../core/portfolio.models';
@@ -39,6 +39,7 @@ import { PricelistWizardThresholdsStepComponent } from './pricelist-wizard-thres
 interface WizardStepDefinition {
   id: PricelistCreationStep;
   label: string;
+  description: string;
 }
 
 @Component({
@@ -66,13 +67,15 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   private readonly portfolioService = inject(PortfolioService);
   private readonly wizardService = inject(PricelistWizardService);
   private readonly transientMessages = inject(TransientMessageService);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly ngZone = inject(NgZone);
 
   readonly steps: WizardStepDefinition[] = [
-    { id: 'BASIC_INFO', label: 'Basic information' },
-    { id: 'TEAM_ACCESS', label: 'Team' },
-    { id: 'ITEMS', label: 'Items' },
-    { id: 'THRESHOLDS', label: 'Thresholds' },
-    { id: 'REVIEW', label: 'Review' },
+    { id: 'BASIC_INFO', label: 'Basic information', description: 'Region, segment, currency, and validity dates' },
+    { id: 'TEAM_ACCESS', label: 'Team access', description: 'Private draft or shared team ownership' },
+    { id: 'ITEMS', label: 'Items', description: 'Active product variants included in this pricelist' },
+    { id: 'THRESHOLDS', label: 'Thresholds', description: 'Quantity breaks and prices for each item' },
+    { id: 'REVIEW', label: 'Review', description: 'Validate and finish the draft wizard' },
   ];
 
   readonly minPeriodStart = PricelistCreateWizardComponent.todayStartInputValue();
@@ -109,14 +112,16 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   state: PricelistWizardState | null = null;
   summary: PricelistWizardSummary | null = null;
 
-  loadingState = false;
+  loading = true;
+  wizardReady = false;
   starting = false;
   saving = false;
   loadingSummary = false;
-  loadErrorMessage = '';
+  loadError: string | null = null;
   errorMessage = '';
   successMessage = '';
   lookupWarningMessages: string[] = [];
+  private routeSubscription?: Subscription;
 
   regions: Region[] = [];
   teams: PricelistTeam[] = [];
@@ -125,22 +130,20 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   productsByItem: Record<number, Product[]> = {};
   variantsByItem: Record<number, Variant[]> = {};
 
-  get isWizardLoading(): boolean {
-    return (this.loadingState || this.starting) && !this.loadErrorMessage;
-  }
-
   ngOnInit(): void {
     this.loadLookups();
-    this.route.paramMap.subscribe((params) => {
+    this.routeSubscription = this.route.paramMap.subscribe((params) => {
       const id = params.get('id');
       if (id) {
         const wizardId = Number(id);
         if (!Number.isFinite(wizardId) || wizardId <= 0) {
-          this.loadingState = false;
-          this.starting = false;
           this.wizardId = null;
+          this.wizardReady = false;
           this.showError('Pricelist draft could not be found.');
           this.showLoadErrorMessage('Pricelist draft could not be found.');
+          return;
+        }
+        if (this.wizardReady && this.wizardId === wizardId && this.state?.pricelistId === wizardId) {
           return;
         }
         this.wizardId = wizardId;
@@ -149,16 +152,20 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
       }
       this.wizardId = null;
       this.state = null;
+      this.summary = null;
+      this.wizardReady = false;
+      this.requestWizardRender();
       this.startWizard();
     });
   }
 
   ngOnDestroy(): void {
+    this.routeSubscription?.unsubscribe();
     this.transientMessages.clearAll(this);
   }
 
   get activeStep(): WizardStepDefinition {
-    return this.steps[this.activeStepIndex];
+    return this.steps[this.activeStepIndex] ?? this.steps[0];
   }
 
   get items(): UntypedFormArray {
@@ -176,6 +183,8 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   retryLoad(): void {
     this.clearResultMessages();
     this.clearLoadError();
+    this.wizardReady = false;
+    this.requestWizardRender();
     if (this.wizardId) {
       this.loadWizardState(this.wizardId);
       return;
@@ -218,6 +227,10 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
 
   finish(): void {
     if (!this.wizardId || this.saving) {
+      return;
+    }
+    if (!this.summary?.readyToFinish) {
+      this.showError('Review the validation messages before finishing the wizard.');
       return;
     }
     this.saving = true;
@@ -351,7 +364,22 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   }
 
   stepActionDisabled(): boolean {
-    return this.saving || (this.activeStep.id === 'BASIC_INFO' && this.basicInfoForm.invalid);
+    if (this.saving) {
+      return true;
+    }
+
+    switch (this.activeStep.id) {
+      case 'BASIC_INFO':
+        return this.basicInfoForm.invalid;
+      case 'TEAM_ACCESS':
+        return this.teamAccessForm.invalid;
+      case 'ITEMS':
+        return this.itemsForm.invalid || this.hasDuplicateVariants();
+      case 'THRESHOLDS':
+        return this.thresholdsForm.invalid || this.thresholdItems.length === 0;
+      default:
+        return false;
+    }
   }
 
   private startWizard(): void {
@@ -359,24 +387,30 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
       return;
     }
     this.starting = true;
-    this.loadingState = true;
+    this.loading = true;
+    this.wizardReady = false;
     this.clearLoadError();
     this.clearError();
+    this.requestWizardRender();
     this.wizardService.startWizard().pipe(timeout(30000), finalize(() => {
       this.starting = false;
-      this.loadingState = false;
+      this.loading = false;
+      this.requestWizardRender();
     })).subscribe({
       next: (response) => {
-        const wizardId = response.pricelistId ?? response.state?.pricelistId;
+        const normalized = this.normalizeStartResponse(response);
+        const wizardId = normalized.pricelistId;
         if (!wizardId) {
           this.showLoadErrorMessage('Wizard was started, but the draft identifier was missing.');
           return;
         }
         this.wizardId = wizardId;
-        if (response.state) {
-          this.safeApplyState(response.state, true);
-        }
-        this.router.navigate(['/pricelists/create', wizardId], { replaceUrl: true });
+        this.requestWizardRender();
+        void this.router.navigate(['/pricelists/create', wizardId], { replaceUrl: true }).then((navigated) => {
+          if (!navigated) {
+            this.loadWizardState(wizardId);
+          }
+        });
       },
       error: (error: HttpErrorResponse) => {
         this.showLoadError(error);
@@ -385,33 +419,30 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   }
 
   private loadWizardState(id: number): void {
-    this.loadingState = true;
+    if (this.wizardReady && this.wizardId === id && this.state?.pricelistId === id) {
+      return;
+    }
+    this.wizardId = id;
+    this.loading = true;
+    this.wizardReady = false;
     this.starting = false;
     this.clearLoadError();
     this.clearError();
-    this.wizardService.getWizardState(id).pipe(timeout(30000), finalize(() => (this.loadingState = false))).subscribe({
-      next: (state) => {
-        if (!state) {
-          this.showLoadErrorMessage('The backend returned an empty wizard response.');
-          return;
-        }
-        this.safeApplyState(state, true);
+    this.requestWizardRender();
+    this.wizardService.getWizardState(id).pipe(timeout(30000), finalize(() => {
+      if (!this.loadError) {
+        this.loading = false;
+      }
+      this.requestWizardRender();
+    })).subscribe({
+      next: (response) => {
+        const state = this.normalizeWizardState(response) ?? this.createFallbackWizardState(id, response);
+        this.finishWizardLoad(state);
       },
       error: (error: HttpErrorResponse) => {
         this.showLoadError(error);
       },
     });
-  }
-
-  private safeApplyState(state: PricelistWizardState, followBackendStep: boolean): boolean {
-    try {
-      this.applyState(state, followBackendStep);
-      this.clearLoadError();
-      return true;
-    } catch {
-      this.showLoadErrorMessage('Wizard data could not be displayed. Please refresh and try again.');
-      return false;
-    }
   }
 
   private applyState(state: PricelistWizardState, followBackendStep: boolean): void {
@@ -424,6 +455,24 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     if (this.activeStep.id === 'REVIEW') {
       this.loadSummary();
     }
+  }
+
+  private finishWizardLoad(state: PricelistWizardState): void {
+    this.ngZone.run(() => {
+      try {
+        this.applyState(state, true);
+        this.wizardReady = true;
+        this.loadError = null;
+      } catch (error) {
+        console.error('Wizard data was loaded but could not be rendered.', error);
+        this.loadError = 'Wizard data was loaded but could not be rendered.';
+        this.wizardReady = false;
+      } finally {
+        this.loading = false;
+        this.starting = false;
+        this.requestWizardRender();
+      }
+    });
   }
 
   private resolveCreationStep(state: PricelistWizardState): PricelistCreationStep {
@@ -694,19 +743,149 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     return next;
   }
 
+  private normalizeStartResponse(response: unknown): { pricelistId: number | null; state: PricelistWizardState | null } {
+    const root = this.objectValue(response);
+    const data = this.objectValue(root?.['data']);
+    const content = this.objectValue(root?.['content']);
+    const state = this.normalizeWizardState(root?.['state'] ?? data?.['state'] ?? content?.['state']);
+    const rawId = root?.['pricelistId'] ?? data?.['pricelistId'] ?? content?.['pricelistId'] ?? root?.['id'] ?? state?.pricelistId;
+    const pricelistId = this.toPositiveNumber(rawId);
+    return { pricelistId, state };
+  }
+
+  private normalizeWizardState(response: unknown): PricelistWizardState | null {
+    const root = this.objectValue(response);
+    const candidate = this.objectValue(root?.['data'])
+      ?? this.objectValue(root?.['content'])
+      ?? this.objectValue(root?.['state'])
+      ?? root;
+
+    if (!candidate) {
+      return null;
+    }
+
+    const pricelist = this.objectValue(candidate['pricelist']);
+    const candidateId = this.toPositiveNumber(candidate['pricelistId']) ?? this.toPositiveNumber(candidate['id']);
+    if (candidateId && (candidate['creationStep'] || candidate['currentStep'] || pricelist)) {
+      return {
+        pricelistId: candidateId,
+        currentStep: this.normalizeStep(candidate['currentStep']),
+        creationStep: this.normalizeStep(candidate['creationStep'] ?? pricelist?.['creationStep']) ?? 'BASIC_INFO',
+        creationCompleted: candidate['creationCompleted'] === true || pricelist?.['creationCompleted'] === true,
+        status: this.normalizeStatus(candidate['status'] ?? pricelist?.['status']),
+        teamId: this.toPositiveNumber(candidate['teamId'] ?? pricelist?.['teamId']),
+        teamName: this.stringOrNull(candidate['teamName'] ?? pricelist?.['teamName']),
+        lastEditedAt: this.stringOrNull(candidate['lastEditedAt'] ?? pricelist?.['lastEditedAt']),
+        pricelist: (pricelist as Pricelist | null) ?? null,
+      };
+    }
+
+    const directPricelistId = this.toPositiveNumber(candidate['id']);
+    if (directPricelistId && candidate['status']) {
+      const directPricelist = candidate as unknown as Pricelist;
+      return {
+        pricelistId: directPricelistId,
+        currentStep: null,
+        creationStep: this.normalizeStep(directPricelist.creationStep) ?? 'BASIC_INFO',
+        creationCompleted: directPricelist.creationCompleted === true,
+        status: this.normalizeStatus(directPricelist.status),
+        teamId: this.toPositiveNumber(directPricelist.teamId),
+        teamName: this.stringOrNull(directPricelist.teamName),
+        lastEditedAt: this.stringOrNull(directPricelist.lastEditedAt),
+        pricelist: directPricelist,
+      };
+    }
+
+    return null;
+  }
+
+  private createFallbackWizardState(id: number, response: unknown): PricelistWizardState {
+    const pricelist = this.extractPricelist(response);
+    return {
+      pricelistId: id,
+      currentStep: null,
+      creationStep: this.normalizeStep(pricelist?.creationStep) ?? 'BASIC_INFO',
+      creationCompleted: pricelist?.creationCompleted === true,
+      status: this.normalizeStatus(pricelist?.status),
+      teamId: this.toPositiveNumber(pricelist?.teamId),
+      teamName: this.stringOrNull(pricelist?.teamName),
+      lastEditedAt: this.stringOrNull(pricelist?.lastEditedAt),
+      pricelist,
+    };
+  }
+
+  private extractPricelist(response: unknown): Pricelist | null {
+    const root = this.objectValue(response);
+    const data = this.objectValue(root?.['data']);
+    const content = this.objectValue(root?.['content']);
+    const state = this.objectValue(root?.['state'] ?? data?.['state'] ?? content?.['state']);
+    const explicitPricelist = this.objectValue(root?.['pricelist'])
+      ?? this.objectValue(data?.['pricelist'])
+      ?? this.objectValue(content?.['pricelist'])
+      ?? this.objectValue(state?.['pricelist']);
+
+    if (explicitPricelist) {
+      return explicitPricelist as unknown as Pricelist;
+    }
+
+    const candidate = data ?? content ?? state ?? root;
+    if (candidate && (candidate['status'] || candidate['regionId'] || candidate['periodStart'] || candidate['items'])) {
+      return candidate as unknown as Pricelist;
+    }
+
+    return null;
+  }
+
+  private objectValue(value: unknown): Record<string, unknown> | null {
+    return value && typeof value === 'object' ? value as Record<string, unknown> : null;
+  }
+
+  private toPositiveNumber(value: unknown): number | null {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+  }
+
+  private stringOrNull(value: unknown): string | null {
+    return typeof value === 'string' && value.trim() ? value : null;
+  }
+
+  private normalizeStep(value: unknown): PricelistCreationStep | null {
+    return typeof value === 'string' && this.steps.some((step) => step.id === value || value === 'COMPLETED')
+      ? value as PricelistCreationStep
+      : null;
+  }
+
+  private normalizeStatus(value: unknown): Pricelist['status'] {
+    return value === 'IN_REVIEW' || value === 'ACTIVE' || value === 'ARCHIVED' ? value : 'DRAFT';
+  }
+
   private showLoadError(error: unknown): void {
     const detail = extractBackendErrorMessage(error, '').trim();
     this.showLoadErrorMessage(detail || 'Please try again.');
   }
 
   private showLoadErrorMessage(message: string): void {
-    this.loadingState = false;
+    this.loading = false;
     this.starting = false;
-    this.loadErrorMessage = message;
+    this.wizardReady = false;
+    this.loadError = message;
+    this.requestWizardRender();
   }
 
   private clearLoadError(): void {
-    this.loadErrorMessage = '';
+    this.loadError = null;
+    this.requestWizardRender();
+  }
+
+  private requestWizardRender(): void {
+    queueMicrotask(() => {
+      try {
+        this.cdr.markForCheck();
+        this.cdr.detectChanges();
+      } catch (error) {
+        console.warn('Wizard change detection skipped.', error);
+      }
+    });
   }
 
   private addLookupWarning(message: string): void {

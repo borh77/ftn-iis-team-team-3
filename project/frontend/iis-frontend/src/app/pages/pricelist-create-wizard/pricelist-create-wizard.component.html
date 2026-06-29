@@ -3,19 +3,19 @@
     <div>
       <p class="kicker">Pricelist wizard</p>
       <h2>Create pricelist</h2>
-      <p>Build the draft step by step. Every step is saved to the backend and can be continued later.</p>
+      <p>Define the region, team access, product variants, quantity thresholds, and review the draft before finishing.</p>
     </div>
 
     <a class="ghost hero-action" routerLink="/content/mine">Back to pricelists</a>
   </header>
 
   <section class="panel wizard-panel">
-    @if (isWizardLoading) {
+    @if (loading && !wizardReady) {
       <p class="muted">Loading wizard...</p>
-    } @else if (loadErrorMessage) {
+    } @else if (loadError) {
       <div class="error-box load-error" role="alert">
         <strong>Could not load pricelist wizard.</strong>
-        <span>{{ loadErrorMessage }}</span>
+        <span>{{ loadError }}</span>
       </div>
 
       <div class="wizard-actions load-error-actions">
@@ -27,15 +27,19 @@
     } @else {
       <nav class="wizard-progress" aria-label="Pricelist creation steps">
         @for (step of steps; track step.id; let stepIndex = $index) {
-          <div class="progress-step" [class]="stepClass(stepIndex)">
+          <div class="progress-step" [class]="stepClass(stepIndex)" [attr.aria-current]="stepIndex === activeStepIndex ? 'step' : null">
             <span>{{ stepIndex + 1 }}</span>
-            <strong>{{ step.label }}</strong>
+            <div>
+              <strong>{{ step.label }}</strong>
+              <small>{{ step.description }}</small>
+            </div>
           </div>
         }
       </nav>
 
       <div class="wizard-meta">
         <span>Draft #{{ wizardId || '-' }}</span>
+        <span>Step {{ activeStepIndex + 1 }} of {{ steps.length }}</span>
         <span>Current step: {{ activeStep.label }}</span>
         @if (state?.lastEditedAt) {
           <span>Last edited: {{ state?.lastEditedAt | date:'dd.MM.yyyy HH:mm' }}</span>
@@ -111,11 +115,11 @@
 
         @if (activeStep.id !== 'REVIEW') {
           <button type="button" class="secondary" (click)="saveCurrentStep(false)" [disabled]="stepActionDisabled()">
-            {{ saving ? 'Saving...' : 'Save' }}
+            {{ saving ? 'Saving...' : 'Save draft' }}
           </button>
 
           <button type="button" class="primary" (click)="saveCurrentStep(true)" [disabled]="stepActionDisabled()">
-            {{ saving ? 'Saving...' : 'Save and continue' }}
+            {{ saving ? 'Saving...' : 'Next' }}
           </button>
         } @else {
           <button type="button" class="secondary" (click)="saveCurrentStep(false)" [disabled]="loadingSummary">
@@ -126,7 +130,7 @@
             type="button"
             class="primary"
             (click)="finish()"
-            [disabled]="saving || loadingSummary || summary?.readyToFinish === false"
+            [disabled]="saving || loadingSummary || !summary || summary.readyToFinish === false"
           >
             {{ saving ? 'Finishing...' : 'Finish' }}
           </button>
