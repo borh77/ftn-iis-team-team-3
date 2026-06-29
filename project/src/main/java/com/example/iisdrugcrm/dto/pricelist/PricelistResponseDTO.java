@@ -31,6 +31,7 @@ public class PricelistResponseDTO {
     private boolean owner;
     private boolean canCollaborate;
     private boolean canManageOffers;
+    private boolean canActivate;
     private OffsetDateTime periodStart;
     private OffsetDateTime periodEnd;
     private List<PricelistItemResponseDTO> items;
@@ -197,6 +198,14 @@ public class PricelistResponseDTO {
 
     public void setCanManageOffers(boolean canManageOffers) {
         this.canManageOffers = canManageOffers;
+    }
+
+    public boolean isCanActivate() {
+        return canActivate;
+    }
+
+    public void setCanActivate(boolean canActivate) {
+        this.canActivate = canActivate;
     }
 
     public void setPeriodEnd(OffsetDateTime periodEnd) {

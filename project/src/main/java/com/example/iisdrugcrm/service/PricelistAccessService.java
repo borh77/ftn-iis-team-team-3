@@ -5,6 +5,7 @@ import com.example.iisdrugcrm.domain.pricelist.Pricelist;
 import com.example.iisdrugcrm.repository.PricelistTeamRepository;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -35,6 +36,33 @@ public class PricelistAccessService {
             return false;
         }
         return pricelist.getTeam().getLeaderId().equals(userId) || pricelist.getTeam().getMemberIds().contains(userId);
+    }
+
+    public boolean canActivateAsReviewer(Pricelist pricelist, Long userId) {
+        return canActivateAsReviewer(pricelist, userId, false);
+    }
+
+    public boolean canActivateAsReviewer(Pricelist pricelist, Long userId, boolean admin) {
+        if (isOwner(pricelist, userId) || userId == null) {
+            return false;
+        }
+        if (admin) {
+            return true;
+        }
+        if (pricelist.getTeam() == null) {
+            return false;
+        }
+        return pricelist.getTeam().getLeaderId().equals(userId) || pricelist.getTeam().getMemberIds().contains(userId);
+    }
+
+    public void validateActivationReviewer(Pricelist pricelist, Long userId) {
+        validateActivationReviewer(pricelist, userId, false);
+    }
+
+    public void validateActivationReviewer(Pricelist pricelist, Long userId, boolean admin) {
+        if (!canActivateAsReviewer(pricelist, userId, admin)) {
+            throw new AccessDeniedException("A pricelist must be activated by another authorized reviewer.");
+        }
     }
 
     public void validateOwnerOnly(Pricelist pricelist, Long userId) {

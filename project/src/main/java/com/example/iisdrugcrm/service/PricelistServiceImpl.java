@@ -236,9 +236,15 @@ public class PricelistServiceImpl implements PricelistService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto, Long currentUserId) {
+        return changeStatus(id, dto, currentUserId, false);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto, Long currentUserId, boolean currentUserAdmin) {
         Pricelist pricelist = pricelistRepository.findById(id)
                 .orElseThrow(() -> new PricelistNotFoundException("Pricelist not found"));
-        accessService.validateOwnerOnly(pricelist, currentUserId);
+        validateStatusChangeAccess(pricelist, dto.getTargetStatus(), currentUserId, currentUserAdmin);
         return changeStatus(pricelist, dto, currentUserId);
     }
 
@@ -274,7 +280,15 @@ public class PricelistServiceImpl implements PricelistService {
                 saved.getStatus()
         );
         LOGGER.info("Changed pricelist {} status from {} to {}", saved.getId(), previousStatus, saved.getStatus());
-        return toResponse(saved);
+        return toResponse(saved, currentUserId, accessService.canCollaborate(saved, currentUserId));
+    }
+
+    private void validateStatusChangeAccess(Pricelist pricelist, PricelistStatus targetStatus, Long currentUserId, boolean currentUserAdmin) {
+        if (pricelist.getStatus() == PricelistStatus.IN_REVIEW && targetStatus == PricelistStatus.ACTIVE) {
+            accessService.validateActivationReviewer(pricelist, currentUserId, currentUserAdmin);
+            return;
+        }
+        accessService.validateOwnerOnly(pricelist, currentUserId);
     }
 
     @Override
@@ -520,7 +534,10 @@ public class PricelistServiceImpl implements PricelistService {
     }
 
     private PricelistResponseDTO toResponse(Pricelist pricelist, Long currentUserId, boolean canCollaborate) {
-        return PricelistResponseDTO.fromEntity(pricelist, currentUserId, canCollaborate, activeVariantsFor(pricelist));
+        PricelistResponseDTO response = PricelistResponseDTO.fromEntity(pricelist, currentUserId, canCollaborate, activeVariantsFor(pricelist));
+        response.setCanActivate(pricelist.getStatus() == PricelistStatus.IN_REVIEW
+                && accessService.canActivateAsReviewer(pricelist, currentUserId));
+        return response;
     }
 
     private Map<Long, CatalogVariantDTO> activeVariantsFor(Pricelist pricelist) {

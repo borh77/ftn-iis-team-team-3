@@ -33,6 +33,7 @@ export interface Pricelist {
   owner: boolean;
   canCollaborate: boolean;
   canManageOffers: boolean;
+  canActivate?: boolean;
   periodStart: string;
   periodEnd: string;
   items: PricelistItem[];

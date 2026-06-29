@@ -188,7 +188,7 @@ export class PricelistListComponent implements OnInit, OnDestroy {
   }
 
   canSubmitForReview(pricelist: Pricelist): boolean {
-    return this.isOwner(pricelist) && pricelist.status === 'DRAFT';
+    return this.isOwner(pricelist) && pricelist.status === 'DRAFT' && pricelist.creationCompleted !== false;
   }
 
   canEdit(pricelist: Pricelist): boolean {
@@ -196,7 +196,8 @@ export class PricelistListComponent implements OnInit, OnDestroy {
   }
 
   canActivate(pricelist: Pricelist): boolean {
-    return this.isOwner(pricelist) && pricelist.status === 'IN_REVIEW';
+    return pricelist.status === 'IN_REVIEW'
+      && (pricelist.canActivate ?? (!this.isOwner(pricelist) && this.canCollaborate(pricelist)));
   }
 
   canReturnToDraft(pricelist: Pricelist): boolean {
