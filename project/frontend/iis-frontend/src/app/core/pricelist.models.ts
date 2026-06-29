@@ -21,6 +21,11 @@ export interface Pricelist {
   customerSegment: string;
   currency: string;
   status: 'DRAFT' | 'IN_REVIEW' | 'ACTIVE' | 'ARCHIVED';
+  creationStep?: PricelistCreationStep | null;
+  creationCompleted?: boolean;
+  lastEditedAt?: string | null;
+  teamId?: number | null;
+  teamName?: string | null;
   versionNumber: number;
   parentPricelistId: number | null;
   rootPricelistId: number | null;
@@ -61,6 +66,7 @@ export type PricelistCreationStep =
 
 export interface PricelistWizardState {
   pricelistId: number;
+  currentStep?: PricelistCreationStep | null;
   creationStep: PricelistCreationStep;
   creationCompleted: boolean;
   status: Pricelist['status'];

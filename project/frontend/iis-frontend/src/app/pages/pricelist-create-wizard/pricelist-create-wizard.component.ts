@@ -13,6 +13,7 @@ import {
 } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, Observable } from 'rxjs';
+import { extractBackendErrorMessage } from '../../core/http-error-message';
 import { PortfolioService } from '../../core/portfolio.service';
 import { Category, Product, Subcategory, Variant } from '../../core/portfolio.models';
 import {
@@ -125,8 +126,14 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     this.route.paramMap.subscribe((params) => {
       const id = params.get('id');
       if (id) {
-        this.wizardId = Number(id);
-        this.loadWizardState(this.wizardId);
+        const wizardId = Number(id);
+        if (!Number.isFinite(wizardId) || wizardId <= 0) {
+          this.loadingState = false;
+          this.showError('Pricelist draft could not be found.');
+          return;
+        }
+        this.wizardId = wizardId;
+        this.loadWizardState(wizardId);
         return;
       }
       this.startWizard();
@@ -329,9 +336,16 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
       this.loadingState = false;
     })).subscribe({
       next: (response) => {
-        this.wizardId = response.pricelistId;
-        this.applyState(response.state, true);
-        this.router.navigate(['/pricelists/create', response.pricelistId], { replaceUrl: true });
+        const wizardId = response.pricelistId ?? response.state?.pricelistId;
+        if (!wizardId) {
+          this.showError('Wizard was started, but the draft identifier was missing.');
+          return;
+        }
+        this.wizardId = wizardId;
+        if (response.state) {
+          this.safeApplyState(response.state, true);
+        }
+        this.router.navigate(['/pricelists/create', wizardId], { replaceUrl: true });
       },
       error: (error: HttpErrorResponse) => {
         this.showError(this.createErrorMessage(error));
@@ -343,27 +357,47 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     this.loadingState = true;
     this.clearError();
     this.wizardService.getWizardState(id).pipe(finalize(() => (this.loadingState = false))).subscribe({
-      next: (state) => this.applyState(state, true),
+      next: (state) => this.safeApplyState(state, true),
       error: (error: HttpErrorResponse) => {
         this.showError(this.createErrorMessage(error));
       },
     });
   }
 
+  private safeApplyState(state: PricelistWizardState, followBackendStep: boolean): void {
+    try {
+      this.applyState(state, followBackendStep);
+    } catch {
+      this.showError('Wizard data could not be displayed. Please refresh and try again.');
+    }
+  }
+
   private applyState(state: PricelistWizardState, followBackendStep: boolean): void {
     this.state = state;
-    this.wizardId = state.pricelistId;
+    this.wizardId = state.pricelistId ?? this.wizardId;
     this.populateForms(state);
     if (followBackendStep) {
-      this.setActiveStep(state.creationStep);
+      this.setActiveStep(this.resolveCreationStep(state), state.status);
     }
     if (this.activeStep.id === 'REVIEW') {
       this.loadSummary();
     }
   }
 
-  private setActiveStep(step: PricelistCreationStep): void {
+  private resolveCreationStep(state: PricelistWizardState): PricelistCreationStep {
+    const step = state.currentStep ?? state.creationStep ?? state.pricelist?.creationStep;
+    if (step && (this.steps.some((candidate) => candidate.id === step) || step === 'COMPLETED')) {
+      return step;
+    }
+    return 'BASIC_INFO';
+  }
+
+  private setActiveStep(step: PricelistCreationStep, status: Pricelist['status'] | null | undefined): void {
     if (step === 'COMPLETED') {
+      if (status === 'DRAFT') {
+        this.activeStepIndex = this.steps.findIndex((candidate) => candidate.id === 'REVIEW');
+        return;
+      }
       this.router.navigate(['/content/mine']);
       return;
     }
@@ -627,25 +661,13 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   }
 
   private createErrorMessage(error: HttpErrorResponse): string {
-    if (typeof error.error?.error === 'string' && error.error.error.trim()) {
-      return error.error.error.trim();
-    }
-    if (typeof error.error?.message === 'string' && error.error.message.trim()) {
-      return error.error.message.trim();
-    }
-    if (typeof error.error?.detail === 'string' && error.error.detail.trim()) {
-      return error.error.detail.trim();
-    }
-    if (typeof error.error === 'string' && error.error.trim()) {
-      return error.error.trim();
-    }
     if (error.status === 409) {
       return 'A conflict exists with an already existing pricelist.';
     }
     if (error.status === 403) {
       return 'You do not have access to this pricelist.';
     }
-    return 'Wizard action failed. Please try again.';
+    return extractBackendErrorMessage(error, 'Wizard action failed. Please try again.');
   }
 
   private toDatetimeLocal(value: string | null | undefined): string {

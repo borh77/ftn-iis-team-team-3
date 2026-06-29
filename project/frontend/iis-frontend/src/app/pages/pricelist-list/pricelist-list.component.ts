@@ -122,7 +122,11 @@ export class PricelistListComponent implements OnInit, OnDestroy {
   }
 
   editPricelist(pricelist: Pricelist): void {
-    this.router.navigate(['/pricelists', pricelist.id, 'edit']);
+    if (!this.canEdit(pricelist)) {
+      this.showError('Only draft pricelists can be edited through the wizard.');
+      return;
+    }
+    this.router.navigate(['/pricelists/create', pricelist.id]);
   }
 
   activate(pricelist: Pricelist): void {
