@@ -12,7 +12,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { finalize, Observable } from 'rxjs';
+import { finalize, Observable, timeout } from 'rxjs';
 import { extractBackendErrorMessage } from '../../core/http-error-message';
 import { PortfolioService } from '../../core/portfolio.service';
 import { Category, Product, Subcategory, Variant } from '../../core/portfolio.models';
@@ -111,8 +111,10 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   starting = false;
   saving = false;
   loadingSummary = false;
+  loadErrorMessage = '';
   errorMessage = '';
   successMessage = '';
+  lookupWarningMessages: string[] = [];
 
   regions: Region[] = [];
   teams: PricelistTeam[] = [];
@@ -120,6 +122,10 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   subcategoriesByItem: Record<number, Subcategory[]> = {};
   productsByItem: Record<number, Product[]> = {};
   variantsByItem: Record<number, Variant[]> = {};
+
+  get isWizardLoading(): boolean {
+    return (this.loadingState || this.starting) && !this.loadErrorMessage;
+  }
 
   ngOnInit(): void {
     this.loadLookups();
@@ -129,13 +135,18 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
         const wizardId = Number(id);
         if (!Number.isFinite(wizardId) || wizardId <= 0) {
           this.loadingState = false;
+          this.starting = false;
+          this.wizardId = null;
           this.showError('Pricelist draft could not be found.');
+          this.showLoadErrorMessage('Pricelist draft could not be found.');
           return;
         }
         this.wizardId = wizardId;
         this.loadWizardState(wizardId);
         return;
       }
+      this.wizardId = null;
+      this.state = null;
       this.startWizard();
     });
   }
@@ -158,6 +169,16 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
 
   get duplicateVariantMessage(): string {
     return this.hasDuplicateVariants() ? 'A variant can only be selected once in this pricelist.' : '';
+  }
+
+  retryLoad(): void {
+    this.clearResultMessages();
+    this.clearLoadError();
+    if (this.wizardId) {
+      this.loadWizardState(this.wizardId);
+      return;
+    }
+    this.startWizard();
   }
 
   goBack(): void {
@@ -243,12 +264,13 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
       this.subcategoriesByItem[itemIndex] = [];
       return;
     }
-    this.portfolioService.getSubcategories(categoryId).subscribe({
+    this.portfolioService.getSubcategories(categoryId).pipe(timeout(30000)).subscribe({
       next: (subcategories) => {
         this.subcategoriesByItem[itemIndex] = subcategories.filter((subcategory) => subcategory.status === 'ACTIVE');
       },
       error: () => {
         this.subcategoriesByItem[itemIndex] = [];
+        this.addLookupWarning('Subcategories could not be loaded for the selected category.');
       },
     });
   }
@@ -266,12 +288,13 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
       this.productsByItem[itemIndex] = [];
       return;
     }
-    this.portfolioService.getProducts(subcategoryId).subscribe({
+    this.portfolioService.getProducts(subcategoryId).pipe(timeout(30000)).subscribe({
       next: (products) => {
         this.productsByItem[itemIndex] = products.filter((product) => product.status === 'ACTIVE');
       },
       error: () => {
         this.productsByItem[itemIndex] = [];
+        this.addLookupWarning('Products could not be loaded for the selected subcategory.');
       },
     });
   }
@@ -287,12 +310,13 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
       this.variantsByItem[itemIndex] = [];
       return;
     }
-    this.portfolioService.getVariants(productId).subscribe({
+    this.portfolioService.getVariants(productId).pipe(timeout(30000)).subscribe({
       next: (variants) => {
         this.variantsByItem[itemIndex] = variants.filter((variant) => variant.status === 'ACTIVE');
       },
       error: () => {
         this.variantsByItem[itemIndex] = [];
+        this.addLookupWarning('Variants could not be loaded for the selected product.');
       },
     });
   }
@@ -330,15 +354,16 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     }
     this.starting = true;
     this.loadingState = true;
+    this.clearLoadError();
     this.clearError();
-    this.wizardService.startWizard().pipe(finalize(() => {
+    this.wizardService.startWizard().pipe(timeout(30000), finalize(() => {
       this.starting = false;
       this.loadingState = false;
     })).subscribe({
       next: (response) => {
         const wizardId = response.pricelistId ?? response.state?.pricelistId;
         if (!wizardId) {
-          this.showError('Wizard was started, but the draft identifier was missing.');
+          this.showLoadErrorMessage('Wizard was started, but the draft identifier was missing.');
           return;
         }
         this.wizardId = wizardId;
@@ -348,27 +373,38 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
         this.router.navigate(['/pricelists/create', wizardId], { replaceUrl: true });
       },
       error: (error: HttpErrorResponse) => {
-        this.showError(this.createErrorMessage(error));
+        this.showLoadError(error);
       },
     });
   }
 
   private loadWizardState(id: number): void {
     this.loadingState = true;
+    this.starting = false;
+    this.clearLoadError();
     this.clearError();
-    this.wizardService.getWizardState(id).pipe(finalize(() => (this.loadingState = false))).subscribe({
-      next: (state) => this.safeApplyState(state, true),
+    this.wizardService.getWizardState(id).pipe(timeout(30000), finalize(() => (this.loadingState = false))).subscribe({
+      next: (state) => {
+        if (!state) {
+          this.showLoadErrorMessage('The backend returned an empty wizard response.');
+          return;
+        }
+        this.safeApplyState(state, true);
+      },
       error: (error: HttpErrorResponse) => {
-        this.showError(this.createErrorMessage(error));
+        this.showLoadError(error);
       },
     });
   }
 
-  private safeApplyState(state: PricelistWizardState, followBackendStep: boolean): void {
+  private safeApplyState(state: PricelistWizardState, followBackendStep: boolean): boolean {
     try {
       this.applyState(state, followBackendStep);
+      this.clearLoadError();
+      return true;
     } catch {
-      this.showError('Wizard data could not be displayed. Please refresh and try again.');
+      this.showLoadErrorMessage('Wizard data could not be displayed. Please refresh and try again.');
+      return false;
     }
   }
 
@@ -610,17 +646,26 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   }
 
   private loadLookups(): void {
-    this.regionService.list().subscribe({
+    this.regionService.list().pipe(timeout(30000)).subscribe({
       next: (regions) => (this.regions = regions),
-      error: () => (this.regions = []),
+      error: () => {
+        this.regions = [];
+        this.addLookupWarning('Regions could not be loaded. Region selection is temporarily unavailable.');
+      },
     });
-    this.teamService.getMyTeams().subscribe({
+    this.teamService.getMyTeams().pipe(timeout(30000)).subscribe({
       next: (teams) => (this.teams = teams),
-      error: () => (this.teams = []),
+      error: () => {
+        this.teams = [];
+        this.addLookupWarning('Teams could not be loaded. Team sharing is temporarily unavailable.');
+      },
     });
-    this.portfolioService.getCategories().subscribe({
+    this.portfolioService.getCategories().pipe(timeout(30000)).subscribe({
       next: (categories) => (this.categories = categories.filter((category) => category.status === 'ACTIVE')),
-      error: () => (this.categories = []),
+      error: () => {
+        this.categories = [];
+        this.addLookupWarning('Catalog categories could not be loaded. Item selection is temporarily unavailable.');
+      },
     });
   }
 
@@ -641,6 +686,27 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
       }
     }
     return next;
+  }
+
+  private showLoadError(error: unknown): void {
+    const detail = extractBackendErrorMessage(error, '').trim();
+    this.showLoadErrorMessage(detail || 'Please try again.');
+  }
+
+  private showLoadErrorMessage(message: string): void {
+    this.loadingState = false;
+    this.starting = false;
+    this.loadErrorMessage = message;
+  }
+
+  private clearLoadError(): void {
+    this.loadErrorMessage = '';
+  }
+
+  private addLookupWarning(message: string): void {
+    if (!this.lookupWarningMessages.includes(message)) {
+      this.lookupWarningMessages = [...this.lookupWarningMessages, message];
+    }
   }
 
   private showSuccess(message: string): void {

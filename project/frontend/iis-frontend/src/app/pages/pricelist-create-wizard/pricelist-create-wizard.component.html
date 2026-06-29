@@ -10,8 +10,20 @@
   </header>
 
   <section class="panel wizard-panel">
-    @if (loadingState || starting) {
+    @if (isWizardLoading) {
       <p class="muted">Loading wizard...</p>
+    } @else if (loadErrorMessage) {
+      <div class="error-box load-error" role="alert">
+        <strong>Could not load pricelist wizard.</strong>
+        <span>{{ loadErrorMessage }}</span>
+      </div>
+
+      <div class="wizard-actions load-error-actions">
+        <button type="button" class="primary" (click)="retryLoad()">
+          Retry
+        </button>
+        <a class="ghost" routerLink="/content/mine">Back to pricelists</a>
+      </div>
     } @else {
       <nav class="wizard-progress" aria-label="Pricelist creation steps">
         @for (step of steps; track step.id; let stepIndex = $index) {
@@ -36,6 +48,14 @@
 
       @if (successMessage) {
         <p class="success-box">{{ successMessage }}</p>
+      }
+
+      @if (lookupWarningMessages.length) {
+        <div class="warning-box" role="status">
+          @for (warning of lookupWarningMessages; track warning) {
+            <p>{{ warning }}</p>
+          }
+        </div>
       }
 
       <section class="step-panel">
