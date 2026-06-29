@@ -1,8 +1,9 @@
-import { ChangeDetectorRef, Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
+import { ERROR_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 
 @Component({
   selector: 'app-login',
@@ -11,11 +12,12 @@ import { AuthService } from '../../core/auth/auth.service';
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })
-export class LoginComponent {
+export class LoginComponent implements OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly transientMessages = inject(TransientMessageService);
 
   loading = false;
   errorMessage = '';
@@ -26,6 +28,10 @@ export class LoginComponent {
     password: ['', Validators.required],
   });
 
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
+  }
+
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -33,7 +39,7 @@ export class LoginComponent {
     }
 
     this.loading = true;
-    this.errorMessage = '';
+    this.clearError();
 
     this.authService.login(this.form.getRawValue()).subscribe({
       next: (session) => {
@@ -46,10 +52,10 @@ export class LoginComponent {
         this.loading = false;
         // Show generic auth message for 401 (unauthorized) and 400 (bad request)
         if (err && err.status && (err.status === 401 || err.status === 400)) {
-          this.errorMessage = 'Incorrect username or password.';
+          this.showError('Incorrect username or password.');
           this.lastAuthError = true;
         } else {
-          this.errorMessage = 'An unexpected error occurred.';
+          this.showError('An unexpected error occurred.');
           this.lastAuthError = false;
         }
         this.cdr.detectChanges();
@@ -59,8 +65,16 @@ export class LoginComponent {
 
   onFieldFocus(): void {
     if (this.lastAuthError) {
-      this.errorMessage = 'Incorrect username or password.';
+      this.showError('Incorrect username or password.');
       this.cdr.detectChanges();
     }
+  }
+
+  private showError(message: string): void {
+    this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private clearError(): void {
+    this.transientMessages.clearField(this, 'errorMessage', () => this.cdr.detectChanges());
   }
 }

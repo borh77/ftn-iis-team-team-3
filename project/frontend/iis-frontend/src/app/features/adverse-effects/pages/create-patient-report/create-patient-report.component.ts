@@ -1,8 +1,9 @@
-import { ChangeDetectorRef, Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AdverseEffectsApiService } from '../../api/adverse-effects-api.service';
 import { CreatePatientReportRequest } from '../../models/adverse-effect-report.model';
+import { ERROR_MESSAGE_MS, SUCCESS_MESSAGE_MS, TransientMessageService } from '../../../../core/transient-message.service';
 
 interface MedicationSymptoms {
   [medication: string]: string[];
@@ -15,10 +16,11 @@ interface MedicationSymptoms {
   templateUrl: './create-patient-report.component.html',
   styleUrls: ['./create-patient-report.component.css']
 })
-export class CreatePatientReportComponent {
+export class CreatePatientReportComponent implements OnDestroy {
 
   private readonly api = inject(AdverseEffectsApiService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly transientMessages = inject(TransientMessageService);
 
   saving = false;
   errorMessage = '';
@@ -63,6 +65,10 @@ export class CreatePatientReportComponent {
     symptomDate: ''
   };
 
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
+  }
+
   onMedicationChange(): void {
     this.selectedSymptoms = [];
     this.availableSymptoms = this.symptomMap[this.form.medicationName] ?? [];
@@ -86,18 +92,17 @@ export class CreatePatientReportComponent {
 
   submit(): void {
     if (!this.form.medicationName || !this.form.symptoms || !this.form.symptomDate) {
-      this.errorMessage = 'Please fill in all required fields.';
+      this.showError('Please fill in all required fields.');
       return;
     }
 
     this.saving = true;
-    this.errorMessage = '';
-    this.successMessage = '';
+    this.clearResultMessages();
 
     this.api.createPatientReport(this.form).subscribe({
       next: (report) => {
         this.saving = false;
-        this.successMessage = `Thank you for submitting your report! We appreciate you taking the time to inform us. Your report has been recorded and we will take it into consideration.`;
+        this.showSuccess('Thank you for submitting your report! We appreciate you taking the time to inform us. Your report has been recorded and we will take it into consideration.');
         this.form = { medicationName: '', symptoms: '', additionalDesc: '', patientGender: '', patientAge: undefined, symptomDate: '' };
         this.selectedSymptoms = [];
         this.availableSymptoms = [];
@@ -105,10 +110,23 @@ export class CreatePatientReportComponent {
       },
       error: (err) => {
         this.saving = false;
-        this.errorMessage = 'Error submitting report. Please try again.';
+        this.showError('Error submitting report. Please try again.');
         console.error(err);
         this.cdr.detectChanges();
       }
     });
+  }
+
+  private showSuccess(message: string): void {
+    this.transientMessages.setField(this, 'successMessage', message, SUCCESS_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private showError(message: string): void {
+    this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private clearResultMessages(): void {
+    this.transientMessages.clearField(this, 'successMessage', () => this.cdr.detectChanges());
+    this.transientMessages.clearField(this, 'errorMessage', () => this.cdr.detectChanges());
   }
 }

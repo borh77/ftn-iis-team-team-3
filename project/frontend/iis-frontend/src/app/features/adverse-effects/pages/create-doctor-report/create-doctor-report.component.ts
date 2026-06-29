@@ -1,9 +1,10 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AdverseEffectsApiService } from '../../api/adverse-effects-api.service';
 import { CreateDoctorReportRequest } from '../../models/adverse-effect-report.model';
+import { ERROR_MESSAGE_MS, TransientMessageService } from '../../../../core/transient-message.service';
 
 @Component({
   selector: 'app-create-doctor-report',
@@ -12,10 +13,11 @@ import { CreateDoctorReportRequest } from '../../models/adverse-effect-report.mo
   templateUrl: './create-doctor-report.component.html',
   styleUrls: ['./create-doctor-report.component.css']
 })
-export class CreateDoctorReportComponent {
+export class CreateDoctorReportComponent implements OnDestroy {
 
   private readonly api = inject(AdverseEffectsApiService);
   private readonly router = inject(Router);
+  private readonly transientMessages = inject(TransientMessageService);
 
   saving = false;
   errorMessage = '';
@@ -36,10 +38,14 @@ export class CreateDoctorReportComponent {
     patientAge: undefined
   };
 
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
+  }
+
   submit(): void {
     this.saving = true;
-    this.errorMessage = '';
-    this.successMessage = '';
+    this.transientMessages.clearField(this, 'errorMessage');
+    this.transientMessages.clearField(this, 'successMessage');
 
     this.api.createDoctorReport(this.form).subscribe({
       next: (report) => {
@@ -51,7 +57,7 @@ export class CreateDoctorReportComponent {
       },
       error: (err) => {
         this.saving = false;
-        this.errorMessage = 'Error creating report. Please check your input.';
+        this.transientMessages.setField(this, 'errorMessage', 'Error creating report. Please check your input.', ERROR_MESSAGE_MS);
         console.error(err);
       }
     });

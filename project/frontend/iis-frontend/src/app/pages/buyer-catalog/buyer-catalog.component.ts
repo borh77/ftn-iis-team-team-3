@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { finalize, take } from 'rxjs';
 import { BuyerCatalogService } from '../../core/buyer-catalog.service';
 import { BuyerCatalog } from '../../core/buyer-catalog.models';
+import { ERROR_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 
 @Component({
   selector: 'app-buyer-catalog',
@@ -12,9 +13,10 @@ import { BuyerCatalog } from '../../core/buyer-catalog.models';
   templateUrl: './buyer-catalog.component.html',
   styleUrl: './buyer-catalog.component.css',
 })
-export class BuyerCatalogComponent implements OnInit {
+export class BuyerCatalogComponent implements OnInit, OnDestroy {
   private readonly catalogService = inject(BuyerCatalogService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly transientMessages = inject(TransientMessageService);
 
   loading = false;
   refreshing = false;
@@ -23,6 +25,10 @@ export class BuyerCatalogComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCatalog();
+  }
+
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
   }
 
   loadCatalog(): void {
@@ -36,7 +42,7 @@ export class BuyerCatalogComponent implements OnInit {
   private requestCatalog(initialLoad: boolean): void {
     this.loading = initialLoad;
     this.refreshing = !initialLoad;
-    this.errorMessage = '';
+    this.clearError();
 
     this.catalogService.getCatalog()
       .pipe(
@@ -50,12 +56,12 @@ export class BuyerCatalogComponent implements OnInit {
       .subscribe({
         next: (catalog) => {
           this.catalog = catalog;
-          this.errorMessage = '';
+          this.clearError();
           this.cdr.detectChanges();
         },
         error: (err: HttpErrorResponse) => {
           this.catalog = null;
-          this.errorMessage = this.createErrorMessage(err);
+          this.showError(this.createErrorMessage(err));
           this.cdr.detectChanges();
         },
       });
@@ -83,5 +89,13 @@ export class BuyerCatalogComponent implements OnInit {
     }
 
     return 'Catalog could not be loaded.';
+  }
+
+  private showError(message: string): void {
+    this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private clearError(): void {
+    this.transientMessages.clearField(this, 'errorMessage', () => this.cdr.detectChanges());
   }
 }

@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectorRef, Component, ElementRef, ViewChild, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, OnDestroy, ViewChild, inject } from '@angular/core';
 import { finalize, take } from 'rxjs';
 import { ProcurementService } from '../../core/procurement.service';
 import { ValidationResult } from '../../core/procurement.models';
+import { ERROR_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 import { ValidationResultComponent } from './validation-result.component';
 
 @Component({
@@ -13,17 +14,22 @@ import { ValidationResultComponent } from './validation-result.component';
   templateUrl: './order-upload.component.html',
   styleUrl: './order-upload.component.css',
 })
-export class OrderUploadComponent {
+export class OrderUploadComponent implements OnDestroy {
   @ViewChild('fileInput') fileInput?: ElementRef<HTMLInputElement>;
 
   private readonly procurementService = inject(ProcurementService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly transientMessages = inject(TransientMessageService);
 
   selectedFile: File | null = null;
   result: ValidationResult | null = null;
   loading = false;
   errorMessage = '';
   dragActive = false;
+
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
+  }
 
   onFileInputChange(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -54,17 +60,17 @@ export class OrderUploadComponent {
 
   validateSelectedFile(): void {
     if (!this.selectedFile) {
-      this.errorMessage = 'Please choose a JSON or CSV document first.';
+      this.showError('Please choose a JSON or CSV document first.');
       return;
     }
 
     if (!this.isSupportedFile(this.selectedFile)) {
-      this.errorMessage = 'Unsupported file type. Please upload a JSON or CSV document.';
+      this.showError('Unsupported file type. Please upload a JSON or CSV document.');
       return;
     }
 
     this.loading = true;
-    this.errorMessage = '';
+    this.clearError();
     this.result = null;
 
     this.procurementService.validateOrderDocument(this.selectedFile)
@@ -78,12 +84,12 @@ export class OrderUploadComponent {
       .subscribe({
         next: (result) => {
           this.result = result;
-          this.errorMessage = '';
+          this.clearError();
           this.cdr.detectChanges();
         },
         error: (error: HttpErrorResponse) => {
           this.result = null;
-          this.errorMessage = this.createErrorMessage(error);
+          this.showError(this.createErrorMessage(error));
           this.cdr.detectChanges();
         },
       });
@@ -92,7 +98,7 @@ export class OrderUploadComponent {
   clearSelection(): void {
     this.selectedFile = null;
     this.result = null;
-    this.errorMessage = '';
+    this.clearError();
     if (this.fileInput?.nativeElement) {
       this.fileInput.nativeElement.value = '';
     }
@@ -101,10 +107,10 @@ export class OrderUploadComponent {
   private setSelectedFile(file: File | null): void {
     this.selectedFile = file;
     this.result = null;
-    this.errorMessage = '';
+    this.clearError();
 
     if (file && !this.isSupportedFile(file)) {
-      this.errorMessage = 'Unsupported file type. Please upload a JSON or CSV document.';
+      this.showError('Unsupported file type. Please upload a JSON or CSV document.');
     }
   }
 
@@ -136,5 +142,13 @@ export class OrderUploadComponent {
     }
 
     return 'The document could not be validated.';
+  }
+
+  private showError(message: string): void {
+    this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private clearError(): void {
+    this.transientMessages.clearField(this, 'errorMessage', () => this.cdr.detectChanges());
   }
 }

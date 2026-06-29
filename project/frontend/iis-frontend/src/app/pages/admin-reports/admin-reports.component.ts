@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   AnalyticsService,
@@ -7,6 +7,7 @@ import {
   PerformanceReportFilters,
   TeamPerformanceReport,
 } from '../../core/analytics.service';
+import { ERROR_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 
 type TeamMode = 'all' | 'specific';
 
@@ -17,10 +18,11 @@ type TeamMode = 'all' | 'specific';
   templateUrl: './admin-reports.component.html',
   styleUrl: './admin-reports.component.css',
 })
-export class AdminReportsComponent implements OnInit {
+export class AdminReportsComponent implements OnInit, OnDestroy {
   private readonly analyticsService = inject(AnalyticsService);
   private readonly fb = inject(FormBuilder);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly transientMessages = inject(TransientMessageService);
 
   // TODO: Replace the specific-team numeric field with a real team dropdown once an admin teams lookup endpoint exists.
   readonly form = this.fb.nonNullable.group({
@@ -48,10 +50,14 @@ export class AdminReportsComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
+  }
+
   generateReport(): void {
     this.submitted = true;
-    this.errorMessage = '';
-    this.pdfErrorMessage = '';
+    this.clearError();
+    this.clearPdfError();
 
     if (this.form.invalid || !this.hasValidTeamFilter()) {
       this.form.markAllAsTouched();
@@ -68,7 +74,7 @@ export class AdminReportsComponent implements OnInit {
       error: () => {
         this.loading = false;
         this.report = null;
-        this.errorMessage = 'Unable to generate the report for the selected period.';
+        this.showError('Unable to generate the report for the selected period.');
         this.cdr.detectChanges();
       },
     });
@@ -76,7 +82,7 @@ export class AdminReportsComponent implements OnInit {
 
   downloadPdf(): void {
     this.submitted = true;
-    this.pdfErrorMessage = '';
+    this.clearPdfError();
 
     if (this.form.invalid || !this.hasValidTeamFilter()) {
       this.form.markAllAsTouched();
@@ -92,7 +98,7 @@ export class AdminReportsComponent implements OnInit {
       },
       error: () => {
         this.pdfDownloading = false;
-        this.pdfErrorMessage = 'Unable to download the PDF report for the selected period.';
+        this.showPdfError('Unable to download the PDF report for the selected period.');
         this.cdr.detectChanges();
       },
     });
@@ -162,5 +168,21 @@ export class AdminReportsComponent implements OnInit {
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
+  }
+
+  private showError(message: string): void {
+    this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private showPdfError(message: string): void {
+    this.transientMessages.setField(this, 'pdfErrorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private clearError(): void {
+    this.transientMessages.clearField(this, 'errorMessage', () => this.cdr.detectChanges());
+  }
+
+  private clearPdfError(): void {
+    this.transientMessages.clearField(this, 'pdfErrorMessage', () => this.cdr.detectChanges());
   }
 }

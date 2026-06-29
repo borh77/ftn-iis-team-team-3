@@ -4,6 +4,7 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 import { PricelistTeam, TeamMember } from '../../core/team.models';
 import { TeamService } from '../../core/team.service';
+import { ERROR_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 
 @Component({
   selector: 'app-team-members-modal',
@@ -18,6 +19,7 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
   @Output() teamChanged = new EventEmitter<PricelistTeam>();
 
   private readonly teamService = inject(TeamService);
+  private readonly transientMessages = inject(TransientMessageService);
   private searchSub: Subscription | null = null;
 
   currentTeam: PricelistTeam | null = null;
@@ -35,7 +37,7 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
         memberIds: [...this.team.memberIds],
         members: [...this.team.members],
       };
-      this.errorMessage = '';
+      this.clearError();
       this.searchResults = [];
       this.searchControl.setValue('', { emitEvent: false });
       this.bindSearch();
@@ -44,6 +46,7 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this.searchSub?.unsubscribe();
+    this.transientMessages.clearAll(this);
   }
 
   close(): void {
@@ -56,7 +59,7 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
     }
 
     this.submittingMemberId = memberId;
-    this.errorMessage = '';
+    this.clearError();
     this.teamService.addMember(this.currentTeam.id, { memberId }).subscribe({
       next: (team) => {
         this.submittingMemberId = null;
@@ -71,7 +74,7 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
       },
       error: (error) => {
         this.submittingMemberId = null;
-        this.errorMessage = error?.error?.error ?? 'Neuspešno dodavanje člana.';
+        this.showError(error?.error?.error ?? 'Failed to add member.');
       },
     });
   }
@@ -82,7 +85,7 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
     }
 
     this.submittingMemberId = memberId;
-    this.errorMessage = '';
+    this.clearError();
     this.teamService.removeMember(this.currentTeam.id, { memberId }).subscribe({
       next: (team) => {
         this.submittingMemberId = null;
@@ -95,7 +98,7 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
       },
       error: (error) => {
         this.submittingMemberId = null;
-        this.errorMessage = error?.error?.error ?? 'Neuspešno uklanjanje člana.';
+        this.showError(error?.error?.error ?? 'Failed to remove member.');
       },
     });
   }
@@ -149,5 +152,13 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
         this.loadingSearch = false;
       },
     });
+  }
+
+  private showError(message: string): void {
+    this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS);
+  }
+
+  private clearError(): void {
+    this.transientMessages.clearField(this, 'errorMessage');
   }
 }

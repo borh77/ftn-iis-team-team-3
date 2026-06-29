@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import {
   ActivityLogFilters,
@@ -7,6 +7,7 @@ import {
   PricelistActivityLog,
 } from '../../core/analytics.service';
 import { SpringPage } from '../../core/auth/auth.models';
+import { ERROR_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 
 @Component({
   selector: 'app-admin-logs',
@@ -15,10 +16,11 @@ import { SpringPage } from '../../core/auth/auth.models';
   templateUrl: './admin-logs.component.html',
   styleUrl: './admin-logs.component.css',
 })
-export class AdminLogsComponent implements OnInit {
+export class AdminLogsComponent implements OnInit, OnDestroy {
   private readonly analyticsService = inject(AnalyticsService);
   private readonly fb = inject(FormBuilder);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly transientMessages = inject(TransientMessageService);
 
   readonly pageSize = 10;
   readonly defaultSort = 'timestamp,desc';
@@ -38,6 +40,10 @@ export class AdminLogsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadLogs(0);
+  }
+
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
   }
 
   applyFilters(): void {
@@ -77,7 +83,7 @@ export class AdminLogsComponent implements OnInit {
 
   private loadLogs(page: number): void {
     this.loading = true;
-    this.errorMessage = '';
+    this.clearError();
 
     this.analyticsService
       .getActivityLogs(this.buildFilters(), page, this.pageSize, this.defaultSort)
@@ -93,7 +99,7 @@ export class AdminLogsComponent implements OnInit {
         },
         error: () => {
           this.loading = false;
-          this.errorMessage = 'Unable to load activity logs.';
+          this.showError('Unable to load activity logs.');
           this.data = null;
           this.cdr.detectChanges();
         },
@@ -127,5 +133,13 @@ export class AdminLogsComponent implements OnInit {
     }
 
     return new Date(value).toISOString();
+  }
+
+  private showError(message: string): void {
+    this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private clearError(): void {
+    this.transientMessages.clearField(this, 'errorMessage', () => this.cdr.detectChanges());
   }
 }

@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { PricelistTeam } from '../../core/team.models';
 import { TeamService } from '../../core/team.service';
+import { ERROR_MESSAGE_MS, SUCCESS_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 import { TeamMembersModalComponent } from '../../widgets/team-members-modal/team-members-modal.component';
 import { TeamListComponent } from '../../widgets/team-list/team-list.component';
 
@@ -13,9 +14,10 @@ import { TeamListComponent } from '../../widgets/team-list/team-list.component';
   templateUrl: './team-management.component.html',
   styleUrl: './team-management.component.css',
 })
-export class TeamManagementComponent implements OnInit {
+export class TeamManagementComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly teamService = inject(TeamService);
+  private readonly transientMessages = inject(TransientMessageService);
 
   saving = false;
   readonly refreshToken = signal(0);
@@ -30,6 +32,10 @@ export class TeamManagementComponent implements OnInit {
 
   ngOnInit(): void {}
 
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
+  }
+
   markRefreshed(): void {
     this.refreshToken.update((v: number) => v + 1);
   }
@@ -41,14 +47,14 @@ export class TeamManagementComponent implements OnInit {
     }
 
     this.saving = true;
-    this.errorMessage = '';
+    this.transientMessages.clearField(this, 'errorMessage');
     const payload = { teamName: this.form.controls.teamName.value.trim() };
 
     this.teamService.createTeam(payload).subscribe({
       next: (created) => {
         this.saving = false;
         this.form.reset({ teamName: '' });
-        this.showToast('Team created.');
+        this.showToast('Team created successfully.', SUCCESS_MESSAGE_MS);
         // Trigger list refresh in child component
         this.markRefreshed();
       },
@@ -56,10 +62,10 @@ export class TeamManagementComponent implements OnInit {
         this.saving = false;
         const message = error?.error?.error ?? 'Failed to create team.';
         if (error?.status === 409) {
-          this.errorMessage = 'A team with that name already exists.';
+          this.transientMessages.setField(this, 'errorMessage', 'A team with that name already exists.', ERROR_MESSAGE_MS);
           return;
         }
-        this.errorMessage = message;
+        this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS);
       },
     });
   }
@@ -93,13 +99,8 @@ export class TeamManagementComponent implements OnInit {
     return '';
   }
 
-  showToast(message: string): void {
-    this.toastMessage = message;
-    window.setTimeout(() => {
-      if (this.toastMessage === message) {
-        this.toastMessage = '';
-      }
-    }, 3500);
+  showToast(message: string, durationMs = ERROR_MESSAGE_MS): void {
+    this.transientMessages.setField(this, 'toastMessage', message, durationMs);
   }
 
   teamMembersText(team: PricelistTeam): string {

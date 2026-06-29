@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal, inject, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Region } from '../../core/region.model';
 import { RegionService } from '../../core/region.service';
+import { ERROR_MESSAGE_MS, SUCCESS_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 import { RegionListComponent } from '../../widgets/region-list/region-list.component';
 
 @Component({
@@ -12,9 +13,10 @@ import { RegionListComponent } from '../../widgets/region-list/region-list.compo
   templateUrl: './admin-regions-page.component.html',
   styleUrl: './admin-regions-page.component.css',
 })
-export class AdminRegionsPageComponent implements OnInit {
+export class AdminRegionsPageComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly regionService = inject(RegionService);
+  private readonly transientMessages = inject(TransientMessageService);
   readonly refreshToken = signal(0);
 
   saving = false;
@@ -31,7 +33,10 @@ export class AdminRegionsPageComponent implements OnInit {
     code: ['', [Validators.required, Validators.maxLength(20)]],
   });
 
-  ngOnInit(): void {
+  ngOnInit(): void {}
+
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
   }
 
   markRefreshed(): void {
@@ -40,14 +45,14 @@ export class AdminRegionsPageComponent implements OnInit {
 
   openCreate(): void {
     this.selected = null;
-    this.errorMessage = '';
+    this.transientMessages.clearField(this, 'errorMessage');
     this.showModal = true;
     this.form.reset({ name: '', code: '' });
   }
 
   openEdit(region: Region): void {
     this.selected = region;
-    this.errorMessage = '';
+    this.transientMessages.clearField(this, 'errorMessage');
     this.showModal = true;
     this.form.reset({ name: region.name, code: region.code });
   }
@@ -55,7 +60,7 @@ export class AdminRegionsPageComponent implements OnInit {
   closeModal(): void {
     this.showModal = false;
     this.selected = null;
-    this.errorMessage = '';
+    this.transientMessages.clearField(this, 'errorMessage');
     this.form.reset({ name: '', code: '' });
   }
 
@@ -66,7 +71,7 @@ export class AdminRegionsPageComponent implements OnInit {
     }
 
     this.saving = true;
-    this.errorMessage = '';
+    this.transientMessages.clearField(this, 'errorMessage');
     const payload = {
       name: this.form.controls.name.value.trim(),
       code: this.form.controls.code.value.trim(),
@@ -76,18 +81,20 @@ export class AdminRegionsPageComponent implements OnInit {
 
     request.subscribe({
       next: () => {
+        const message = this.selected ? 'Region updated successfully.' : 'Region created successfully.';
         this.saving = false;
         this.closeModal();
         this.markRefreshed();
+        this.showToast(message, SUCCESS_MESSAGE_MS);
       },
       error: (error) => {
         this.saving = false;
-        const message = error?.error?.error ?? 'Neuspešno čuvanje regiona.';
-        if ((error?.status === 409) || message.includes('Region sa tim imenom ili kodom već postoji')) {
-          this.errorMessage = 'Region sa tim imenom ili kodom već postoji';
+        const message = error?.error?.error ?? 'Failed to save region.';
+        if (error?.status === 409 || message.includes('Region sa tim imenom ili kodom')) {
+          this.transientMessages.setField(this, 'errorMessage', 'Region with that name or code already exists.', ERROR_MESSAGE_MS);
           return;
         }
-        this.errorMessage = message;
+        this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS);
       },
     });
   }
@@ -114,26 +121,22 @@ export class AdminRegionsPageComponent implements OnInit {
         this.deleting = false;
         this.cancelDelete();
         this.markRefreshed();
+        this.showToast('Region deleted successfully.', SUCCESS_MESSAGE_MS);
       },
       error: (error) => {
         this.deleting = false;
         this.cancelDelete();
         if (error?.status === 422) {
-          this.showToast('Nije moguće obrisati region jer ga koriste aktivni korisnici ili cenovnici');
+          this.showToast('Region cannot be deleted because it is used by active users or pricelists.');
           return;
         }
-        this.showToast('Brisanje regiona nije uspelo.');
+        this.showToast('Region deletion failed.');
       },
     });
   }
 
-  showToast(message: string): void {
-    this.toastMessage = message;
-    window.setTimeout(() => {
-      if (this.toastMessage === message) {
-        this.toastMessage = '';
-      }
-    }, 3500);
+  showToast(message: string, durationMs = ERROR_MESSAGE_MS): void {
+    this.transientMessages.setField(this, 'toastMessage', message, durationMs);
   }
 
   controlError(controlName: 'name' | 'code'): string {
@@ -142,10 +145,10 @@ export class AdminRegionsPageComponent implements OnInit {
       return '';
     }
     if (control.hasError('required')) {
-      return 'Polje je obavezno.';
+      return 'This field is required.';
     }
     if (control.hasError('maxlength')) {
-      return controlName === 'name' ? 'Naziv može imati najviše 120 karaktera.' : 'Kod može imati najviše 20 karaktera.';
+      return controlName === 'name' ? 'Name can be at most 120 characters.' : 'Code can be at most 20 characters.';
     }
     return '';
   }

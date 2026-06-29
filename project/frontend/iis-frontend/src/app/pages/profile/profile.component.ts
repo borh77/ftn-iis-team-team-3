@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { AuthService } from '../../core/auth/auth.service';
 import { UserService } from '../../core/user.service';
 import { UserRow } from '../../core/auth/auth.models';
+import { ERROR_MESSAGE_MS, SUCCESS_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 
 @Component({
   selector: 'app-profile',
@@ -12,11 +13,12 @@ import { UserRow } from '../../core/auth/auth.models';
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.css',
 })
-export class ProfileComponent implements OnInit {
+export class ProfileComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly userService = inject(UserService);
   private readonly fb = inject(FormBuilder);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly transientMessages = inject(TransientMessageService);
 
   profile: UserRow | null = null;
   loadingProfile = false;
@@ -45,6 +47,10 @@ export class ProfileComponent implements OnInit {
     this.loadProfile();
   }
 
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
+  }
+
   loadProfile(): void {
     this.loadingProfile = true;
     this.userService.getProfile().subscribe({
@@ -61,7 +67,7 @@ export class ProfileComponent implements OnInit {
       },
       error: () => {
         this.loadingProfile = false;
-        this.profileMessage = 'Unable to load profile data.';
+        this.showProfileMessage('Unable to load profile data.', ERROR_MESSAGE_MS);
         this.cdr.detectChanges();
       },
     });
@@ -74,19 +80,19 @@ export class ProfileComponent implements OnInit {
     }
 
     this.savingProfile = true;
-    this.profileMessage = '';
+    this.clearProfileMessage();
 
     this.userService.updateProfile(this.profileForm.getRawValue()).subscribe({
       next: (profile) => {
         this.profile = profile;
         this.authService.applySessionResponse(profile);
         this.savingProfile = false;
-        this.profileMessage = 'Profile updated successfully.';
+        this.showProfileMessage('Profile updated successfully.', SUCCESS_MESSAGE_MS);
         this.cdr.detectChanges();
       },
       error: (error) => {
         this.savingProfile = false;
-        this.profileMessage = error?.error?.error ?? 'Unable to update profile.';
+        this.showProfileMessage(error?.error?.error ?? 'Unable to update profile.', ERROR_MESSAGE_MS);
         this.cdr.detectChanges();
       },
     });
@@ -99,19 +105,19 @@ export class ProfileComponent implements OnInit {
     }
 
     this.changingPassword = true;
-    this.passwordMessage = '';
+    this.clearPasswordMessage();
 
     this.userService.changePassword(this.passwordForm.getRawValue()).subscribe({
       next: (session) => {
         this.changingPassword = false;
         this.authService.applySessionResponse(session);
-        this.passwordMessage = 'Password changed successfully.';
+        this.showPasswordMessage('Password changed successfully.', SUCCESS_MESSAGE_MS);
         this.passwordForm.reset();
         this.cdr.detectChanges();
       },
       error: (error) => {
         this.changingPassword = false;
-        this.passwordMessage = error?.error?.error ?? 'Unable to change password.';
+        this.showPasswordMessage(error?.error?.error ?? 'Unable to change password.', ERROR_MESSAGE_MS);
         this.cdr.detectChanges();
       },
     });
@@ -133,5 +139,21 @@ export class ProfileComponent implements OnInit {
     return oldPassword && newPassword && oldPassword === newPassword
       ? { passwordUnchanged: true }
       : null;
+  }
+
+  private showProfileMessage(message: string, durationMs: number): void {
+    this.transientMessages.setField(this, 'profileMessage', message, durationMs, () => this.cdr.detectChanges());
+  }
+
+  private showPasswordMessage(message: string, durationMs: number): void {
+    this.transientMessages.setField(this, 'passwordMessage', message, durationMs, () => this.cdr.detectChanges());
+  }
+
+  private clearProfileMessage(): void {
+    this.transientMessages.clearField(this, 'profileMessage', () => this.cdr.detectChanges());
+  }
+
+  private clearPasswordMessage(): void {
+    this.transientMessages.clearField(this, 'passwordMessage', () => this.cdr.detectChanges());
   }
 }

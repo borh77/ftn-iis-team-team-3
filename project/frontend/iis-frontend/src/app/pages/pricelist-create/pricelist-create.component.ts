@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AbstractControl, FormArray, ReactiveFormsModule, UntypedFormArray, UntypedFormBuilder, UntypedFormControl, UntypedFormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -9,6 +9,7 @@ import { PortfolioService } from '../../core/portfolio.service';
 import { Category, Product, Subcategory, Variant } from '../../core/portfolio.models';
 import { PricelistService } from '../../core/pricelist.service';
 import { CreatePricelistPayload, Pricelist, PricelistItem, QuantityThreshold } from '../../core/pricelist.models';
+import { ERROR_MESSAGE_MS, SUCCESS_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 
 type ThresholdGroup = UntypedFormGroup;
 type ItemGroup = UntypedFormGroup;
@@ -21,13 +22,14 @@ type PricelistFormGroup = UntypedFormGroup;
   templateUrl: './pricelist-create.component.html',
   styleUrl: './pricelist-create.component.css',
 })
-export class PricelistCreateComponent implements OnInit {
+export class PricelistCreateComponent implements OnInit, OnDestroy {
   private readonly fb = inject(UntypedFormBuilder);
   private readonly regionService = inject(RegionService);
   private readonly portfolioService = inject(PortfolioService);
   private readonly pricelistService = inject(PricelistService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly transientMessages = inject(TransientMessageService);
 
   loadingRegions = false;
   loadingLookup = false;
@@ -65,6 +67,10 @@ export class PricelistCreateComponent implements OnInit {
     if (this.isEditMode && this.editingPricelistId != null) {
       this.loadPricelist(this.editingPricelistId);
     }
+  }
+
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
   }
 
   get items(): FormArray<ItemGroup> {
@@ -185,8 +191,8 @@ export class PricelistCreateComponent implements OnInit {
 
     const payload = this.buildPayload();
     this.saving = true;
-    this.errorMessage = '';
-    this.successMessage = '';
+    this.transientMessages.clearField(this, 'errorMessage');
+    this.transientMessages.clearField(this, 'successMessage');
 
     const request = this.isEditMode && this.editingPricelistId != null
       ? this.pricelistService.update(this.editingPricelistId, payload)
@@ -199,7 +205,7 @@ export class PricelistCreateComponent implements OnInit {
           this.router.navigate(['/content/mine']);
           return;
         }
-        this.successMessage = 'Pricelist was successfully created in DRAFT status.';
+        this.transientMessages.setField(this, 'successMessage', 'Pricelist was successfully created in DRAFT status.', SUCCESS_MESSAGE_MS);
         this.form.reset({
           regionId: null,
           customerSegment: '',
@@ -215,7 +221,7 @@ export class PricelistCreateComponent implements OnInit {
       },
       error: (err: HttpErrorResponse) => {
         this.saving = false;
-        this.errorMessage = this.createErrorMessage(err);
+        this.transientMessages.setField(this, 'errorMessage', this.createErrorMessage(err), ERROR_MESSAGE_MS);
       },
     });
   }
@@ -302,20 +308,20 @@ export class PricelistCreateComponent implements OnInit {
 
   private loadPricelist(id: number): void {
     this.loadingPricelist = true;
-    this.errorMessage = '';
+    this.transientMessages.clearField(this, 'errorMessage');
 
     this.pricelistService.getById(id).subscribe({
       next: (pricelist) => {
         this.loadingPricelist = false;
         if (pricelist.status !== 'DRAFT') {
-          this.errorMessage = 'Only draft pricelists can be edited.';
+          this.transientMessages.setField(this, 'errorMessage', 'Only draft pricelists can be edited.', ERROR_MESSAGE_MS);
           return;
         }
         this.populateForm(pricelist);
       },
       error: (err: HttpErrorResponse) => {
         this.loadingPricelist = false;
-        this.errorMessage = this.createErrorMessage(err);
+        this.transientMessages.setField(this, 'errorMessage', this.createErrorMessage(err), ERROR_MESSAGE_MS);
       },
     });
   }

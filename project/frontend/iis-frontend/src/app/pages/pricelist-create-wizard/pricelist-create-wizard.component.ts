@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import {
   AbstractControl,
   ReactiveFormsModule,
@@ -28,6 +28,7 @@ import { Region } from '../../core/region.model';
 import { RegionService } from '../../core/region.service';
 import { TeamService } from '../../core/team.service';
 import { PricelistTeam } from '../../core/team.models';
+import { ERROR_MESSAGE_MS, SUCCESS_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 import { PricelistWizardBasicInfoStepComponent } from './pricelist-wizard-basic-info-step.component';
 import { PricelistWizardItemsStepComponent } from './pricelist-wizard-items-step.component';
 import { PricelistWizardReviewStepComponent } from './pricelist-wizard-review-step.component';
@@ -55,7 +56,7 @@ interface WizardStepDefinition {
   templateUrl: './pricelist-create-wizard.component.html',
   styleUrl: './pricelist-create-wizard.component.css',
 })
-export class PricelistCreateWizardComponent implements OnInit {
+export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   private readonly fb = inject(UntypedFormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -63,6 +64,7 @@ export class PricelistCreateWizardComponent implements OnInit {
   private readonly teamService = inject(TeamService);
   private readonly portfolioService = inject(PortfolioService);
   private readonly wizardService = inject(PricelistWizardService);
+  private readonly transientMessages = inject(TransientMessageService);
 
   readonly steps: WizardStepDefinition[] = [
     { id: 'BASIC_INFO', label: 'Osnovni podaci' },
@@ -131,6 +133,10 @@ export class PricelistCreateWizardComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
+  }
+
   get activeStep(): WizardStepDefinition {
     return this.steps[this.activeStepIndex];
   }
@@ -149,8 +155,7 @@ export class PricelistCreateWizardComponent implements OnInit {
 
   goBack(): void {
     if (this.activeStepIndex > 0) {
-      this.errorMessage = '';
-      this.successMessage = '';
+      this.clearResultMessages();
       this.activeStepIndex -= 1;
     }
   }
@@ -160,8 +165,7 @@ export class PricelistCreateWizardComponent implements OnInit {
       return;
     }
 
-    this.errorMessage = '';
-    this.successMessage = '';
+    this.clearResultMessages();
 
     switch (this.activeStep.id) {
       case 'BASIC_INFO':
@@ -187,8 +191,7 @@ export class PricelistCreateWizardComponent implements OnInit {
       return;
     }
     this.saving = true;
-    this.errorMessage = '';
-    this.successMessage = '';
+    this.clearResultMessages();
     this.wizardService.finishWizard(this.wizardId).pipe(finalize(() => (this.saving = false))).subscribe({
       next: () => {
         this.router.navigate(['/content/mine'], {
@@ -196,7 +199,7 @@ export class PricelistCreateWizardComponent implements OnInit {
         });
       },
       error: (error: HttpErrorResponse) => {
-        this.errorMessage = this.createErrorMessage(error);
+        this.showError(this.createErrorMessage(error));
       },
     });
   }
@@ -320,7 +323,7 @@ export class PricelistCreateWizardComponent implements OnInit {
     }
     this.starting = true;
     this.loadingState = true;
-    this.errorMessage = '';
+    this.clearError();
     this.wizardService.startWizard().pipe(finalize(() => {
       this.starting = false;
       this.loadingState = false;
@@ -331,18 +334,18 @@ export class PricelistCreateWizardComponent implements OnInit {
         this.router.navigate(['/pricelists/create', response.pricelistId], { replaceUrl: true });
       },
       error: (error: HttpErrorResponse) => {
-        this.errorMessage = this.createErrorMessage(error);
+        this.showError(this.createErrorMessage(error));
       },
     });
   }
 
   private loadWizardState(id: number): void {
     this.loadingState = true;
-    this.errorMessage = '';
+    this.clearError();
     this.wizardService.getWizardState(id).pipe(finalize(() => (this.loadingState = false))).subscribe({
       next: (state) => this.applyState(state, true),
       error: (error: HttpErrorResponse) => {
-        this.errorMessage = this.createErrorMessage(error);
+        this.showError(this.createErrorMessage(error));
       },
     });
   }
@@ -440,11 +443,11 @@ export class PricelistCreateWizardComponent implements OnInit {
     this.saving = true;
     request.pipe(finalize(() => (this.saving = false))).subscribe({
       next: (state) => {
-        this.successMessage = 'Korak je sačuvan.';
+        this.showSuccess('Step saved.');
         this.applyState(state, advance);
       },
       error: (error: HttpErrorResponse) => {
-        this.errorMessage = this.createErrorMessage(error);
+        this.showError(this.createErrorMessage(error));
       },
     });
   }
@@ -460,7 +463,7 @@ export class PricelistCreateWizardComponent implements OnInit {
         this.summary = summary;
       },
       error: (error: HttpErrorResponse) => {
-        this.errorMessage = this.createErrorMessage(error);
+        this.showError(this.createErrorMessage(error));
       },
     });
   }
@@ -604,6 +607,23 @@ export class PricelistCreateWizardComponent implements OnInit {
       }
     }
     return next;
+  }
+
+  private showSuccess(message: string): void {
+    this.transientMessages.setField(this, 'successMessage', message, SUCCESS_MESSAGE_MS);
+  }
+
+  private showError(message: string): void {
+    this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS);
+  }
+
+  private clearError(): void {
+    this.transientMessages.clearField(this, 'errorMessage');
+  }
+
+  private clearResultMessages(): void {
+    this.transientMessages.clearField(this, 'successMessage');
+    this.clearError();
   }
 
   private createErrorMessage(error: HttpErrorResponse): string {

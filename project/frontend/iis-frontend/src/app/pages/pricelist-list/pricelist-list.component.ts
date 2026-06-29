@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { PricelistService } from '../../core/pricelist.service';
@@ -10,6 +10,7 @@ import { SpecialOfferService } from '../../core/special-offer.service';
 import { DiscountType, PromotionSuggestion, SpecialOffer } from '../../core/special-offer.models';
 import { CatalogService } from '../../core/catalog.service';
 import { CatalogVariant } from '../../core/catalog.model';
+import { ERROR_MESSAGE_MS, SUCCESS_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 
 @Component({
   selector: 'app-pricelist-list',
@@ -18,13 +19,14 @@ import { CatalogVariant } from '../../core/catalog.model';
   templateUrl: './pricelist-list.component.html',
   styleUrls: ['./pricelist-list.component.css'],
 })
-export class PricelistListComponent implements OnInit {
+export class PricelistListComponent implements OnInit, OnDestroy {
   private readonly service = inject(PricelistService);
   private readonly wizardService = inject(PricelistWizardService);
   private readonly offerService = inject(SpecialOfferService);
   private readonly catalogService = inject(CatalogService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
+  private readonly transientMessages = inject(TransientMessageService);
 
   loading = false;
   loadingDrafts = false;
@@ -53,16 +55,20 @@ export class PricelistListComponent implements OnInit {
   ngOnInit(): void {
     const navigationSuccess = globalThis.history?.state?.successMessage;
     if (navigationSuccess) {
-      this.successMessage = navigationSuccess;
+      this.showSuccess(navigationSuccess);
     }
     this.loadActiveVariants();
     this.loadDrafts();
     this.load();
   }
 
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
+  }
+
   load(): void {
     this.loading = true;
-    this.errorMessage = '';
+    this.clearError();
     this.service.team().subscribe({
       next: (list) => {
         this.loading = false;
@@ -72,7 +78,7 @@ export class PricelistListComponent implements OnInit {
       error: () => {
         this.loading = false;
         this.pricelists = [];
-        this.errorMessage = 'Team pricelists could not be loaded.';
+        this.showError('Team pricelists could not be loaded.');
         this.cdr.detectChanges();
       },
     });
@@ -85,7 +91,7 @@ export class PricelistListComponent implements OnInit {
 
   loadDrafts(): void {
     this.loadingDrafts = true;
-    this.draftsErrorMessage = '';
+    this.clearDraftsError();
     this.wizardService.getDrafts().subscribe({
       next: (drafts) => {
         this.loadingDrafts = false;
@@ -95,7 +101,7 @@ export class PricelistListComponent implements OnInit {
       error: () => {
         this.loadingDrafts = false;
         this.wizardDrafts = [];
-        this.draftsErrorMessage = 'Unfinished drafts could not be loaded.';
+        this.showDraftsError('Unfinished drafts could not be loaded.');
         this.cdr.detectChanges();
       },
     });
@@ -124,7 +130,7 @@ export class PricelistListComponent implements OnInit {
   returnToDraft(pricelist: Pricelist): void {
     const reason = window.prompt('Enter a reason for returning this pricelist to draft:')?.trim();
     if (!reason) {
-      this.errorMessage = 'A reason is required to return a pricelist to draft.';
+      this.showError('A reason is required to return a pricelist to draft.');
       return;
     }
     this.changeStatus(pricelist, 'DRAFT', reason);
@@ -140,21 +146,20 @@ export class PricelistListComponent implements OnInit {
     }
     const replacementVariantId = this.replacementVariantIds[item.id];
     if (!replacementVariantId) {
-      this.errorMessage = 'Variant could not be replaced.';
+      this.showError('Variant could not be replaced.');
       return;
     }
     this.replacingItemId = item.id;
-    this.successMessage = '';
-    this.errorMessage = '';
+    this.clearResultMessages();
     this.service.replaceVariant(pricelist.id, item.id, Number(replacementVariantId)).subscribe({
       next: () => {
         this.replacingItemId = null;
-        this.successMessage = 'Variant was replaced.';
+        this.showSuccess('Variant was replaced.');
         this.load();
       },
       error: (error) => {
         this.replacingItemId = null;
-        this.errorMessage = this.replaceVariantErrorMessage(error);
+        this.showError(this.replaceVariantErrorMessage(error));
         this.cdr.detectChanges();
       },
     });
@@ -162,18 +167,17 @@ export class PricelistListComponent implements OnInit {
 
   createNewVersion(pricelist: Pricelist): void {
     this.creatingVersionId = pricelist.id;
-    this.successMessage = '';
-    this.errorMessage = '';
+    this.clearResultMessages();
 
     this.service.createNewVersion(pricelist.id).subscribe({
       next: () => {
         this.creatingVersionId = null;
-        this.successMessage = 'New draft version was created.';
+        this.showSuccess('New draft version was created.');
         this.load();
       },
       error: (error) => {
         this.creatingVersionId = null;
-        this.errorMessage = this.versionErrorMessage(error);
+        this.showError(this.versionErrorMessage(error));
         this.cdr.detectChanges();
       },
     });
@@ -279,7 +283,7 @@ export class PricelistListComponent implements OnInit {
     form.variantId = suggestion.variantId ?? form.variantId;
     form.discountType = suggestion.suggestedDiscountType;
     form.discountValue = suggestion.suggestedDiscountValue;
-    this.successMessage = 'Promotion suggestion was copied to the offer form. Review dates before saving.';
+    this.showSuccess('Promotion suggestion was copied to the offer form. Review dates before saving.');
   }
 
   dismissPromotionSuggestion(pricelist: Pricelist, suggestion: PromotionSuggestion): void {
@@ -308,11 +312,10 @@ export class PricelistListComponent implements OnInit {
 
   createOffer(pricelist: Pricelist): void {
     const form = this.ensureOfferForm(pricelist);
-    this.successMessage = '';
-    this.errorMessage = '';
+    this.clearResultMessages();
 
     if (!form.variantId || !form.discountValue || !form.startDate || !form.endDate) {
-      this.errorMessage = 'Offer could not be created.';
+      this.showError('Offer could not be created.');
       return;
     }
 
@@ -325,43 +328,36 @@ export class PricelistListComponent implements OnInit {
       endDate: new Date(form.endDate).toISOString(),
     }).subscribe({
       next: () => {
-        this.successMessage = 'Offer was created successfully.';
+        this.showSuccess('Offer was created successfully.');
         this.offerForms[pricelist.id] = this.defaultOfferForm(pricelist);
         this.loadOffers(pricelist.id);
       },
       error: (error) => {
-        this.errorMessage = this.offerErrorMessage(error, 'create');
+        this.showError(this.offerErrorMessage(error, 'create'));
       },
     });
   }
 
   activateOffer(offer: SpecialOffer): void {
     this.changingOfferId = offer.id;
-    this.toastErrorMessage = '';
-    this.activationErrorByOfferId[offer.id] = '';
+    this.clearToastError();
+    this.clearActivationError(offer.id);
 
     this.offerService.activate(offer.id).subscribe({
       next: () => {
         this.changingOfferId = null;
-        this.toastErrorMessage = '';
-        this.activationErrorByOfferId[offer.id] = '';
-        this.successMessage = 'Offer was activated successfully.';
+        this.clearToastError();
+        this.clearActivationError(offer.id);
+        this.showSuccess('Offer was activated successfully.');
         this.loadOffers(offer.pricelistId);
       },
       error: (err: HttpErrorResponse) => {
         const message = this.createErrorMessage(err);
 
         this.changingOfferId = null;
-        this.toastErrorMessage = message;
-        this.activationErrorByOfferId[offer.id] = message;
+        this.showToastError(message);
+        this.showActivationError(offer.id, message);
         this.cdr.detectChanges();
-
-        setTimeout(() => {
-          if (this.toastErrorMessage === message) {
-            this.toastErrorMessage = '';
-            this.cdr.detectChanges();
-          }
-        }, 6000);
       },
     });
   }
@@ -390,20 +386,77 @@ export class PricelistListComponent implements OnInit {
     return labels[step] ?? step;
   }
 
+  private showSuccess(message: string): void {
+    this.transientMessages.setField(this, 'successMessage', message, SUCCESS_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private showError(message: string): void {
+    this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private showDraftsError(message: string): void {
+    this.transientMessages.setField(this, 'draftsErrorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private showToastError(message: string): void {
+    this.transientMessages.setField(this, 'toastErrorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private showActivationError(offerId: number, message: string): void {
+    this.transientMessages.set(
+      this,
+      `activationError:${offerId}`,
+      (value) => {
+        this.activationErrorByOfferId[offerId] = value;
+      },
+      () => this.activationErrorByOfferId[offerId] ?? '',
+      message,
+      ERROR_MESSAGE_MS,
+      () => this.cdr.detectChanges()
+    );
+  }
+
+  private clearResultMessages(): void {
+    this.transientMessages.clearField(this, 'successMessage', () => this.cdr.detectChanges());
+    this.clearError();
+  }
+
+  private clearError(): void {
+    this.transientMessages.clearField(this, 'errorMessage', () => this.cdr.detectChanges());
+  }
+
+  private clearDraftsError(): void {
+    this.transientMessages.clearField(this, 'draftsErrorMessage', () => this.cdr.detectChanges());
+  }
+
+  private clearToastError(): void {
+    this.transientMessages.clearField(this, 'toastErrorMessage', () => this.cdr.detectChanges());
+  }
+
+  private clearActivationError(offerId: number): void {
+    this.transientMessages.clear(
+      this,
+      `activationError:${offerId}`,
+      () => {
+        this.activationErrorByOfferId[offerId] = '';
+      },
+      () => this.cdr.detectChanges()
+    );
+  }
+
   private changeStatus(pricelist: Pricelist, targetStatus: Pricelist['status'], reason?: string): void {
     this.changingStatusId = pricelist.id;
-    this.successMessage = '';
-    this.errorMessage = '';
+    this.clearResultMessages();
 
     this.service.changeStatus(pricelist.id, { targetStatus, reason }).subscribe({
       next: () => {
         this.changingStatusId = null;
-        this.successMessage = 'Pricelist status was updated successfully.';
+        this.showSuccess('Pricelist status was updated successfully.');
         this.load();
       },
       error: (error) => {
         this.changingStatusId = null;
-        this.errorMessage = this.statusChangeErrorMessage(error);
+        this.showError(this.statusChangeErrorMessage(error));
         this.cdr.detectChanges();
       },
     });
@@ -456,7 +509,7 @@ export class PricelistListComponent implements OnInit {
       error: () => {
         this.offersByPricelist[pricelistId] = [];
         this.loadingOffersId = null;
-        this.errorMessage = 'Offers could not be loaded.';
+        this.showError('Offers could not be loaded.');
         this.cdr.detectChanges();
       },
     });
@@ -497,12 +550,12 @@ export class PricelistListComponent implements OnInit {
     request.subscribe({
       next: () => {
         this.changingOfferId = null;
-        this.successMessage = action === 'activate' ? 'Offer was activated successfully.' : 'Offer was archived successfully.';
+        this.showSuccess(action === 'activate' ? 'Offer was activated successfully.' : 'Offer was archived successfully.');
         this.loadOffers(offer.pricelistId);
       },
       error: (error) => {
         this.changingOfferId = null;
-        this.errorMessage = this.offerErrorMessage(error, action);
+        this.showError(this.offerErrorMessage(error, action));
       },
     });
   }
