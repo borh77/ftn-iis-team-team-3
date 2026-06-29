@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { LogOut, Search, LucideAngularModule } from 'lucide-angular';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { UserService } from '../../core/user.service';
@@ -8,7 +9,7 @@ import { UserService } from '../../core/user.service';
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, LucideAngularModule],
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.css']
 })
@@ -20,6 +21,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   private profileSub: Subscription | null = null;
 
   displayName: string | null = null;
+  readonly icons = { LogOut, Search };
 
   ngOnInit(): void {
     this.profileSub = this.userService.profile$.subscribe((profile) => {

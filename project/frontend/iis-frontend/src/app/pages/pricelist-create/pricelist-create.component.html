@@ -99,7 +99,7 @@
               <span>Subcategory</span>
               <select formControlName="subcategoryId" (change)="onSubcategoryChange(itemIndex)">
                 <option [ngValue]="null">Select subcategory</option>
-                @for (subcategory of (subcategoriesByItem[itemIndex] ?? []); track subcategory.id) {
+                @for (subcategory of subcategoriesByItem[itemIndex]; track subcategory.id) {
                   <option [ngValue]="subcategory.id">{{ subcategory.name }}</option>
                 }
               </select>
@@ -112,7 +112,7 @@
               <span>Product</span>
               <select formControlName="productId" (change)="onProductChange(itemIndex)">
                 <option [ngValue]="null">Select product</option>
-                @for (product of (productsByItem[itemIndex] ?? []); track product.id) {
+                @for (product of productsByItem[itemIndex]; track product.id) {
                   <option [ngValue]="product.id">{{ product.name }}</option>
                 }
               </select>
@@ -130,7 +130,7 @@
                     {{ itemGroup(itemIndex).controls['existingVariantName'].value }}
                   </option>
                 }
-                @for (variant of (variantsByItem[itemIndex] ?? []); track variant.id) {
+                @for (variant of variantsByItem[itemIndex]; track variant.id) {
                   <option [ngValue]="variant.id">{{ variant.productName }} - {{ variant.form }} / {{ variant.dosage }}</option>
                 }
               </select>
