@@ -28,7 +28,7 @@
 
       <form [formGroup]="form" (ngSubmit)="submit()" class="modal-form">
         <label>
-          <span>Naziv</span>
+          <span>Name</span>
           <input type="text" formControlName="name" placeholder="Vojvodina" />
           @if (controlError('name')) {
             <small class="field-error">{{ controlError('name') }}</small>
@@ -36,7 +36,7 @@
         </label>
 
         <label>
-          <span>Oznaka</span>
+          <span>Code</span>
           <input type="text" formControlName="code" placeholder="VOJVODINA" />
           @if (controlError('code')) {
             <small class="field-error">{{ controlError('code') }}</small>

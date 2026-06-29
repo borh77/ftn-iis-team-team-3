@@ -13,7 +13,7 @@ import { Region } from '../../core/region.model';
         <label>
           <span>Region</span>
           <select formControlName="regionId">
-            <option [ngValue]="null">Izaberite region</option>
+            <option [ngValue]="null">Select region</option>
             @for (region of regions; track region.id) {
               <option [ngValue]="region.id">{{ region.name }} ({{ region.code }})</option>
             }

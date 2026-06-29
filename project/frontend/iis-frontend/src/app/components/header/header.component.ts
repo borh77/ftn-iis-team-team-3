@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { LogOut, LucideAngularModule } from 'lucide-angular';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { roleLabel } from '../../core/auth/role-labels';
 import { UserService } from '../../core/user.service';
 
 @Component({
@@ -22,6 +23,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   displayName: string | null = null;
   readonly icons = { LogOut };
+  readonly roleLabel = roleLabel;
 
   ngOnInit(): void {
     this.profileSub = this.userService.profile$.subscribe((profile) => {

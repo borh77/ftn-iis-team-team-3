@@ -231,13 +231,13 @@ export const routes: Routes = [
 		},
 		title: 'IIS Drug CRM | Communications',
 	},
-	// Podsistem neželjenih efekata lekova
+	// Adverse drug effects subsystem
 	{
 		path: 'adverse-effects/create-doctor-report',
 		component: CreateDoctorReportComponent,
 		canActivate: [authGuard, passwordChangeGuard],
 		data: { roles: ['ROLE_LEKAR'] },
-		title: 'IIS Drug CRM | New Report — Doctor',
+		title: 'IIS Drug CRM | New Report - Doctor',
 	},
 	{
 		path: 'adverse-effects/my-reports',

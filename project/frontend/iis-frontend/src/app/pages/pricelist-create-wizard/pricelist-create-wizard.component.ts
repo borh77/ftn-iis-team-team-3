@@ -67,11 +67,11 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   private readonly transientMessages = inject(TransientMessageService);
 
   readonly steps: WizardStepDefinition[] = [
-    { id: 'BASIC_INFO', label: 'Osnovni podaci' },
-    { id: 'TEAM_ACCESS', label: 'Tim' },
-    { id: 'ITEMS', label: 'Stavke' },
-    { id: 'THRESHOLDS', label: 'Pragovi' },
-    { id: 'REVIEW', label: 'Pregled' },
+    { id: 'BASIC_INFO', label: 'Basic information' },
+    { id: 'TEAM_ACCESS', label: 'Team' },
+    { id: 'ITEMS', label: 'Items' },
+    { id: 'THRESHOLDS', label: 'Thresholds' },
+    { id: 'REVIEW', label: 'Review' },
   ];
 
   readonly basicInfoForm = this.fb.group(

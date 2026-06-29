@@ -53,7 +53,7 @@ public class RegionServiceImpl implements RegionService {
             regionRepository.delete(region);
             regionRepository.flush();
         } catch (DataIntegrityViolationException exception) {
-            throw new RegionInUseException("Nije moguće obrisati region jer ga koriste aktivni korisnici ili cenovnici");
+            throw new RegionInUseException("Region cannot be deleted because it is used by active users or pricelists.");
         }
     }
 
@@ -69,7 +69,7 @@ public class RegionServiceImpl implements RegionService {
                 ? regionRepository.existsByNameIgnoreCase(normalizedName)
                 : regionRepository.existsByNameIgnoreCaseAndIdNot(normalizedName, currentId);
         if (duplicateName) {
-            throw new RegionConflictException("Region sa tim imenom već postoji");
+            throw new RegionConflictException("Region with that name already exists.");
         }
     }
 

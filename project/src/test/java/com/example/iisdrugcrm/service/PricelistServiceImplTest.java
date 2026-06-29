@@ -119,7 +119,7 @@ class PricelistServiceImplTest {
         assertEquals(1000L, event.pricelistId());
         assertEquals(99L, event.userId());
         assertEquals(PricelistActionType.CREATE, event.actionType());
-        assertEquals("Kreiran cenovnik u statusu DRAFT", event.description());
+        assertEquals("Created pricelist in DRAFT status", event.description());
     }
 
     @Test
@@ -154,7 +154,7 @@ class PricelistServiceImplTest {
         assertEquals(100L, event.pricelistId());
         assertEquals(99L, event.userId());
         assertEquals(PricelistActionType.UPDATE_THRESHOLDS, event.actionType());
-        assertEquals("Azurirani pragovi cena cenovnika", event.description());
+        assertEquals("Updated pricelist price thresholds", event.description());
     }
 
     @Test
@@ -271,7 +271,7 @@ class PricelistServiceImplTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> service.changeStatus(100L, statusDto(PricelistStatus.IN_REVIEW, null)));
 
-        assertEquals("Cenovnik nije kompletiran kroz wizard i ne moze biti poslat na proveru.", exception.getMessage());
+        assertEquals("Pricelist was not completed through the wizard and cannot be submitted for review.", exception.getMessage());
         assertEquals(PricelistStatus.DRAFT, pricelist.getStatus());
         verify(pricelistRepository, never()).save(any(Pricelist.class));
     }
@@ -300,7 +300,7 @@ class PricelistServiceImplTest {
         assertEquals(100L, event.pricelistId());
         assertEquals(99L, event.userId());
         assertEquals(PricelistActionType.STATUS_CHANGE, event.actionType());
-        assertEquals("Promenjen status iz DRAFT u IN_REVIEW", event.description());
+        assertEquals("Changed status from DRAFT to IN_REVIEW", event.description());
         assertEquals(PricelistStatus.DRAFT, event.statusFrom());
         assertEquals(PricelistStatus.IN_REVIEW, event.statusTo());
     }
@@ -560,7 +560,7 @@ class PricelistServiceImplTest {
         assertEquals(1000L, event.pricelistId());
         assertEquals(99L, event.userId());
         assertEquals(PricelistActionType.CREATE_VERSION, event.actionType());
-        assertEquals("Kreirana nova verzija cenovnika", event.description());
+        assertEquals("Created new pricelist version", event.description());
     }
 
     @Test
@@ -679,7 +679,7 @@ class PricelistServiceImplTest {
         assertEquals(100L, event.pricelistId());
         assertEquals(99L, event.userId());
         assertEquals(PricelistActionType.REPLACE_ITEM, event.actionType());
-        assertEquals("Zamenjena stavka cenovnika", event.description());
+        assertEquals("Replaced pricelist item", event.description());
     }
 
     @Test

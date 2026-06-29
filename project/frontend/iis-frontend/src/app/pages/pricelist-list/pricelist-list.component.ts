@@ -376,12 +376,12 @@ export class PricelistListComponent implements OnInit, OnDestroy {
 
   draftStepLabel(step: PricelistCreationStep): string {
     const labels: Record<PricelistCreationStep, string> = {
-      BASIC_INFO: 'Osnovni podaci',
-      TEAM_ACCESS: 'Tim',
-      ITEMS: 'Stavke',
-      THRESHOLDS: 'Pragovi',
-      REVIEW: 'Pregled',
-      COMPLETED: 'Završeno',
+      BASIC_INFO: 'Basic information',
+      TEAM_ACCESS: 'Team',
+      ITEMS: 'Items',
+      THRESHOLDS: 'Thresholds',
+      REVIEW: 'Review',
+      COMPLETED: 'Completed',
     };
     return labels[step] ?? step;
   }

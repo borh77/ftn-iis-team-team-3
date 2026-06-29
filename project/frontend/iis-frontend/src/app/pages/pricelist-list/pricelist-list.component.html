@@ -61,7 +61,7 @@
           </dl>
 
           <button type="button" class="primary" (click)="continueDraft(draft)">
-            Nastavi kreiranje
+            Continue creation
           </button>
         </article>
       }
@@ -223,7 +223,7 @@
               <section class="suggestions-panel">
                 <div class="panel-head compact">
                   <div>
-                    <h4>Sistemske preporuke za popuste</h4>
+                    <h4>System discount recommendations</h4>
                     <p class="muted">Generate system recommendations for the selected customer segment, then copy one into the offer form.</p>
                   </div>
                 </div>
@@ -245,7 +245,7 @@
                   </label>
 
                   <button type="button" class="secondary" (click)="generatePromotionSuggestions(p)" [disabled]="isLoadingSuggestions(p)">
-                    {{ isLoadingSuggestions(p) ? 'Generating...' : 'Generiši predloge' }}
+                    {{ isLoadingSuggestions(p) ? 'Generating...' : 'Generate suggestions' }}
                   </button>
                 </div>
 
@@ -280,17 +280,17 @@
 
                           <div class="suggestion-actions">
                             <button type="button" class="primary" (click)="applyPromotionSuggestion(p, suggestion)">
-                              Kreiraj ponudu na osnovu predloga
+                              Create offer from suggestion
                             </button>
                             <button type="button" class="ghost" (click)="dismissPromotionSuggestion(p, suggestion)">
-                              Odbaci
+                              Dismiss
                             </button>
                           </div>
                         </article>
                       }
                     </div>
                   } @else {
-                    <p class="muted">Nema dostupnih predloga za izabrani segment.</p>
+                    <p class="muted">No suggestions are available for the selected segment.</p>
                   }
                 }
               </section>

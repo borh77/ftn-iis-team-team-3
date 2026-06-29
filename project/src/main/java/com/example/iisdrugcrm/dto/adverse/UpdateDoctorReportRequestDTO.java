@@ -6,18 +6,18 @@ import java.time.LocalDate;
 
 public class UpdateDoctorReportRequestDTO {
 
-    @NotBlank(message = "Naziv leka je obavezan")
+    @NotBlank(message = "Medication name is required")
     private String medicationName;
 
-    @NotBlank(message = "Ozbiljnost je obavezna")
+    @NotBlank(message = "Severity is required")
     private String severity;
 
     private String source;
 
-    @NotNull(message = "Datum simptoma je obavezan")
+    @NotNull(message = "Symptom date is required")
     private LocalDate symptomDate;
 
-    @NotBlank(message = "Opis efekta je obavezan")
+    @NotBlank(message = "Effect description is required")
     private String effectDescription;
 
     private String additionalNotes;

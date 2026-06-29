@@ -52,7 +52,7 @@ class PricelistActivityLogServiceImplTest {
                 99L,
                 null,
                 PricelistActionType.STATUS_CHANGE,
-                "Promenjen status iz DRAFT u IN_REVIEW",
+                "Changed status from DRAFT to IN_REVIEW",
                 OffsetDateTime.parse("2026-06-27T10:00:00Z")
         );
         when(repository.findAll(any(Specification.class), any(Pageable.class)))

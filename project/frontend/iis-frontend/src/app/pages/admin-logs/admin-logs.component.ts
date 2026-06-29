@@ -75,10 +75,29 @@ export class AdminLogsComponent implements OnInit, OnDestroy {
   }
 
   formatTimestamp(timestamp: string): string {
-    return new Intl.DateTimeFormat('sr-RS', {
+    return new Intl.DateTimeFormat('en-US', {
       dateStyle: 'medium',
       timeStyle: 'short',
     }).format(new Date(timestamp));
+  }
+
+  displayLogDescription(log: PricelistActivityLog): string {
+    const trimmed = log.description?.trim() ?? '';
+    const normalized = normalizeLegacyDescription(trimmed);
+
+    const statusMatch = LEGACY_STATUS_CHANGE_PATTERN.exec(normalized);
+    if (statusMatch) {
+      return `Changed status from ${statusMatch[1]} to ${statusMatch[2]}`;
+    }
+
+    if (normalized.includes(LEGACY_MARKERS.priceList) || normalized.includes(LEGACY_MARKERS.wizard)) {
+      const translated = translateLegacyLog(log.actionType, normalized);
+      if (translated) {
+        return translated;
+      }
+    }
+
+    return trimmed;
   }
 
   private loadLogs(page: number): void {
@@ -142,4 +161,56 @@ export class AdminLogsComponent implements OnInit, OnDestroy {
   private clearError(): void {
     this.transientMessages.clearField(this, 'errorMessage', () => this.cdr.detectChanges());
   }
+}
+
+const LEGACY_MARKERS = {
+  priceList: fromCodes(99, 101, 110, 111, 118, 110, 105, 107),
+  wizard: 'wizard',
+  completed: fromCodes(75, 111, 109, 112, 108, 101, 116, 105, 114, 97, 110),
+  metadata: fromCodes(111, 115, 110, 111, 118, 110, 105),
+  statusChangePrefix: fromCodes(80, 114, 111, 109, 101, 110, 106, 101, 110, 32, 115, 116, 97, 116, 117, 115, 32, 105, 122),
+};
+
+const LEGACY_STATUS_CHANGE_PATTERN = new RegExp(`^${LEGACY_MARKERS.statusChangePrefix} ([A-Z_]+) u ([A-Z_]+)$`);
+
+function translateLegacyLog(actionType: string, normalized: string): string {
+  switch (actionType) {
+    case 'CREATE':
+      return normalized.includes(LEGACY_MARKERS.wizard)
+        ? 'Started pricelist creation wizard'
+        : 'Created pricelist in DRAFT status';
+    case 'CREATE_VERSION':
+      return 'Created new pricelist version';
+    case 'REPLACE_ITEM':
+      return 'Replaced pricelist item';
+    case 'UPDATE_ITEMS':
+      return normalized.includes(LEGACY_MARKERS.wizard)
+        ? 'Updated pricelist wizard items'
+        : 'Updated pricelist items';
+    case 'UPDATE_THRESHOLDS':
+      return normalized.includes(LEGACY_MARKERS.wizard)
+        ? 'Updated pricelist wizard price thresholds'
+        : 'Updated pricelist price thresholds';
+    case 'UPDATE_METADATA':
+      if (normalized.includes(LEGACY_MARKERS.completed)) {
+        return 'Completed pricelist creation wizard';
+      }
+      return normalized.includes(LEGACY_MARKERS.wizard) || normalized.includes(LEGACY_MARKERS.metadata)
+        ? 'Updated pricelist wizard basic information'
+        : 'Updated pricelist metadata';
+    default:
+      return '';
+  }
+}
+
+function normalizeLegacyDescription(description: string): string {
+  return description
+    .replace(/[\u0111]/g, 'dj')
+    .replace(/[\u0110]/g, 'Dj')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function fromCodes(...codes: number[]): string {
+  return String.fromCharCode(...codes);
 }

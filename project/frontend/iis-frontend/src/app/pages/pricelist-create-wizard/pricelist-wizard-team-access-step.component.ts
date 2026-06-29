@@ -31,7 +31,7 @@ import { PricelistTeam } from '../../core/team.models';
         <label class="wide-field">
           <span>Team</span>
           <select formControlName="teamId">
-            <option [ngValue]="null">Izaberite tim</option>
+            <option [ngValue]="null">Select team</option>
             @for (team of teams; track team.id) {
               <option [ngValue]="team.id">{{ team.name }}</option>
             }

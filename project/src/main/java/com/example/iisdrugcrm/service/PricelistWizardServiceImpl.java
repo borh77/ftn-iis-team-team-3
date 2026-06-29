@@ -86,7 +86,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
         pricelist.setLastEditedAt(now);
 
         Pricelist saved = pricelistRepository.save(pricelist);
-        publishAction(saved, currentUserId, PricelistActionType.CREATE, "Zapocet wizard za kreiranje cenovnika");
+        publishAction(saved, currentUserId, PricelistActionType.CREATE, "Started pricelist creation wizard");
         return new StartPricelistWizardResponseDTO(saved.getId(), toState(saved, currentUserId));
     }
 
@@ -123,7 +123,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
         markProgress(pricelist, PricelistCreationStep.TEAM_ACCESS);
 
         Pricelist saved = pricelistRepository.save(pricelist);
-        publishAction(saved, currentUserId, PricelistActionType.UPDATE_METADATA, "Azurirani osnovni podaci cenovnika u wizardu");
+        publishAction(saved, currentUserId, PricelistActionType.UPDATE_METADATA, "Updated pricelist wizard basic information");
         return toState(saved, currentUserId);
     }
 
@@ -165,7 +165,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
         markProgress(pricelist, PricelistCreationStep.THRESHOLDS);
 
         Pricelist saved = pricelistRepository.save(pricelist);
-        publishAction(saved, currentUserId, PricelistActionType.UPDATE_ITEMS, "Azurirane stavke cenovnika u wizardu");
+        publishAction(saved, currentUserId, PricelistActionType.UPDATE_ITEMS, "Updated pricelist wizard items");
         return toState(saved, currentUserId);
     }
 
@@ -193,7 +193,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
 
         markProgress(pricelist, PricelistCreationStep.REVIEW);
         Pricelist saved = pricelistRepository.save(pricelist);
-        publishAction(saved, currentUserId, PricelistActionType.UPDATE_THRESHOLDS, "Azurirani pragovi cena cenovnika u wizardu");
+        publishAction(saved, currentUserId, PricelistActionType.UPDATE_THRESHOLDS, "Updated pricelist wizard price thresholds");
         return toState(saved, currentUserId);
     }
 
@@ -221,7 +221,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
         pricelist.setLastEditedAt(OffsetDateTime.now(ZoneOffset.UTC));
 
         Pricelist saved = pricelistRepository.save(pricelist);
-        publishAction(saved, currentUserId, PricelistActionType.UPDATE_METADATA, "Kompletiran wizard za kreiranje cenovnika");
+        publishAction(saved, currentUserId, PricelistActionType.UPDATE_METADATA, "Completed pricelist creation wizard");
         return toState(saved, currentUserId);
     }
 
@@ -245,7 +245,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
 
     private void validatePeriod(OffsetDateTime periodStart, OffsetDateTime periodEnd) {
         if (!periodStart.isBefore(periodEnd)) {
-            throw new IllegalArgumentException("Period od mora biti strogo manji od perioda do.");
+            throw new IllegalArgumentException("Period start must be strictly before period end.");
         }
     }
 
@@ -264,7 +264,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
                 .filter(variantId -> !activeVariants.containsKey(variantId))
                 .toList();
         if (!missingVariantIds.isEmpty()) {
-            throw new VariantNotFoundException("Varijante " + missingVariantIds + " ne postoje ili nisu aktivne u katalogu");
+            throw new VariantNotFoundException("Variants " + missingVariantIds + " do not exist or are not active in the catalog");
         }
         return activeVariants;
     }
@@ -347,8 +347,8 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
         }
         Pricelist conflict = conflicts.get(0);
         throw new PricelistConflictException(
-                "Cenovnik za region [" + pricelist.getRegion().getName() + "] i segment [" + pricelist.getCustomerSegment()
-                        + "] vec postoji u periodu [" + conflict.getPeriodStart().toLocalDate()
+                "Pricelist for region [" + pricelist.getRegion().getName() + "] and segment [" + pricelist.getCustomerSegment()
+                        + "] already exists in period [" + conflict.getPeriodStart().toLocalDate()
                         + " - " + conflict.getPeriodEnd().toLocalDate() + "]."
         );
     }

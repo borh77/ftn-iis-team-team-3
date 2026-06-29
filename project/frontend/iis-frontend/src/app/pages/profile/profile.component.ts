@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { AuthService } from '../../core/auth/auth.service';
+import { roleLabel } from '../../core/auth/role-labels';
 import { UserService } from '../../core/user.service';
 import { UserRow } from '../../core/auth/auth.models';
 import { ERROR_MESSAGE_MS, SUCCESS_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
@@ -26,6 +27,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   passwordMessage = '';
   savingProfile = false;
   changingPassword = false;
+  readonly roleLabel = roleLabel;
 
   readonly profileForm = this.fb.nonNullable.group({
     username: ['', [Validators.required, Validators.maxLength(100)]],

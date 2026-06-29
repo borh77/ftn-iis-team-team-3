@@ -58,7 +58,7 @@ class AdminAnalyticsControllerTest {
         dto.setUserId(99L);
         dto.setTeamId(5L);
         dto.setActionType(PricelistActionType.CREATE);
-        dto.setDescription("Kreiran cenovnik u statusu DRAFT");
+        dto.setDescription("Created pricelist in DRAFT status");
         dto.setTimestamp(OffsetDateTime.parse("2026-06-27T10:00:00Z"));
         when(service.findLogs(eq(5L), eq(99L), eq(OffsetDateTime.parse("2026-06-01T00:00:00Z")), eq(OffsetDateTime.parse("2026-06-30T23:59:59Z")), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(dto), PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "timestamp")), 1));

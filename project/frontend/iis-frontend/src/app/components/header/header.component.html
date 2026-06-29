@@ -9,7 +9,7 @@
       <div class="avatar">{{ session.username.charAt(0).toUpperCase() }}</div>
       <div class="profile-meta">
         <span class="profile-name">{{ displayName || session.username }}</span>
-        <span class="profile-role">{{ session.roles[0] }}</span>
+        <span class="profile-role">{{ roleLabel(session.roles[0]) }}</span>
       </div>
     </a>
     <button type="button" class="logout-button" (click)="onLogout()">

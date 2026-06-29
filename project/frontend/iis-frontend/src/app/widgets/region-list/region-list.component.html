@@ -36,9 +36,9 @@
         <thead>
           <tr>
             <th>ID</th>
-            <th>Naziv</th>
-            <th>Kod</th>
-            <th>Akcije</th>
+            <th>Name</th>
+            <th>Code</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -48,8 +48,8 @@
               <td>{{ region.name }}</td>
               <td>{{ region.code }}</td>
               <td class="actions">
-                <button type="button" (click)="editRequested.emit(region)">Izmeni</button>
-                <button type="button" class="danger" (click)="deleteRequested.emit(region)">Obriši</button>
+                <button type="button" (click)="editRequested.emit(region)">Edit</button>
+                <button type="button" class="danger" (click)="deleteRequested.emit(region)">Delete</button>
               </td>
             </tr>
           }

@@ -276,11 +276,6 @@ export class PricelistCreateComponent implements OnInit, OnDestroy {
     return '';
   }
 
-  private isEnglishMessage(message: string): boolean {
-    const serbianTerms = /\b(cenovnik|postoji|pokusajte|izabrani|vec|već|periodu|pragovi|varijantu)\b/i;
-    return message.length > 0 && !serbianTerms.test(message);
-  }
-
   private loadRegions(): void {
     this.loadingRegions = true;
     this.regionService.list().subscribe({

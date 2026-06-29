@@ -34,7 +34,7 @@ public class TeamServiceImpl implements TeamService {
     public TeamDetailsDTO createTeam(String teamName, Long leaderId) {
         String normalizedName = normalize(teamName);
         if (teamRepository.existsByName(normalizedName)) {
-            throw new DuplicateTeamException("Team sa tim imenom već postoji");
+            throw new DuplicateTeamException("A team with that name already exists.");
         }
 
         requireUser(leaderId);
@@ -53,7 +53,7 @@ public class TeamServiceImpl implements TeamService {
         ensurePricelistCreator(member);
 
         if (memberId.equals(currentUserId)) {
-            throw new IllegalArgumentException("Leader ne može da se doda kao član tima");
+            throw new IllegalArgumentException("The team leader cannot be added as a team member.");
         }
 
         team.addMember(memberId);
@@ -90,13 +90,13 @@ public class TeamServiceImpl implements TeamService {
 
     private void ensureLeader(PricelistTeam team, Long currentUserId) {
         if (!team.getLeaderId().equals(currentUserId)) {
-            throw new IllegalArgumentException("Samo vođa tima može da upravlja članovima");
+            throw new IllegalArgumentException("Only the team leader can manage team members.");
         }
     }
 
     private void ensurePricelistCreator(User user) {
         if (user.getRole() != UserRole.ROLE_PRICELIST_CREATOR) {
-            throw new IllegalArgumentException("U tim mogu da se dodaju samo korisnici sa ulogom ROLE_PRICELIST_CREATOR");
+            throw new IllegalArgumentException("Only users with ROLE_PRICELIST_CREATOR can be added to a team.");
         }
     }
 

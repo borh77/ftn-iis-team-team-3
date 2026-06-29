@@ -18,22 +18,22 @@ export class AdverseEffectsApiService {
   private readonly apiBaseUrl = inject(API_BASE_URL);
   private get base() { return `${this.apiBaseUrl}/api/adverse-effects`; }
 
-  // US-01: Lekar kreira nalog
+  // US-01: Doctor creates a report
   createDoctorReport(dto: CreateDoctorReportRequest): Observable<AdverseEffectReport> {
     return this.http.post<AdverseEffectReport>(`${this.base}/doctor-reports`, dto);
   }
 
-  // US-02: Pacijent kreira nalog
+  // US-02: Patient creates a report
   createPatientReport(dto: CreatePatientReportRequest): Observable<AdverseEffectReport> {
     return this.http.post<AdverseEffectReport>(`${this.base}/patient-reports`, dto);
   }
 
-  // US-03: Lekar vidi samo svoje naloge
+  // US-03: Doctor sees only their reports
   getMyReports(): Observable<AdverseEffectReport[]> {
     return this.http.get<AdverseEffectReport[]>(`${this.base}/my-reports`);
   }
 
-  // US-04: Farmakovigilant vidi sve naloge
+  // US-04: Pharmacovigilance user sees all reports
   getAllReports(): Observable<AdverseEffectReport[]> {
     return this.http.get<AdverseEffectReport[]>(this.base);
   }
@@ -51,12 +51,12 @@ export class AdverseEffectsApiService {
     return this.http.get<AdverseEffectReport[]>(`${this.base}/reports`, { params });
   }
 
-  // Detalji jednog naloga
+  // Single report details
   getReportById(id: number): Observable<AdverseEffectReport> {
     return this.http.get<AdverseEffectReport>(`${this.base}/${id}`);
   }
 
-  // US-03: Lekar edituje nalog (samo dok je SUBMITTED)
+  // US-03: Doctor edits a report only while it is SUBMITTED
   updateDoctorReport(id: number, dto: any): Observable<AdverseEffectReport> {
     return this.http.put<AdverseEffectReport>(`${this.base}/doctor-reports/${id}`, dto);
   }

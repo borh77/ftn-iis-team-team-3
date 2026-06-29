@@ -90,7 +90,7 @@ export class AdminRegionsPageComponent implements OnInit, OnDestroy {
       error: (error) => {
         this.saving = false;
         const message = error?.error?.error ?? 'Failed to save region.';
-        if (error?.status === 409 || message.includes('Region sa tim imenom ili kodom')) {
+        if (error?.status === 409) {
           this.transientMessages.setField(this, 'errorMessage', 'Region with that name or code already exists.', ERROR_MESSAGE_MS);
           return;
         }
