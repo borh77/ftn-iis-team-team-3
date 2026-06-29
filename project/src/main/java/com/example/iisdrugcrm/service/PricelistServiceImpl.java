@@ -60,6 +60,7 @@ public class PricelistServiceImpl implements PricelistService {
     @Transactional(rollbackFor = Exception.class)
     public PricelistResponseDTO createCenovnik(CreatePricelistDTO dto, Long currentUserId) {
         Region region = resolveRegion(dto);
+        PricelistDateRules.validateStartDateNotPast(dto.getPeriodStart());
         OffsetDateTime periodStart = utcPeriodStart(dto);
         OffsetDateTime periodEnd = utcPeriodEnd(dto);
         validatePeriod(periodStart, periodEnd);
@@ -116,6 +117,7 @@ public class PricelistServiceImpl implements PricelistService {
         }
 
         Region region = resolveRegion(dto);
+        PricelistDateRules.validateStartDateNotPast(dto.getPeriodStart());
         OffsetDateTime periodStart = utcPeriodStart(dto);
         OffsetDateTime periodEnd = utcPeriodEnd(dto);
         validatePeriod(periodStart, periodEnd);
@@ -176,6 +178,7 @@ public class PricelistServiceImpl implements PricelistService {
                 ? maxVersion
                 : source.getVersionNumber() != null ? source.getVersionNumber() : 1;
         newVersion.setVersionNumber(currentVersion + 1);
+        PricelistDateRules.validateStartDateNotPast(newVersion.getPeriodStart());
 
         for (PricelistItem sourceItem : source.getItems()) {
             PricelistItem item = new PricelistItem();
@@ -256,6 +259,7 @@ public class PricelistServiceImpl implements PricelistService {
         }
         if ((pricelist.getStatus() == PricelistStatus.DRAFT && dto.getTargetStatus() == PricelistStatus.IN_REVIEW)
                 || (pricelist.getStatus() == PricelistStatus.IN_REVIEW && dto.getTargetStatus() == PricelistStatus.ACTIVE)) {
+            PricelistDateRules.validateStartDateNotPast(pricelist.getPeriodStart());
             validateAllVariantsActive(pricelist);
         }
         if (pricelist.getStatus() == PricelistStatus.IN_REVIEW && dto.getTargetStatus() == PricelistStatus.ACTIVE) {

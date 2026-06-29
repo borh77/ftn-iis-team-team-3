@@ -10,12 +10,14 @@ import com.example.iisdrugcrm.dto.pricelist.CreatePricelistDTO;
 import com.example.iisdrugcrm.exception.InvalidPricelistThresholdException;
 import com.example.iisdrugcrm.exception.InvalidPricelistStatusTransitionException;
 import com.example.iisdrugcrm.exception.PricelistConflictException;
+import com.example.iisdrugcrm.exception.PricelistStartDateInPastException;
 import com.example.iisdrugcrm.repository.PricelistRepository;
 import com.example.iisdrugcrm.repository.RegionRepository;
 import com.example.iisdrugcrm.service.event.PricelistActionEvent;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -112,6 +114,43 @@ class PricelistServiceImplTest {
     }
 
     @Test
+    void createFailsWhenStartDateIsYesterday() {
+        CreatePricelistDTO dto = validDto();
+        dto.setPeriodStart(dateAtStartOfDay(today().minusDays(1)));
+        dto.setPeriodEnd(dateAtStartOfDay(today().plusDays(10)));
+
+        PricelistStartDateInPastException exception = assertThrows(PricelistStartDateInPastException.class,
+                () -> service.createCenovnik(dto, 99L));
+
+        assertEquals("Pricelist start date cannot be in the past.", exception.getMessage());
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
+    }
+
+    @Test
+    void createSucceedsWhenStartDateIsToday() {
+        noBlockingConflict();
+        CreatePricelistDTO dto = validDto();
+        dto.setPeriodStart(dateAtStartOfDay(today()));
+        dto.setPeriodEnd(dateAtStartOfDay(today().plusDays(10)));
+
+        service.createCenovnik(dto, 99L);
+
+        verify(pricelistRepository).save(any(Pricelist.class));
+    }
+
+    @Test
+    void createSucceedsWhenStartDateIsFuture() {
+        noBlockingConflict();
+        CreatePricelistDTO dto = validDto();
+        dto.setPeriodStart(dateAtStartOfDay(today().plusDays(1)));
+        dto.setPeriodEnd(dateAtStartOfDay(today().plusDays(10)));
+
+        service.createCenovnik(dto, 99L);
+
+        verify(pricelistRepository).save(any(Pricelist.class));
+    }
+
+    @Test
     void createPublishesActivityEvent() {
         noBlockingConflict();
 
@@ -170,6 +209,19 @@ class PricelistServiceImplTest {
     }
 
     @Test
+    void updateDraftFailsWhenStartDateIsYesterday() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        CreatePricelistDTO dto = validDto();
+        dto.setPeriodStart(dateAtStartOfDay(today().minusDays(1)));
+        dto.setPeriodEnd(dateAtStartOfDay(today().plusDays(10)));
+
+        assertThrows(PricelistStartDateInPastException.class, () -> service.update(100L, dto, 99L));
+
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
+    }
+
+    @Test
     void archivedPricelistDoesNotBlockWhenRepositoryReturnsNoBlockingConflict() {
         noBlockingConflict();
 
@@ -182,8 +234,8 @@ class PricelistServiceImplTest {
     void nonOverlappingPeriodSucceeds() {
         noBlockingConflict();
         CreatePricelistDTO dto = validDto();
-        dto.setPeriodStart(OffsetDateTime.of(2026, 10, 1, 0, 0, 0, 0, ZoneOffset.UTC));
-        dto.setPeriodEnd(OffsetDateTime.of(2026, 12, 31, 0, 0, 0, 0, ZoneOffset.UTC));
+        dto.setPeriodStart(dateAtStartOfDay(today().plusDays(30)));
+        dto.setPeriodEnd(dateAtStartOfDay(today().plusDays(90)));
 
         assertDoesNotThrow(() -> service.createCenovnik(dto, 99L));
 
@@ -767,12 +819,40 @@ class PricelistServiceImplTest {
     }
 
     @Test
+    void draftToInReviewFailsIfStartDateIsYesterday() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        pricelist.setPeriodStart(dateAtStartOfDay(today().minusDays(1)));
+        pricelist.setPeriodEnd(dateAtStartOfDay(today().plusDays(10)));
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+
+        assertThrows(PricelistStartDateInPastException.class,
+                () -> service.changeStatus(100L, statusDto(PricelistStatus.IN_REVIEW, null)));
+
+        assertEquals(PricelistStatus.DRAFT, pricelist.getStatus());
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
+    }
+
+    @Test
     void inReviewToActiveFailsIfVariantIsInactive() {
         Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
         when(catalogService.findActiveVariantsByIds(List.of(10L))).thenReturn(Map.of());
 
         assertThrows(IllegalArgumentException.class, () -> service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null)));
+    }
+
+    @Test
+    void inReviewToActiveFailsIfStartDateIsYesterday() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
+        pricelist.setPeriodStart(dateAtStartOfDay(today().minusDays(1)));
+        pricelist.setPeriodEnd(dateAtStartOfDay(today().plusDays(10)));
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+
+        assertThrows(PricelistStartDateInPastException.class,
+                () -> service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null)));
+
+        assertEquals(PricelistStatus.IN_REVIEW, pricelist.getStatus());
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
     }
 
     private void noBlockingConflict() {
@@ -803,8 +883,8 @@ class PricelistServiceImplTest {
         dto.setRegionId(1L);
         dto.setCustomerSegment("Lanci apoteka");
         dto.setCurrency("RSD");
-        dto.setPeriodStart(OffsetDateTime.of(2026, 7, 1, 0, 0, 0, 0, ZoneOffset.UTC));
-        dto.setPeriodEnd(OffsetDateTime.of(2026, 9, 30, 0, 0, 0, 0, ZoneOffset.UTC));
+        dto.setPeriodStart(dateAtStartOfDay(today().plusDays(1)));
+        dto.setPeriodEnd(dateAtStartOfDay(today().plusDays(90)));
 
         CreatePricelistDTO.PricelistItemDTO item = new CreatePricelistDTO.PricelistItemDTO();
         item.setVariantId(10L);
@@ -837,10 +917,18 @@ class PricelistServiceImplTest {
         pricelist.setCustomerSegment(customerSegment);
         pricelist.setCurrency("RSD");
         pricelist.setStatus(status);
-        pricelist.setPeriodStart(OffsetDateTime.of(2026, 7, 1, 0, 0, 0, 0, ZoneOffset.UTC));
-        pricelist.setPeriodEnd(OffsetDateTime.of(2026, 9, 30, 0, 0, 0, 0, ZoneOffset.UTC));
+        pricelist.setPeriodStart(dateAtStartOfDay(today().plusDays(1)));
+        pricelist.setPeriodEnd(dateAtStartOfDay(today().plusDays(90)));
         pricelist.setCreatedBy(99L);
         return pricelist;
+    }
+
+    private LocalDate today() {
+        return LocalDate.now(ZoneId.systemDefault());
+    }
+
+    private OffsetDateTime dateAtStartOfDay(LocalDate date) {
+        return date.atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime();
     }
 
     private Pricelist pricelistWithItem(Long id, PricelistStatus status, Region region, String customerSegment) {

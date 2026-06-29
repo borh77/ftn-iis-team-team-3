@@ -75,6 +75,8 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     { id: 'REVIEW', label: 'Review' },
   ];
 
+  readonly minPeriodStart = PricelistCreateWizardComponent.todayStartInputValue();
+
   readonly basicInfoForm = this.fb.group(
     {
       regionId: new UntypedFormControl(null, [Validators.required]),
@@ -348,6 +350,10 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     return index < this.activeStepIndex ? 'complete' : '';
   }
 
+  stepActionDisabled(): boolean {
+    return this.saving || (this.activeStep.id === 'BASIC_INFO' && this.basicInfoForm.invalid);
+  }
+
   private startWizard(): void {
     if (this.starting || this.wizardId) {
       return;
@@ -452,8 +458,8 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
         regionId: Number(raw.regionId),
         customerSegment: raw.customerSegment.trim(),
         currency: raw.currency.trim().toUpperCase(),
-        periodStart: new Date(raw.periodStart).toISOString(),
-        periodEnd: new Date(raw.periodEnd).toISOString(),
+        periodStart: this.toOffsetDateTime(raw.periodStart),
+        periodEnd: this.toOffsetDateTime(raw.periodEnd),
       }),
       advance
     );
@@ -748,6 +754,17 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
   }
 
+  private toOffsetDateTime(value: string): string {
+    const date = new Date(value);
+    const offsetMinutes = -date.getTimezoneOffset();
+    const sign = offsetMinutes >= 0 ? '+' : '-';
+    const absoluteOffset = Math.abs(offsetMinutes);
+    const hours = String(Math.floor(absoluteOffset / 60)).padStart(2, '0');
+    const minutes = String(absoluteOffset % 60).padStart(2, '0');
+    const localDateTime = value.length === 16 ? `${value}:00` : value;
+    return `${localDateTime}${sign}${hours}:${minutes}`;
+  }
+
   private placeholderSegment(segment: string | null | undefined): boolean {
     return !segment || segment === 'UNDEFINED';
   }
@@ -755,10 +772,34 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   static periodValidator(control: AbstractControl): ValidationErrors | null {
     const periodStart = control.get('periodStart')?.value;
     const periodEnd = control.get('periodEnd')?.value;
-    if (!periodStart || !periodEnd) {
-      return null;
+    const errors: ValidationErrors = {};
+
+    if (periodStart && PricelistCreateWizardComponent.isBeforeToday(periodStart)) {
+      errors['periodStartInPast'] = true;
     }
-    return new Date(periodStart) < new Date(periodEnd) ? null : { periodOrder: true };
+
+    if (periodStart && periodEnd && !(new Date(periodStart) < new Date(periodEnd))) {
+      errors['periodOrder'] = true;
+    }
+
+    return Object.keys(errors).length ? errors : null;
+  }
+
+  private static isBeforeToday(value: string): boolean {
+    const datePart = value.slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(datePart) && datePart < PricelistCreateWizardComponent.todayDateValue();
+  }
+
+  private static todayStartInputValue(): string {
+    return `${PricelistCreateWizardComponent.todayDateValue()}T00:00`;
+  }
+
+  private static todayDateValue(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   static teamAccessValidator(control: AbstractControl): ValidationErrors | null {

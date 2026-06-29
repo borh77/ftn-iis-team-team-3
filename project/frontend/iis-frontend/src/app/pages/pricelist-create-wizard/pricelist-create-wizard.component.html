@@ -64,6 +64,7 @@
             <app-pricelist-wizard-basic-info-step
               [form]="basicInfoForm"
               [regions]="regions"
+              [minPeriodStart]="minPeriodStart"
             />
           }
           @case ('TEAM_ACCESS') {
@@ -109,11 +110,11 @@
         </button>
 
         @if (activeStep.id !== 'REVIEW') {
-          <button type="button" class="secondary" (click)="saveCurrentStep(false)" [disabled]="saving">
+          <button type="button" class="secondary" (click)="saveCurrentStep(false)" [disabled]="stepActionDisabled()">
             {{ saving ? 'Saving...' : 'Save' }}
           </button>
 
-          <button type="button" class="primary" (click)="saveCurrentStep(true)" [disabled]="saving">
+          <button type="button" class="primary" (click)="saveCurrentStep(true)" [disabled]="stepActionDisabled()">
             {{ saving ? 'Saving...' : 'Save and continue' }}
           </button>
         } @else {

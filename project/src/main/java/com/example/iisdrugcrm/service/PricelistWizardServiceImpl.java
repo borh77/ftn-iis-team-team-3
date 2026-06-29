@@ -111,6 +111,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
         Pricelist pricelist = requireEditableDraft(pricelistId, currentUserId);
         Region region = regionRepository.findById(dto.getRegionId())
                 .orElseThrow(() -> new IllegalArgumentException("Region not found"));
+        PricelistDateRules.validateStartDateNotPast(dto.getPeriodStart());
         OffsetDateTime periodStart = dto.getPeriodStart().withOffsetSameInstant(ZoneOffset.UTC);
         OffsetDateTime periodEnd = dto.getPeriodEnd().withOffsetSameInstant(ZoneOffset.UTC);
         validatePeriod(periodStart, periodEnd);
@@ -131,6 +132,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
     @Transactional
     public PricelistWizardStateDTO saveTeamAccess(Long pricelistId, SaveTeamAccessStepDTO dto, Long currentUserId) {
         Pricelist pricelist = requireEditableDraft(pricelistId, currentUserId);
+        PricelistDateRules.validateStartDateNotPast(pricelist.getPeriodStart());
         PricelistTeam team = null;
         if (dto.getTeamId() != null) {
             team = teamRepository.findById(dto.getTeamId())
@@ -149,6 +151,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
     @Transactional
     public PricelistWizardStateDTO saveItems(Long pricelistId, SaveItemsStepDTO dto, Long currentUserId) {
         Pricelist pricelist = requireEditableDraft(pricelistId, currentUserId);
+        PricelistDateRules.validateStartDateNotPast(pricelist.getPeriodStart());
         validateUniqueVariants(dto.getItems().stream().map(SaveItemsStepDTO.PricelistWizardItemDTO::getVariantId).toList());
         Map<Long, CatalogVariantDTO> activeVariants = resolveActiveVariants(dto.getItems().stream()
                 .map(SaveItemsStepDTO.PricelistWizardItemDTO::getVariantId)
@@ -173,6 +176,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
     @Transactional
     public PricelistWizardStateDTO saveThresholds(Long pricelistId, SaveThresholdsStepDTO dto, Long currentUserId) {
         Pricelist pricelist = requireEditableDraft(pricelistId, currentUserId);
+        PricelistDateRules.validateStartDateNotPast(pricelist.getPeriodStart());
         Map<Long, PricelistItem> itemsByVariantId = itemsByVariantId(pricelist);
         if (itemsByVariantId.size() != dto.getItems().size()) {
             throw new IllegalArgumentException("Thresholds must be provided for every selected item.");
@@ -208,6 +212,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
     @Transactional
     public PricelistWizardStateDTO finishWizard(Long pricelistId, Long currentUserId) {
         Pricelist pricelist = requireEditableDraft(pricelistId, currentUserId);
+        PricelistDateRules.validateStartDateNotPast(pricelist.getPeriodStart());
         List<String> validationMessages = validationMessages(pricelist);
         if (!validationMessages.isEmpty()) {
             throw new IllegalArgumentException(String.join(" ", validationMessages));
@@ -304,6 +309,9 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
         }
         if (pricelist.getPeriodStart() == null || pricelist.getPeriodEnd() == null || !pricelist.getPeriodStart().isBefore(pricelist.getPeriodEnd())) {
             messages.add("Valid period start and end are required.");
+        }
+        if (PricelistDateRules.isStartDateInPast(pricelist.getPeriodStart())) {
+            messages.add("Pricelist start date cannot be in the past.");
         }
         if (pricelist.getItems().isEmpty()) {
             messages.add("At least one item is required.");

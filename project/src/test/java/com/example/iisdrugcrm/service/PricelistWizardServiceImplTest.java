@@ -12,12 +12,14 @@ import com.example.iisdrugcrm.dto.pricelist.SaveBasicInfoStepDTO;
 import com.example.iisdrugcrm.dto.pricelist.SaveItemsStepDTO;
 import com.example.iisdrugcrm.dto.pricelist.SaveThresholdsStepDTO;
 import com.example.iisdrugcrm.exception.InvalidPricelistThresholdException;
+import com.example.iisdrugcrm.exception.PricelistStartDateInPastException;
 import com.example.iisdrugcrm.repository.PricelistRepository;
 import com.example.iisdrugcrm.repository.PricelistTeamRepository;
 import com.example.iisdrugcrm.repository.RegionRepository;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -114,6 +116,29 @@ class PricelistWizardServiceImplTest {
     }
 
     @Test
+    void savingBasicInfoRejectsPastStartDate() {
+        Pricelist draft = draft(100L);
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(draft));
+        SaveBasicInfoStepDTO dto = basicInfo();
+        dto.setPeriodStart(dateAtStartOfDay(today().minusDays(1)));
+        dto.setPeriodEnd(dateAtStartOfDay(today().plusDays(10)));
+
+        assertThrows(PricelistStartDateInPastException.class, () -> service.saveBasicInfo(100L, dto, 99L));
+    }
+
+    @Test
+    void savingTeamAccessRejectsDraftWithPastStartDate() {
+        Pricelist draft = draft(100L);
+        draft.setPeriodStart(dateAtStartOfDay(today().minusDays(1)));
+        draft.setPeriodEnd(dateAtStartOfDay(today().plusDays(10)));
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(draft));
+
+        var dto = new com.example.iisdrugcrm.dto.pricelist.SaveTeamAccessStepDTO();
+
+        assertThrows(PricelistStartDateInPastException.class, () -> service.saveTeamAccess(100L, dto, 99L));
+    }
+
+    @Test
     void savingItemsPersistsDraftItems() {
         Pricelist draft = draft(100L);
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(draft));
@@ -147,6 +172,16 @@ class PricelistWizardServiceImplTest {
         assertTrue(draft.isCreationCompleted());
         assertEquals(PricelistCreationStep.COMPLETED, draft.getCreationStep());
         verify(pricelistRepository).save(draft);
+    }
+
+    @Test
+    void finishWizardRejectsDraftWithPastStartDate() {
+        Pricelist draft = completeDraft(100L);
+        draft.setPeriodStart(dateAtStartOfDay(today().minusDays(1)));
+        draft.setPeriodEnd(dateAtStartOfDay(today().plusDays(10)));
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(draft));
+
+        assertThrows(PricelistStartDateInPastException.class, () -> service.finishWizard(100L, 99L));
     }
 
     @Test
@@ -212,8 +247,8 @@ class PricelistWizardServiceImplTest {
         dto.setRegionId(1L);
         dto.setCustomerSegment("Pharmacy chains");
         dto.setCurrency("RSD");
-        dto.setPeriodStart(OffsetDateTime.of(2026, 7, 1, 0, 0, 0, 0, ZoneOffset.UTC));
-        dto.setPeriodEnd(OffsetDateTime.of(2026, 9, 30, 0, 0, 0, 0, ZoneOffset.UTC));
+        dto.setPeriodStart(dateAtStartOfDay(today().plusDays(1)));
+        dto.setPeriodEnd(dateAtStartOfDay(today().plusDays(90)));
         return dto;
     }
 
@@ -253,12 +288,20 @@ class PricelistWizardServiceImplTest {
         pricelist.setCustomerSegment("UNDEFINED");
         pricelist.setCurrency("RSD");
         pricelist.setStatus(PricelistStatus.DRAFT);
-        pricelist.setPeriodStart(OffsetDateTime.of(2026, 7, 1, 0, 0, 0, 0, ZoneOffset.UTC));
-        pricelist.setPeriodEnd(OffsetDateTime.of(2026, 9, 30, 0, 0, 0, 0, ZoneOffset.UTC));
+        pricelist.setPeriodStart(dateAtStartOfDay(today().plusDays(1)));
+        pricelist.setPeriodEnd(dateAtStartOfDay(today().plusDays(90)));
         pricelist.setCreatedBy(99L);
         pricelist.setCreationStep(PricelistCreationStep.BASIC_INFO);
         pricelist.setCreationCompleted(false);
         return pricelist;
+    }
+
+    private LocalDate today() {
+        return LocalDate.now(ZoneId.systemDefault());
+    }
+
+    private OffsetDateTime dateAtStartOfDay(LocalDate date) {
+        return date.atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime();
     }
 
     private Pricelist draftWithItem(Long id) {

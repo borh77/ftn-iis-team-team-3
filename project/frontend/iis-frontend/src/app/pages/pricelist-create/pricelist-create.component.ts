@@ -39,6 +39,7 @@ export class PricelistCreateComponent implements OnInit, OnDestroy {
   successMessage = '';
   isEditMode = false;
   private editingPricelistId: number | null = null;
+  readonly minPeriodStart = PricelistCreateComponent.todayStartInputValue();
 
   regions: Region[] = [];
   categories: Category[] = [];
@@ -375,8 +376,8 @@ export class PricelistCreateComponent implements OnInit, OnDestroy {
       regionId: raw.regionId as number,
       customerSegment: raw.customerSegment.trim(),
       currency: raw.currency.trim().toUpperCase(),
-      periodStart: new Date(raw.periodStart).toISOString(),
-      periodEnd: new Date(raw.periodEnd).toISOString(),
+      periodStart: this.toOffsetDateTime(raw.periodStart),
+      periodEnd: this.toOffsetDateTime(raw.periodEnd),
       items: raw.items.map((item: any) => ({
         id: undefined,
         variantId: item.variantId as number,
@@ -398,6 +399,17 @@ export class PricelistCreateComponent implements OnInit, OnDestroy {
       }
     }
     return `Variant ${variantId}`;
+  }
+
+  private toOffsetDateTime(value: string): string {
+    const date = new Date(value);
+    const offsetMinutes = -date.getTimezoneOffset();
+    const sign = offsetMinutes >= 0 ? '+' : '-';
+    const absoluteOffset = Math.abs(offsetMinutes);
+    const hours = String(Math.floor(absoluteOffset / 60)).padStart(2, '0');
+    const minutes = String(absoluteOffset % 60).padStart(2, '0');
+    const localDateTime = value.length === 16 ? `${value}:00` : value;
+    return `${localDateTime}${sign}${hours}:${minutes}`;
   }
 
   controlError(itemIndex: number, controlName: 'categoryId' | 'subcategoryId' | 'productId' | 'variantId'): string {
@@ -426,6 +438,10 @@ export class PricelistCreateComponent implements OnInit, OnDestroy {
   }
 
   periodError(): string {
+    if (this.form.hasError('periodStartInPast')) {
+      return 'Pricelist start date cannot be in the past.';
+    }
+
     if (!this.form.touched && !this.form.dirty) {
       return '';
     }
@@ -440,11 +456,33 @@ export class PricelistCreateComponent implements OnInit, OnDestroy {
   static periodValidator(control: AbstractControl): ValidationErrors | null {
     const periodStart = control.get('periodStart')?.value;
     const periodEnd = control.get('periodEnd')?.value;
+    const errors: ValidationErrors = {};
 
-    if (!periodStart || !periodEnd) {
-      return null;
+    if (periodStart && PricelistCreateComponent.isBeforeToday(periodStart)) {
+      errors['periodStartInPast'] = true;
     }
 
-    return new Date(periodStart) < new Date(periodEnd) ? null : { periodOrder: true };
+    if (periodStart && periodEnd && !(new Date(periodStart) < new Date(periodEnd))) {
+      errors['periodOrder'] = true;
+    }
+
+    return Object.keys(errors).length ? errors : null;
+  }
+
+  private static isBeforeToday(value: string): boolean {
+    const datePart = value.slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(datePart) && datePart < PricelistCreateComponent.todayDateValue();
+  }
+
+  private static todayStartInputValue(): string {
+    return `${PricelistCreateComponent.todayDateValue()}T00:00`;
+  }
+
+  private static todayDateValue(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }

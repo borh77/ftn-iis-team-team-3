@@ -49,7 +49,7 @@
 
       <label>
         <span>Period from</span>
-        <input type="datetime-local" formControlName="periodStart" />
+        <input type="datetime-local" formControlName="periodStart" [min]="minPeriodStart" />
       </label>
 
       <label>
@@ -192,7 +192,7 @@
 
     <div class="actions-row">
       <button type="button" class="ghost" routerLink="/content">Cancel</button>
-      <button type="submit" class="primary" [disabled]="saving || loadingPricelist">{{ saving ? 'Saving...' : (isEditMode ? 'Save changes' : 'Create pricelist') }}</button>
+      <button type="submit" class="primary" [disabled]="saving || loadingPricelist || form.invalid">{{ saving ? 'Saving...' : (isEditMode ? 'Save changes' : 'Create pricelist') }}</button>
     </div>
   </form>
 </section>
