@@ -2,10 +2,7 @@ package com.example.iisdrugcrm.service;
 
 import com.example.iisdrugcrm.domain.PricelistStatus;
 import com.example.iisdrugcrm.domain.Region;
-import com.example.iisdrugcrm.domain.pricelist.PricelistActionType;
-import com.example.iisdrugcrm.domain.pricelist.Pricelist;
-import com.example.iisdrugcrm.domain.pricelist.PricelistItem;
-import com.example.iisdrugcrm.domain.pricelist.QuantityThreshold;
+import com.example.iisdrugcrm.domain.pricelist.*;
 import com.example.iisdrugcrm.dto.pricelist.CatalogVariantDTO;
 import com.example.iisdrugcrm.dto.pricelist.ChangePricelistStatusDTO;
 import com.example.iisdrugcrm.dto.pricelist.CreatePricelistDTO;
