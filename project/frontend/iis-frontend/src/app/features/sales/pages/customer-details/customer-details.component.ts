@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { finalize, forkJoin } from 'rxjs';
 
 import { SalesApiService } from '../../api/sales-api.service';
 import { Customer } from '../../models/customer.model';
@@ -10,6 +10,8 @@ import { CustomerCommunication } from '../../models/customer-communication.model
 import { CustomerNeed } from '../../models/customer-need.model';
 import { Offer } from '../../models/offer.model';
 import { Contract } from '../../models/contract.model';
+import { extractBackendErrorMessage } from '../../../../core/http-error-message';
+import { ERROR_MESSAGE_MS, TransientMessageService } from '../../../../core/transient-message.service';
 
 @Component({
   selector: 'app-customer-details',
@@ -18,11 +20,12 @@ import { Contract } from '../../models/contract.model';
   templateUrl: './customer-details.component.html',
   styleUrl: './customer-details.component.css',
 })
-export class CustomerDetailsComponent implements OnInit {
+export class CustomerDetailsComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly salesApiService = inject(SalesApiService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly transientMessages = inject(TransientMessageService);
 
   customer?: Customer;
   processes: SalesProcess[] = [];
@@ -32,6 +35,7 @@ export class CustomerDetailsComponent implements OnInit {
   contracts: Contract[] = [];
 
   loading = true;
+  errorMessage = '';
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
@@ -43,7 +47,7 @@ export class CustomerDetailsComponent implements OnInit {
       needs: this.salesApiService.getCustomerNeeds(id),
       offers: this.salesApiService.getOffers(),
       contracts: this.salesApiService.getContracts(),
-    }).subscribe({
+    }).pipe(finalize(() => (this.loading = false))).subscribe({
       next: (data) => {
         this.customer = data.customers.find((customer) => customer.id === id);
 
@@ -53,12 +57,10 @@ export class CustomerDetailsComponent implements OnInit {
         this.offers = data.offers.filter((offer) => offer.customerId === id);
         this.contracts = data.contracts.filter((contract) => contract.customerId === id);
 
-        this.loading = false;
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('Failed to load customer details:', error);
-        this.loading = false;
+        this.showError(extractBackendErrorMessage(error, 'Failed to load customer details.'));
         this.cdr.detectChanges();
       },
     });
@@ -70,5 +72,13 @@ export class CustomerDetailsComponent implements OnInit {
 
   viewProcess(process: SalesProcess): void {
     this.router.navigate(['/sales/processes', process.id]);
+  }
+
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
+  }
+
+  private showError(message: string): void {
+    this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
   }
 }

@@ -8,6 +8,10 @@
   </section>
 
   <section class="form-card">
+    <div *ngIf="errorMessage" class="error-box" role="alert">
+      {{ errorMessage }}
+    </div>
+
     <h2>Select Customer</h2>
 
     <select

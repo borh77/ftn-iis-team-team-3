@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { finalize } from 'rxjs';
+import { extractBackendErrorMessage } from '../../core/http-error-message';
 import { PricelistTeam } from '../../core/team.models';
 import { TeamService } from '../../core/team.service';
 import { ERROR_MESSAGE_MS, SUCCESS_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
@@ -50,17 +52,15 @@ export class TeamManagementComponent implements OnInit, OnDestroy {
     this.transientMessages.clearField(this, 'errorMessage');
     const payload = { teamName: this.form.controls.teamName.value.trim() };
 
-    this.teamService.createTeam(payload).subscribe({
+    this.teamService.createTeam(payload).pipe(finalize(() => (this.saving = false))).subscribe({
       next: (created) => {
-        this.saving = false;
         this.form.reset({ teamName: '' });
         this.showToast('Team created successfully.', SUCCESS_MESSAGE_MS);
         // Trigger list refresh in child component
         this.markRefreshed();
       },
       error: (error) => {
-        this.saving = false;
-        const message = error?.error?.error ?? 'Failed to create team.';
+        const message = extractBackendErrorMessage(error, 'Failed to create team.');
         if (error?.status === 409) {
           this.transientMessages.setField(this, 'errorMessage', 'A team with that name already exists.', ERROR_MESSAGE_MS);
           return;

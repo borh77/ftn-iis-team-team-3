@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, inject } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subscription, debounceTime, distinctUntilChanged, finalize } from 'rxjs';
+import { extractBackendErrorMessage } from '../../core/http-error-message';
 import { PricelistTeam, TeamMember } from '../../core/team.models';
 import { TeamService } from '../../core/team.service';
 import { ERROR_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
@@ -60,9 +61,8 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
 
     this.submittingMemberId = memberId;
     this.clearError();
-    this.teamService.addMember(this.currentTeam.id, { memberId }).subscribe({
+    this.teamService.addMember(this.currentTeam.id, { memberId }).pipe(finalize(() => (this.submittingMemberId = null))).subscribe({
       next: (team) => {
-        this.submittingMemberId = null;
         this.currentTeam = {
           ...team,
           memberIds: [...team.memberIds],
@@ -73,8 +73,7 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
         this.teamChanged.emit(this.currentTeam);
       },
       error: (error) => {
-        this.submittingMemberId = null;
-        this.showError(error?.error?.error ?? 'Failed to add member.');
+        this.showError(extractBackendErrorMessage(error, 'Failed to add member.'));
       },
     });
   }
@@ -86,9 +85,8 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
 
     this.submittingMemberId = memberId;
     this.clearError();
-    this.teamService.removeMember(this.currentTeam.id, { memberId }).subscribe({
+    this.teamService.removeMember(this.currentTeam.id, { memberId }).pipe(finalize(() => (this.submittingMemberId = null))).subscribe({
       next: (team) => {
-        this.submittingMemberId = null;
         this.currentTeam = {
           ...team,
           memberIds: [...team.memberIds],
@@ -97,8 +95,7 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
         this.teamChanged.emit(this.currentTeam);
       },
       error: (error) => {
-        this.submittingMemberId = null;
-        this.showError(error?.error?.error ?? 'Failed to remove member.');
+        this.showError(extractBackendErrorMessage(error, 'Failed to remove member.'));
       },
     });
   }
@@ -147,9 +144,10 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
         this.searchResults = results.filter((member) => !blockedIds.has(member.id));
         this.loadingSearch = false;
       },
-      error: () => {
+      error: (error) => {
         this.searchResults = [];
         this.loadingSearch = false;
+        this.showError(extractBackendErrorMessage(error, 'User search failed.'));
       },
     });
   }

@@ -8,6 +8,9 @@
   </section>
 
   <section class="table-card">
+    <div *ngIf="errorMessage" class="error-box" role="alert">
+      {{ errorMessage }}
+    </div>
 
     <div *ngIf="loading" class="loading">
       Loading contracts...
@@ -55,8 +58,9 @@
                 *ngIf="contract.status === 'PENDING'"
                 type="button"
                 class="primary-button"
-                (click)="signContract(contract)">
-                Sign
+                (click)="signContract(contract)"
+                [disabled]="signingContractId === contract.id">
+                {{ signingContractId === contract.id ? 'Signing...' : 'Sign' }}
             </button>
 
             <span

@@ -3,6 +3,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { finalize } from 'rxjs';
+import { extractBackendErrorMessage } from '../../core/http-error-message';
 import { PricelistService } from '../../core/pricelist.service';
 import { Pricelist, PricelistCreationStep, PricelistItem, PricelistWizardState } from '../../core/pricelist.models';
 import { PricelistWizardService } from '../../core/pricelist-wizard.service';
@@ -151,14 +153,14 @@ export class PricelistListComponent implements OnInit, OnDestroy {
     }
     this.replacingItemId = item.id;
     this.clearResultMessages();
-    this.service.replaceVariant(pricelist.id, item.id, Number(replacementVariantId)).subscribe({
+    this.service.replaceVariant(pricelist.id, item.id, Number(replacementVariantId)).pipe(
+      finalize(() => (this.replacingItemId = null))
+    ).subscribe({
       next: () => {
-        this.replacingItemId = null;
         this.showSuccess('Variant was replaced.');
         this.load();
       },
       error: (error) => {
-        this.replacingItemId = null;
         this.showError(this.replaceVariantErrorMessage(error));
         this.cdr.detectChanges();
       },
@@ -169,14 +171,12 @@ export class PricelistListComponent implements OnInit, OnDestroy {
     this.creatingVersionId = pricelist.id;
     this.clearResultMessages();
 
-    this.service.createNewVersion(pricelist.id).subscribe({
+    this.service.createNewVersion(pricelist.id).pipe(finalize(() => (this.creatingVersionId = null))).subscribe({
       next: () => {
-        this.creatingVersionId = null;
         this.showSuccess('New draft version was created.');
         this.load();
       },
       error: (error) => {
-        this.creatingVersionId = null;
         this.showError(this.versionErrorMessage(error));
         this.cdr.detectChanges();
       },
@@ -261,18 +261,16 @@ export class PricelistListComponent implements OnInit, OnDestroy {
 
     this.loadingSuggestionsId = pricelist.id;
     this.suggestionErrorByPricelist[pricelist.id] = '';
-    this.offerService.getPromotionSuggestions(segment).subscribe({
+    this.offerService.getPromotionSuggestions(segment).pipe(finalize(() => (this.loadingSuggestionsId = null))).subscribe({
       next: (suggestions) => {
-        this.loadingSuggestionsId = null;
         this.promotionSuggestionsByPricelist[pricelist.id] = suggestions
           .filter((suggestion) => this.canApplySuggestionToPricelist(pricelist, suggestion))
           .slice(0, 5);
         this.cdr.detectChanges();
       },
-      error: () => {
-        this.loadingSuggestionsId = null;
+      error: (error) => {
         this.promotionSuggestionsByPricelist[pricelist.id] = [];
-        this.suggestionErrorByPricelist[pricelist.id] = 'Promotion suggestions could not be loaded.';
+        this.suggestionErrorByPricelist[pricelist.id] = extractBackendErrorMessage(error, 'Promotion suggestions could not be loaded.');
         this.cdr.detectChanges();
       },
     });
@@ -343,9 +341,8 @@ export class PricelistListComponent implements OnInit, OnDestroy {
     this.clearToastError();
     this.clearActivationError(offer.id);
 
-    this.offerService.activate(offer.id).subscribe({
+    this.offerService.activate(offer.id).pipe(finalize(() => (this.changingOfferId = null))).subscribe({
       next: () => {
-        this.changingOfferId = null;
         this.clearToastError();
         this.clearActivationError(offer.id);
         this.showSuccess('Offer was activated successfully.');
@@ -354,7 +351,6 @@ export class PricelistListComponent implements OnInit, OnDestroy {
       error: (err: HttpErrorResponse) => {
         const message = this.createErrorMessage(err);
 
-        this.changingOfferId = null;
         this.showToastError(message);
         this.showActivationError(offer.id, message);
         this.cdr.detectChanges();
@@ -448,14 +444,12 @@ export class PricelistListComponent implements OnInit, OnDestroy {
     this.changingStatusId = pricelist.id;
     this.clearResultMessages();
 
-    this.service.changeStatus(pricelist.id, { targetStatus, reason }).subscribe({
+    this.service.changeStatus(pricelist.id, { targetStatus, reason }).pipe(finalize(() => (this.changingStatusId = null))).subscribe({
       next: () => {
-        this.changingStatusId = null;
         this.showSuccess('Pricelist status was updated successfully.');
         this.load();
       },
       error: (error) => {
-        this.changingStatusId = null;
         this.showError(this.statusChangeErrorMessage(error));
         this.cdr.detectChanges();
       },
@@ -481,7 +475,7 @@ export class PricelistListComponent implements OnInit, OnDestroy {
         return 'Pricelist was not found.';
       }
     }
-    return 'Pricelist status update failed.';
+    return extractBackendErrorMessage(error, 'Pricelist status update failed.');
   }
 
   private versionErrorMessage(error: unknown): string {
@@ -495,7 +489,7 @@ export class PricelistListComponent implements OnInit, OnDestroy {
     if (backend.includes('access')) {
       return 'You do not have access to this pricelist.';
     }
-    return 'New version could not be created.';
+    return extractBackendErrorMessage(error, 'New version could not be created.');
   }
 
   private loadOffers(pricelistId: number): void {
@@ -541,20 +535,18 @@ export class PricelistListComponent implements OnInit, OnDestroy {
     if (backend.includes('access')) {
       return 'You do not have access to this pricelist.';
     }
-    return 'Variant could not be replaced.';
+    return extractBackendErrorMessage(error, 'Variant could not be replaced.');
   }
 
   private changeOfferStatus(offer: SpecialOffer, action: 'activate' | 'archive'): void {
     this.changingOfferId = offer.id;
     const request = action === 'activate' ? this.offerService.activate(offer.id) : this.offerService.archive(offer.id);
-    request.subscribe({
+    request.pipe(finalize(() => (this.changingOfferId = null))).subscribe({
       next: () => {
-        this.changingOfferId = null;
         this.showSuccess(action === 'activate' ? 'Offer was activated successfully.' : 'Offer was archived successfully.');
         this.loadOffers(offer.pricelistId);
       },
       error: (error) => {
-        this.changingOfferId = null;
         this.showError(this.offerErrorMessage(error, action));
       },
     });
@@ -581,26 +573,15 @@ export class PricelistListComponent implements OnInit, OnDestroy {
       return 'You do not have access to this pricelist.';
     }
     if (action === 'activate') {
-      return 'Offer could not be activated.';
+      return extractBackendErrorMessage(error, 'Offer could not be activated.');
     }
-    return 'Offer could not be created.';
+    return extractBackendErrorMessage(error, action === 'archive' ? 'Offer could not be archived.' : 'Offer could not be created.');
   }
 
   private createErrorMessage(error: HttpErrorResponse): string {
-    if (typeof error.error?.error === 'string' && error.error.error.trim()) {
-      return error.error.error.trim();
-    }
-
-    if (typeof error.error?.message === 'string' && error.error.message.trim()) {
-      return error.error.message.trim();
-    }
-
-    if (typeof error.error?.detail === 'string' && error.error.detail.trim()) {
-      return error.error.detail.trim();
-    }
-
-    if (typeof error.error === 'string' && error.error.trim()) {
-      return error.error.trim();
+    const backendMessage = extractBackendErrorMessage(error, '');
+    if (backendMessage) {
+      return backendMessage;
     }
 
     if (error.status === 400 || error.status === 422) {

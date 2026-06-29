@@ -2,6 +2,7 @@ import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angula
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { finalize } from 'rxjs';
 import { AdverseEffectsApiService } from '../../api/adverse-effects-api.service';
 import {
   AdverseEffectReport,
@@ -11,6 +12,7 @@ import {
   StatusTransition
 } from '../../models/adverse-effect-report.model';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { extractBackendErrorMessage } from '../../../../core/http-error-message';
 import { ERROR_MESSAGE_MS, SUCCESS_MESSAGE_MS, TransientMessageService } from '../../../../core/transient-message.service';
 
 @Component({
@@ -96,18 +98,16 @@ export class ReportDetailComponent implements OnInit, OnDestroy {
     this.actionLoading = true;
     this.clearError();
 
-    this.api.changeStatus(this.reportId, this.statusForm).subscribe({
+    this.api.changeStatus(this.reportId, this.statusForm).pipe(finalize(() => (this.actionLoading = false))).subscribe({
       next: (updated) => {
         this.report = updated;
         this.showSuccess('Status changed successfully.');
         this.selectedTransition = null;
-        this.actionLoading = false;
         this.loadStatusHistory(this.reportId!);
         this.cdr.detectChanges();
       },
       error: (err) => {
-        this.showError(err.error?.message || `Error changing status (${err.status}).`);
-        this.actionLoading = false;
+        this.showError(extractBackendErrorMessage(err, 'Error changing status.'));
         this.cdr.detectChanges();
       }
     });
@@ -119,17 +119,15 @@ export class ReportDetailComponent implements OnInit, OnDestroy {
     this.actionLoading = true;
     this.clearError();
 
-    this.api.addNote(this.reportId, { content: this.newNoteContent.trim() }).subscribe({
+    this.api.addNote(this.reportId, { content: this.newNoteContent.trim() }).pipe(finalize(() => (this.actionLoading = false))).subscribe({
       next: (note) => {
         this.notes = [...this.notes, note];
         this.newNoteContent = '';
         this.showSuccess('Note added successfully.');
-        this.actionLoading = false;
         this.cdr.detectChanges();
       },
       error: (err) => {
-        this.showError(err.error?.message || `Error adding note (${err.status}).`);
-        this.actionLoading = false;
+        this.showError(extractBackendErrorMessage(err, 'Error adding note.'));
         this.cdr.detectChanges();
       }
     });
@@ -176,15 +174,13 @@ export class ReportDetailComponent implements OnInit, OnDestroy {
   }
 
   private loadReport(id: number): void {
-    this.api.getReportById(id).subscribe({
+    this.api.getReportById(id).pipe(finalize(() => (this.loading = false))).subscribe({
       next: (data) => {
         this.report = data;
-        this.loading = false;
         this.cdr.detectChanges();
       },
       error: (err) => {
-        this.showError(`Error loading report (${err.status}).`);
-        this.loading = false;
+        this.showError(extractBackendErrorMessage(err, 'Error loading report.'));
         this.cdr.detectChanges();
       }
     });

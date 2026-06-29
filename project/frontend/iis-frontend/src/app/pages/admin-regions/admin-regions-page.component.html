@@ -67,8 +67,12 @@
 
       <p class="confirm-copy">Delete region <strong>{{ deleteCandidate.name }}</strong> ({{ deleteCandidate.code }})?</p>
 
+      @if (deleteErrorMessage) {
+        <p class="error-box">{{ deleteErrorMessage }}</p>
+      }
+
       <div class="modal-actions">
-        <button type="button" class="ghost" (click)="cancelDelete()">Cancel</button>
+        <button type="button" class="ghost" (click)="cancelDelete()" [disabled]="deleting">Cancel</button>
         <button type="button" class="danger" (click)="confirmDelete()" [disabled]="deleting">{{ deleting ? 'Deleting...' : 'Delete' }}</button>
       </div>
     </section>

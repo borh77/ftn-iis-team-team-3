@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { finalize } from 'rxjs';
+import { extractBackendErrorMessage } from '../../core/http-error-message';
 import { Region } from '../../core/region.model';
 import { RegionService } from '../../core/region.service';
 import { ERROR_MESSAGE_MS, SUCCESS_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
@@ -26,6 +28,7 @@ export class AdminRegionsPageComponent implements OnInit, OnDestroy {
   showDeleteDialog = false;
   deleteCandidate: Region | null = null;
   errorMessage = '';
+  deleteErrorMessage = '';
   toastMessage = '';
 
   readonly form = this.fb.nonNullable.group({
@@ -46,6 +49,7 @@ export class AdminRegionsPageComponent implements OnInit, OnDestroy {
   openCreate(): void {
     this.selected = null;
     this.transientMessages.clearField(this, 'errorMessage');
+    this.clearDeleteError();
     this.showModal = true;
     this.form.reset({ name: '', code: '' });
   }
@@ -53,6 +57,7 @@ export class AdminRegionsPageComponent implements OnInit, OnDestroy {
   openEdit(region: Region): void {
     this.selected = region;
     this.transientMessages.clearField(this, 'errorMessage');
+    this.clearDeleteError();
     this.showModal = true;
     this.form.reset({ name: region.name, code: region.code });
   }
@@ -79,17 +84,15 @@ export class AdminRegionsPageComponent implements OnInit, OnDestroy {
 
     const request = this.selected ? this.regionService.update(this.selected.id, payload) : this.regionService.create(payload);
 
-    request.subscribe({
+    request.pipe(finalize(() => (this.saving = false))).subscribe({
       next: () => {
         const message = this.selected ? 'Region updated successfully.' : 'Region created successfully.';
-        this.saving = false;
         this.closeModal();
         this.markRefreshed();
         this.showToast(message, SUCCESS_MESSAGE_MS);
       },
       error: (error) => {
-        this.saving = false;
-        const message = error?.error?.error ?? 'Failed to save region.';
+        const message = extractBackendErrorMessage(error, 'Failed to save region.');
         if (error?.status === 409) {
           this.transientMessages.setField(this, 'errorMessage', 'Region with that name or code already exists.', ERROR_MESSAGE_MS);
           return;
@@ -101,12 +104,17 @@ export class AdminRegionsPageComponent implements OnInit, OnDestroy {
 
   requestDelete(region: Region): void {
     this.deleteCandidate = region;
+    this.clearDeleteError();
     this.showDeleteDialog = true;
   }
 
   cancelDelete(): void {
+    if (this.deleting) {
+      return;
+    }
     this.deleteCandidate = null;
     this.showDeleteDialog = false;
+    this.clearDeleteError();
   }
 
   confirmDelete(): void {
@@ -115,28 +123,37 @@ export class AdminRegionsPageComponent implements OnInit, OnDestroy {
     }
 
     this.deleting = true;
+    this.clearDeleteError();
     const regionId = this.deleteCandidate.id;
-    this.regionService.delete(regionId).subscribe({
+    this.regionService.delete(regionId).pipe(finalize(() => (this.deleting = false))).subscribe({
       next: () => {
-        this.deleting = false;
-        this.cancelDelete();
+        this.deleteCandidate = null;
+        this.showDeleteDialog = false;
+        this.clearDeleteError();
         this.markRefreshed();
         this.showToast('Region deleted successfully.', SUCCESS_MESSAGE_MS);
       },
       error: (error) => {
-        this.deleting = false;
-        this.cancelDelete();
-        if (error?.status === 422) {
-          this.showToast('Region cannot be deleted because it is used by active users or pricelists.');
-          return;
-        }
-        this.showToast('Region deletion failed.');
+        const message = extractBackendErrorMessage(
+          error,
+          'Region cannot be deleted because it is used by active users or pricelists.'
+        );
+        this.showDeleteError(message);
+        this.showToast(message);
       },
     });
   }
 
   showToast(message: string, durationMs = ERROR_MESSAGE_MS): void {
     this.transientMessages.setField(this, 'toastMessage', message, durationMs);
+  }
+
+  private showDeleteError(message: string): void {
+    this.transientMessages.setField(this, 'deleteErrorMessage', message, ERROR_MESSAGE_MS);
+  }
+
+  private clearDeleteError(): void {
+    this.transientMessages.clearField(this, 'deleteErrorMessage');
   }
 
   controlError(controlName: 'name' | 'code'): string {

@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { finalize, forkJoin } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../../core/auth/auth.service';
 
@@ -13,6 +13,8 @@ import { Offer } from '../../models/offer.model';
 import { Contract } from '../../models/contract.model';
 import { SalesProcessHistory } from '../../models/sales-process-history.model';
 import { CustomerCommunicationRequest } from '../../models/customer-communication.model';
+import { extractBackendErrorMessage } from '../../../../core/http-error-message';
+import { ERROR_MESSAGE_MS, TransientMessageService } from '../../../../core/transient-message.service';
 
 @Component({
   selector: 'app-process-details',
@@ -21,12 +23,13 @@ import { CustomerCommunicationRequest } from '../../models/customer-communicatio
   templateUrl: './process-details.component.html',
   styleUrl: './process-details.component.css',
 })
-export class ProcessDetailsComponent implements OnInit {
+export class ProcessDetailsComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly salesApiService = inject(SalesApiService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly authService = inject(AuthService);
+  private readonly transientMessages = inject(TransientMessageService);
 
   process?: SalesProcess;
   needs: CustomerNeed[] = [];
@@ -36,6 +39,8 @@ export class ProcessDetailsComponent implements OnInit {
   history: SalesProcessHistory[] = [];
 
   loading = true;
+  savingCommunication = false;
+  errorMessage = '';
   showCommunicationForm = false;
   canManageCommunications = false;
 
@@ -47,7 +52,7 @@ export class ProcessDetailsComponent implements OnInit {
     this.canManageCommunications =
      this.authService.hasRole('ROLE_ACCOUNT_MANAGER');
 
-    this.salesApiService.getSalesProcessById(id).subscribe({
+    this.salesApiService.getSalesProcessById(id).pipe(finalize(() => (this.loading = false))).subscribe({
       next: (process) => {
         this.process = process;
 
@@ -65,19 +70,16 @@ export class ProcessDetailsComponent implements OnInit {
             this.contracts = data.contracts.filter((contract) => contract.salesProcessId === process.id);
             this.history = data.history;
 
-            this.loading = false;
             this.cdr.detectChanges();
           },
           error: (error) => {
-            console.error('Failed to load process details:', error);
-            this.loading = false;
+            this.showError(extractBackendErrorMessage(error, 'Failed to load process details.'));
             this.cdr.detectChanges();
           },
         });
       },
       error: (error) => {
-        console.error('Failed to load process:', error);
-        this.loading = false;
+        this.showError(extractBackendErrorMessage(error, 'Failed to load process.'));
         this.cdr.detectChanges();
       },
     });
@@ -94,8 +96,11 @@ export class ProcessDetailsComponent implements OnInit {
         return;
     }
 
+    this.savingCommunication = true;
+    this.clearError();
     this.salesApiService
         .createCustomerCommunication(this.process.customerId, this.newCommunication)
+        .pipe(finalize(() => (this.savingCommunication = false)))
         .subscribe({
         next: () => {
             this.showCommunicationForm = false;
@@ -107,7 +112,7 @@ export class ProcessDetailsComponent implements OnInit {
 
             this.ngOnInit();
         },
-        error: (error) => console.error('Failed to add communication:', error),
+        error: (error) => this.showError(extractBackendErrorMessage(error, 'Failed to add communication.')),
         });
     }
 
@@ -121,5 +126,17 @@ export class ProcessDetailsComponent implements OnInit {
     }
 
     return this.stages.indexOf(stage) <= this.stages.indexOf(this.process.stage);
+  }
+
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
+  }
+
+  private showError(message: string): void {
+    this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private clearError(): void {
+    this.transientMessages.clearField(this, 'errorMessage', () => this.cdr.detectChanges());
   }
 }

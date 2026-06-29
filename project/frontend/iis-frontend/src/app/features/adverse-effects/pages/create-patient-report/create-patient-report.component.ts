@@ -1,8 +1,10 @@
 import { ChangeDetectorRef, Component, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs';
 import { AdverseEffectsApiService } from '../../api/adverse-effects-api.service';
 import { CreatePatientReportRequest } from '../../models/adverse-effect-report.model';
+import { extractBackendErrorMessage } from '../../../../core/http-error-message';
 import { ERROR_MESSAGE_MS, SUCCESS_MESSAGE_MS, TransientMessageService } from '../../../../core/transient-message.service';
 
 interface MedicationSymptoms {
@@ -99,9 +101,8 @@ export class CreatePatientReportComponent implements OnDestroy {
     this.saving = true;
     this.clearResultMessages();
 
-    this.api.createPatientReport(this.form).subscribe({
+    this.api.createPatientReport(this.form).pipe(finalize(() => (this.saving = false))).subscribe({
       next: (report) => {
-        this.saving = false;
         this.showSuccess('Thank you for submitting your report! We appreciate you taking the time to inform us. Your report has been recorded and we will take it into consideration.');
         this.form = { medicationName: '', symptoms: '', additionalDesc: '', patientGender: '', patientAge: undefined, symptomDate: '' };
         this.selectedSymptoms = [];
@@ -109,9 +110,7 @@ export class CreatePatientReportComponent implements OnDestroy {
         this.cdr.detectChanges();
       },
       error: (err) => {
-        this.saving = false;
-        this.showError('Error submitting report. Please try again.');
-        console.error(err);
+        this.showError(extractBackendErrorMessage(err, 'Error submitting report. Please try again.'));
         this.cdr.detectChanges();
       }
     });

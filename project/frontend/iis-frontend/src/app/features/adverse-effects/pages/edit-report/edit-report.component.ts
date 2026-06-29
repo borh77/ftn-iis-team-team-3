@@ -2,7 +2,9 @@ import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angula
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { finalize } from 'rxjs';
 import { AdverseEffectsApiService } from '../../api/adverse-effects-api.service';
+import { extractBackendErrorMessage } from '../../../../core/http-error-message';
 import { ERROR_MESSAGE_MS, TransientMessageService } from '../../../../core/transient-message.service';
 
 @Component({
@@ -42,7 +44,7 @@ export class EditReportComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.reportId = Number(this.route.snapshot.paramMap.get('id'));
-    this.api.getReportById(this.reportId).subscribe({
+    this.api.getReportById(this.reportId).pipe(finalize(() => (this.loading = false))).subscribe({
       next: (report) => {
         this.form.medicationName = report.medicationName;
         this.form.severity = report.severity ?? '';
@@ -51,12 +53,10 @@ export class EditReportComponent implements OnInit, OnDestroy {
         this.form.additionalNotes = report.additionalNotes ?? '';
         this.form.patientGender = report.patientGender ?? '';
         this.form.patientAge = report.patientAge;
-        this.loading = false;
         this.cdr.detectChanges();
       },
-      error: () => {
-        this.showError('Error loading report.');
-        this.loading = false;
+      error: (error) => {
+        this.showError(extractBackendErrorMessage(error, 'Error loading report.'));
         this.cdr.detectChanges();
       }
     });
@@ -69,17 +69,14 @@ export class EditReportComponent implements OnInit, OnDestroy {
   submit(): void {
     this.saving = true;
     this.clearError();
-    this.api.updateDoctorReport(this.reportId, this.form).subscribe({
+    this.api.updateDoctorReport(this.reportId, this.form).pipe(finalize(() => (this.saving = false))).subscribe({
       next: () => {
-        this.saving = false;
         this.router.navigate(['/adverse-effects/my-reports'], {
           state: { successMessage: `Report #${this.reportId} updated successfully!` }
         });
       },
       error: (err) => {
-        this.saving = false;
-        this.showError('Error updating report. Please try again.');
-        console.error(err);
+        this.showError(extractBackendErrorMessage(err, 'Error updating report. Please try again.'));
         this.cdr.detectChanges();
       }
     });
