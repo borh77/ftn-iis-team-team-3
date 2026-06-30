@@ -28,7 +28,7 @@ public class AdverseEffectReportController {
         this.service = service;
     }
 
-    // US-01: Lekar kreira nalog
+    // US-01: Doctor creates a report
     @PostMapping("/doctor-reports")
     @PreAuthorize("hasRole('LEKAR')")
     public ResponseEntity<AdverseEffectReportResponseDTO> createDoctorReport(
@@ -38,7 +38,7 @@ public class AdverseEffectReportController {
                 .body(service.createDoctorReport(dto, auth.getName()));
     }
 
-    // US-02: Pacijent kreira nalog
+    // US-02: Patient creates a report
     @PostMapping("/patient-reports")
     @PreAuthorize("hasRole('PACIJENT')")
     public ResponseEntity<AdverseEffectReportResponseDTO> createPatientReport(
@@ -48,14 +48,14 @@ public class AdverseEffectReportController {
                 .body(service.createPatientReport(dto, auth.getName()));
     }
 
-    // US-03: Lekar vidi samo svoje naloge
+    // US-03: Doctor sees only their reports
     @GetMapping("/my-reports")
     @PreAuthorize("hasRole('LEKAR')")
     public ResponseEntity<List<AdverseEffectReportResponseDTO>> getMyReports(Authentication auth) {
         return ResponseEntity.ok(service.getMyReports(auth.getName()));
     }
 
-    // US-04: Farmakovigilant vidi sve naloge
+    // US-04: Pharmacovigilance user sees all reports
     @GetMapping
     @PreAuthorize("hasRole('FARMAKOVIGILANT')")
     public ResponseEntity<List<AdverseEffectReportResponseDTO>> getAllReports(
@@ -74,7 +74,7 @@ public class AdverseEffectReportController {
         return ResponseEntity.ok(service.getAllReportsFiltered(status, medicationName, severity));
     }
 
-    // US-03: Detalji jednog naloga
+    // US-03: Single report details
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('LEKAR', 'FARMAKOVIGILANT')")
     public ResponseEntity<AdverseEffectReportResponseDTO> getReportById(@PathVariable Long id) {
@@ -118,7 +118,7 @@ public class AdverseEffectReportController {
         return ResponseEntity.ok(service.getNotes(id));
     }
 
-    // US-03: Editovanje naloga lekara (samo dok je SUBMITTED)
+    // US-03: Doctor report editing only while SUBMITTED
     @PutMapping("/doctor-reports/{id}")
     @PreAuthorize("hasRole('LEKAR')")
     public ResponseEntity<AdverseEffectReportResponseDTO> updateDoctorReport(

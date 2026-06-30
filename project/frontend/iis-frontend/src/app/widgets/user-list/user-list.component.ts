@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, Input, OnChanges, OnInit, SimpleChanges, inject } from '@angular/core';
 import { UserService } from '../../core/user.service';
 import { SpringPage, UserRow } from '../../core/auth/auth.models';
+import { roleLabel } from '../../core/auth/role-labels';
 
 @Component({
   selector: 'app-user-list',
@@ -20,6 +21,7 @@ export class UserListComponent implements OnChanges {
   pageSize = 8;
   page = 0;
   data: SpringPage<UserRow> | null = null;
+  readonly roleLabel = roleLabel;
 
   ngOnInit(): void {
     this.reload();

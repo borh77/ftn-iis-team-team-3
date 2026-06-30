@@ -21,13 +21,23 @@ export interface Pricelist {
   customerSegment: string;
   currency: string;
   status: 'DRAFT' | 'IN_REVIEW' | 'ACTIVE' | 'ARCHIVED';
+  createdBy?: number | null;
+  creationStep?: PricelistCreationStep | null;
+  creationCompleted?: boolean;
+  lastEditedAt?: string | null;
+  teamId?: number | null;
+  teamName?: string | null;
   versionNumber: number;
   parentPricelistId: number | null;
   rootPricelistId: number | null;
   canCreateNewVersion: boolean;
   owner: boolean;
   canCollaborate: boolean;
+  canEditDraft?: boolean;
+  canSubmitForReview?: boolean;
   canManageOffers: boolean;
+  canActivate?: boolean;
+  canReject?: boolean;
   periodStart: string;
   periodEnd: string;
   items: PricelistItem[];
@@ -61,6 +71,7 @@ export type PricelistCreationStep =
 
 export interface PricelistWizardState {
   pricelistId: number;
+  currentStep?: PricelistCreationStep | null;
   creationStep: PricelistCreationStep;
   creationCompleted: boolean;
   status: Pricelist['status'];

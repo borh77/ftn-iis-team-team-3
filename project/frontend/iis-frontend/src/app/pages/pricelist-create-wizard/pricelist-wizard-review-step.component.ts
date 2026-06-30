@@ -71,7 +71,7 @@ import { PricelistWizardSummary } from '../../core/pricelist.models';
           }
         </div>
       } @else {
-        <p class="success-box">Pricelist is ready to finish.</p>
+        <p class="success-box">Pricelist is ready to submit for review.</p>
       }
     }
   `,

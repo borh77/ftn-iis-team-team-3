@@ -47,6 +47,10 @@
   </section>
 
   <section class="table-card">
+    <div *ngIf="errorMessage" class="error-box" role="alert">
+      {{ errorMessage }}
+    </div>
+
     <div *ngIf="loading" class="loading">
       Loading sales processes...
     </div>
@@ -127,7 +131,9 @@
                   </select>
                 </label>
 
-                <button type="submit" class="primary-button">Save Need</button>
+                <button type="submit" class="primary-button" [disabled]="actionLoading">
+                  {{ actionLoading ? 'Saving...' : 'Save Need' }}
+                </button>
               </form>
             </td>
           </tr>
@@ -183,7 +189,9 @@
                   />
                 </label>
 
-                <button type="submit" class="primary-button">Save Offer</button>
+                <button type="submit" class="primary-button" [disabled]="actionLoading">
+                  {{ actionLoading ? 'Saving...' : 'Save Offer' }}
+                </button>
               </form>
             </td>
           </tr>

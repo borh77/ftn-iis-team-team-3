@@ -17,7 +17,6 @@ import { RoleLandingComponent } from './pages/role-landing/role-landing.componen
 import { ForcePasswordChangeComponent } from './pages/force-password-change/force-password-change.component';
 import { ProfileComponent } from './pages/profile/profile.component';
 import { PortfolioPageComponent } from './pages/portfolio/portfolio-page.component';
-import { PricelistCreateComponent } from './pages/pricelist-create/pricelist-create.component';
 import { PricelistCreateWizardComponent } from './pages/pricelist-create-wizard/pricelist-create-wizard.component';
 import { SalesDashboardComponent } from './pages/sales-dashboard/sales-dashboard.component';
 import { BuyerCatalogComponent } from './pages/buyer-catalog/buyer-catalog.component';
@@ -124,10 +123,10 @@ export const routes: Routes = [
 	},
 	{
 		path: 'pricelists/:id/edit',
-		component: PricelistCreateComponent,
+		component: PricelistCreateWizardComponent,
 		canActivate: [authGuard, passwordChangeGuard],
 		data: { roles: ['ROLE_PRICELIST_CREATOR'] },
-		title: 'IIS Drug CRM | Edit Pricelist',
+		title: 'IIS Drug CRM | Edit Pricelist Draft',
 	},
 	{
 		path: 'published-pricelists',
@@ -231,13 +230,13 @@ export const routes: Routes = [
 		},
 		title: 'IIS Drug CRM | Communications',
 	},
-	// Podsistem neželjenih efekata lekova
+	// Adverse drug effects subsystem
 	{
 		path: 'adverse-effects/create-doctor-report',
 		component: CreateDoctorReportComponent,
 		canActivate: [authGuard, passwordChangeGuard],
 		data: { roles: ['ROLE_LEKAR'] },
-		title: 'IIS Drug CRM | New Report — Doctor',
+		title: 'IIS Drug CRM | New Report - Doctor',
 	},
 	{
 		path: 'adverse-effects/my-reports',

@@ -1,7 +1,8 @@
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { finalize } from 'rxjs';
 import { AdverseEffectsApiService } from '../../api/adverse-effects-api.service';
 import {
   AdverseEffectReport,
@@ -11,6 +12,8 @@ import {
   StatusTransition
 } from '../../models/adverse-effect-report.model';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { extractBackendErrorMessage } from '../../../../core/http-error-message';
+import { ERROR_MESSAGE_MS, SUCCESS_MESSAGE_MS, TransientMessageService } from '../../../../core/transient-message.service';
 
 @Component({
   selector: 'app-report-detail',
@@ -19,13 +22,14 @@ import { AuthService } from '../../../../core/auth/auth.service';
   templateUrl: './report-detail.component.html',
   styleUrls: ['./report-detail.component.css']
 })
-export class ReportDetailComponent implements OnInit {
+export class ReportDetailComponent implements OnInit, OnDestroy {
 
   private readonly api = inject(AdverseEffectsApiService);
   private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly transientMessages = inject(TransientMessageService);
 
   report: AdverseEffectReport | null = null;
   statusHistory: StatusTransition[] = [];
@@ -49,7 +53,7 @@ export class ReportDetailComponent implements OnInit {
     const id = Number(idParam);
 
     if (!idParam || isNaN(id)) {
-      this.errorMessage = 'Invalid report ID.';
+      this.showError('Invalid report ID.');
       this.loading = false;
       this.cdr.detectChanges();
       return;
@@ -63,8 +67,7 @@ export class ReportDetailComponent implements OnInit {
 
   startTransition(newStatus: ReportStatus): void {
     this.selectedTransition = newStatus;
-    this.successMessage = '';
-    this.errorMessage = '';
+    this.clearResultMessages();
     this.statusForm = {
       newStatus,
       comment: '',
@@ -72,6 +75,10 @@ export class ReportDetailComponent implements OnInit {
       closureReason: '',
       verdict: ''
     };
+  }
+
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
   }
 
   cancelTransition(): void {
@@ -83,26 +90,24 @@ export class ReportDetailComponent implements OnInit {
     if (!this.reportId || !this.selectedTransition) return;
 
     if (this.selectedTransition === 'CLOSED' && !this.statusForm.comment?.trim()) {
-      this.errorMessage = 'Comment is required when closing a report.';
+      this.showError('Comment is required when closing a report.');
       this.cdr.detectChanges();
       return;
     }
 
     this.actionLoading = true;
-    this.errorMessage = '';
+    this.clearError();
 
-    this.api.changeStatus(this.reportId, this.statusForm).subscribe({
+    this.api.changeStatus(this.reportId, this.statusForm).pipe(finalize(() => (this.actionLoading = false))).subscribe({
       next: (updated) => {
         this.report = updated;
-        this.successMessage = 'Status changed successfully.';
+        this.showSuccess('Status changed successfully.');
         this.selectedTransition = null;
-        this.actionLoading = false;
         this.loadStatusHistory(this.reportId!);
         this.cdr.detectChanges();
       },
       error: (err) => {
-        this.errorMessage = err.error?.message || `Error changing status (${err.status}).`;
-        this.actionLoading = false;
+        this.showError(extractBackendErrorMessage(err, 'Error changing status.'));
         this.cdr.detectChanges();
       }
     });
@@ -112,19 +117,17 @@ export class ReportDetailComponent implements OnInit {
     if (!this.reportId || !this.newNoteContent.trim()) return;
 
     this.actionLoading = true;
-    this.errorMessage = '';
+    this.clearError();
 
-    this.api.addNote(this.reportId, { content: this.newNoteContent.trim() }).subscribe({
+    this.api.addNote(this.reportId, { content: this.newNoteContent.trim() }).pipe(finalize(() => (this.actionLoading = false))).subscribe({
       next: (note) => {
         this.notes = [...this.notes, note];
         this.newNoteContent = '';
-        this.successMessage = 'Note added successfully.';
-        this.actionLoading = false;
+        this.showSuccess('Note added successfully.');
         this.cdr.detectChanges();
       },
       error: (err) => {
-        this.errorMessage = err.error?.message || `Error adding note (${err.status}).`;
-        this.actionLoading = false;
+        this.showError(extractBackendErrorMessage(err, 'Error adding note.'));
         this.cdr.detectChanges();
       }
     });
@@ -171,15 +174,13 @@ export class ReportDetailComponent implements OnInit {
   }
 
   private loadReport(id: number): void {
-    this.api.getReportById(id).subscribe({
+    this.api.getReportById(id).pipe(finalize(() => (this.loading = false))).subscribe({
       next: (data) => {
         this.report = data;
-        this.loading = false;
         this.cdr.detectChanges();
       },
       error: (err) => {
-        this.errorMessage = `Error loading report (${err.status}).`;
-        this.loading = false;
+        this.showError(extractBackendErrorMessage(err, 'Error loading report.'));
         this.cdr.detectChanges();
       }
     });
@@ -209,5 +210,22 @@ export class ReportDetailComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  private showSuccess(message: string): void {
+    this.transientMessages.setField(this, 'successMessage', message, SUCCESS_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private showError(message: string): void {
+    this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private clearError(): void {
+    this.transientMessages.clearField(this, 'errorMessage', () => this.cdr.detectChanges());
+  }
+
+  private clearResultMessages(): void {
+    this.transientMessages.clearField(this, 'successMessage', () => this.cdr.detectChanges());
+    this.clearError();
   }
 }

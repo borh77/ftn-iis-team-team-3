@@ -61,7 +61,7 @@
           </dl>
 
           <button type="button" class="primary" (click)="continueDraft(draft)">
-            Nastavi kreiranje
+            Continue creation
           </button>
         </article>
       }
@@ -78,13 +78,30 @@
     <p class="success-box">{{ successMessage }}</p>
   }
 
+  <div class="filter-bar" aria-label="Pricelist filters">
+    <label>
+      <span>Status</span>
+      <select [(ngModel)]="selectedStatus" [ngModelOptions]="{standalone: true}">
+        @for (option of statusOptions; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </label>
+
+    <button type="button" class="ghost" (click)="resetFilters()" [disabled]="!statusFilterActive">
+      Reset filters
+    </button>
+  </div>
+
   @if (loading) {
     <p class="muted">Loading pricelists...</p>
   } @else if (!pricelists.length) {
     <p class="muted">You don't have any pricelists yet.</p>
+  } @else if (!filteredPricelists.length) {
+    <p class="muted">No pricelists found for the selected status.</p>
   } @else {
     <div class="pricelist-grid">
-      @for (p of pricelists; track p.id) {
+      @for (p of filteredPricelists; track p.id) {
         <article class="pricelist-card">
           <div class="pricelist-card__header">
             <div>
@@ -113,7 +130,7 @@
             </div>
             <div>
               <dt>Items</dt>
-              <dd>{{ p.items?.length ?? 0 }}</dd>
+              <dd>{{ p.items.length }}</dd>
             </div>
           </dl>
 
@@ -170,7 +187,7 @@
           <div class="status-actions">
             @if (canEdit(p)) {
               <button type="button" class="primary" (click)="editPricelist(p)">
-                Edit
+                Edit draft
               </button>
             }
 
@@ -188,8 +205,12 @@
 
             @if (canReturnToDraft(p)) {
               <button type="button" class="secondary" (click)="returnToDraft(p)" [disabled]="isChanging(p)">
-                {{ isChanging(p) ? 'Updating...' : 'Return to draft' }}
+                {{ isChanging(p) ? 'Updating...' : 'Reject / return to draft' }}
               </button>
+            }
+
+            @if (isWaitingForExternalReview(p)) {
+              <p class="review-note">Waiting for review by another authorized user.</p>
             }
 
             @if (canArchive(p)) {
@@ -223,7 +244,7 @@
               <section class="suggestions-panel">
                 <div class="panel-head compact">
                   <div>
-                    <h4>Sistemske preporuke za popuste</h4>
+                    <h4>System discount recommendations</h4>
                     <p class="muted">Generate system recommendations for the selected customer segment, then copy one into the offer form.</p>
                   </div>
                 </div>
@@ -245,7 +266,7 @@
                   </label>
 
                   <button type="button" class="secondary" (click)="generatePromotionSuggestions(p)" [disabled]="isLoadingSuggestions(p)">
-                    {{ isLoadingSuggestions(p) ? 'Generating...' : 'Generiši predloge' }}
+                    {{ isLoadingSuggestions(p) ? 'Generating...' : 'Generate suggestions' }}
                   </button>
                 </div>
 
@@ -280,17 +301,17 @@
 
                           <div class="suggestion-actions">
                             <button type="button" class="primary" (click)="applyPromotionSuggestion(p, suggestion)">
-                              Kreiraj ponudu na osnovu predloga
+                              Create offer from suggestion
                             </button>
                             <button type="button" class="ghost" (click)="dismissPromotionSuggestion(p, suggestion)">
-                              Odbaci
+                              Dismiss
                             </button>
                           </div>
                         </article>
                       }
                     </div>
                   } @else {
-                    <p class="muted">Nema dostupnih predloga za izabrani segment.</p>
+                    <p class="muted">No suggestions are available for the selected segment.</p>
                   }
                 }
               </section>

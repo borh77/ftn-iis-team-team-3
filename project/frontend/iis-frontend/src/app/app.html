@@ -4,43 +4,85 @@
   </div>
 } @else {
   <div class="shell">
-    <aside class="sidebar compact">
-      <div class="sidebar-top">
-        <button
-          class="hamburger"
-          onclick="document.querySelector('.shell')?.classList.toggle('sidebar-expanded')"
-          aria-label="Toggle menu">
-
-          ☰
-        </button>
-
-        <div class="logo-compact" title="IIS">
-          <span class="logo-text">IIS</span>
+    <aside class="sidebar" aria-label="Primary navigation">
+      <div class="sidebar-brand">
+        <div class="brand-mark">
+          <lucide-icon [img]="icons.Pill" size="22"></lucide-icon>
+        </div>
+        <div>
+          <span class="brand-title">IIS Drug CRM</span>
+          <span class="brand-caption">Enterprise workspace</span>
         </div>
       </div>
 
-      <nav class="nav-compact">
+      @if (authService.session$ | async; as session) {
+        <nav class="sidebar-nav">
+          @if (session.roles.includes('ROLE_ADMIN')) {
+            <section class="nav-section" aria-labelledby="admin-nav-title">
+              <p id="admin-nav-title">Administration</p>
+              <a routerLink="/admin/users" routerLinkActive="active">
+                <lucide-icon [img]="icons.Users" size="18"></lucide-icon>
+                <span>Users</span>
+              </a>
+              <a routerLink="/admin/regions" routerLinkActive="active">
+                <lucide-icon [img]="icons.MapPinned" size="18"></lucide-icon>
+                <span>Regions</span>
+              </a>
+              <a routerLink="/admin/activity-logs" routerLinkActive="active">
+                <lucide-icon [img]="icons.Activity" size="18"></lucide-icon>
+                <span>Activity logs</span>
+              </a>
+              <a routerLink="/admin/reports" routerLinkActive="active">
+                <lucide-icon [img]="icons.ChartBar" size="18"></lucide-icon>
+                <span>Reports</span>
+              </a>
+            </section>
+          }
 
-        <a
-          routerLink="/admin/users"
-          routerLinkActive="active"
-          title="Admin Users">
-
-          <span class="icon">👥</span>
-          <span class="label">Admin</span>
-        </a>
-
-        @if (authService.session$ | async; as session) {
+          @if (session.roles.includes('ROLE_PORTFOLIO_MANAGER')) {
+            <section class="nav-section" aria-labelledby="portfolio-nav-title">
+              <p id="portfolio-nav-title">Portfolio</p>
+              <a routerLink="/portfolio" routerLinkActive="active">
+                <lucide-icon [img]="icons.Boxes" size="18"></lucide-icon>
+                <span>Product portfolio</span>
+              </a>
+            </section>
+          }
 
           @if (session.roles.includes('ROLE_PRICELIST_CREATOR')) {
-            <a
-              routerLink="/teams"
-              routerLinkActive="active"
-              title="My Teams">
+            <section class="nav-section" aria-labelledby="pricing-nav-title">
+              <p id="pricing-nav-title">Pricing</p>
+              <a routerLink="/content" routerLinkActive="active">
+                <lucide-icon [img]="icons.LayoutDashboard" size="18"></lucide-icon>
+                <span>Workspace</span>
+              </a>
+              <a routerLink="/content/mine" routerLinkActive="active">
+                <lucide-icon [img]="icons.Tags" size="18"></lucide-icon>
+                <span>My pricelists</span>
+              </a>
+              <a routerLink="/content/new" routerLinkActive="active">
+                <lucide-icon [img]="icons.FilePenLine" size="18"></lucide-icon>
+                <span>Create pricelist</span>
+              </a>
+              <a routerLink="/teams" routerLinkActive="active">
+                <lucide-icon [img]="icons.Shield" size="18"></lucide-icon>
+                <span>Teams</span>
+              </a>
+            </section>
+          }
 
-              <span class="icon">👥</span>
-              <span class="label">Teams</span>
-            </a>
+          @if (session.roles.includes('ROLE_BUYER')) {
+            <section class="nav-section" aria-labelledby="buyer-nav-title">
+              <p id="buyer-nav-title">Procurement</p>
+              <a routerLink="/catalog" routerLinkActive="active">
+                <lucide-icon [img]="icons.ShoppingCart" size="18"></lucide-icon>
+                <span>Catalog</span>
+              </a>
+              <a routerLink="/buyer/order-validation" routerLinkActive="active">
+                <lucide-icon [img]="icons.ClipboardList" size="18"></lucide-icon>
+                <span>Order validation</span>
+              </a>
+            </section>
           }
 
           @if (
@@ -48,99 +90,86 @@
             session.roles.includes('ROLE_ACCOUNT_MANAGER') ||
             session.roles.includes('ROLE_SALES_MANAGER')
           ) {
-
-            <a
-              routerLink="/sales/leads"
-              routerLinkActive="active"
-              title="Leads">
-
-              <span class="icon">📋</span>
-              <span class="label">Leads</span>
-            </a>
-
-            <a
-              routerLink="/sales/customers"
-              routerLinkActive="active"
-              title="Customers">
-
-              <span class="icon">🏢</span>
-              <span class="label">Customers</span>
-            </a>
-
-            <a
-              routerLink="/sales/processes"
-              routerLinkActive="active"
-              title="Sales Pipeline">
-
-              <span class="icon">📈</span>
-              <span class="label">Pipeline</span>
-            </a>
-
-            <a
-              routerLink="/sales/offers"
-              routerLinkActive="active"
-              title="Offers">
-
-              <span class="icon">📄</span>
-              <span class="label">Offers</span>
-            </a>
-
-            <a
-              routerLink="/sales/contracts"
-              routerLinkActive="active"
-              title="Contracts">
-
-              <span class="icon">📝</span>
-              <span class="label">Contracts</span>
-            </a>
-
-            <a
-              routerLink="/sales/communications"
-              routerLinkActive="active"
-              title="Communications">
-
-              <span class="icon">💬</span>
-              <span class="label">Comms</span>
-            </a>
-          }
-        }
-
-        <a
-          routerLink="/content"
-          routerLinkActive="active"
-          title="Pricelist Owner">
-
-          <span class="icon">📄</span>
-          <span class="label">Pricelist Workspace</span>
-        </a>
-
-          @if (authService.session$ | async; as buyerSession) {
-            @if (buyerSession.roles.includes('ROLE_BUYER')) {
-            <a
-              routerLink="/catalog"
-              routerLinkActive="active"
-              title="Medicine Catalog">
-
-              <span class="icon">🛒</span>
-              <span class="label">Catalog</span>
-            </a>
-            }
+            <section class="nav-section" aria-labelledby="sales-nav-title">
+              <p id="sales-nav-title">Sales CRM</p>
+              <a routerLink="/sales" routerLinkActive="active">
+                <lucide-icon [img]="icons.BriefcaseBusiness" size="18"></lucide-icon>
+                <span>Dashboard</span>
+              </a>
+              <a routerLink="/sales/leads" routerLinkActive="active">
+                <lucide-icon [img]="icons.ClipboardList" size="18"></lucide-icon>
+                <span>Leads</span>
+              </a>
+              <a routerLink="/sales/customers" routerLinkActive="active">
+                <lucide-icon [img]="icons.Building2" size="18"></lucide-icon>
+                <span>Customers</span>
+              </a>
+              <a routerLink="/sales/processes" routerLinkActive="active">
+                <lucide-icon [img]="icons.TrendingUp" size="18"></lucide-icon>
+                <span>Pipeline</span>
+              </a>
+              <a routerLink="/sales/offers" routerLinkActive="active">
+                <lucide-icon [img]="icons.FileText" size="18"></lucide-icon>
+                <span>Offers</span>
+              </a>
+              <a routerLink="/sales/contracts" routerLinkActive="active">
+                <lucide-icon [img]="icons.FolderKanban" size="18"></lucide-icon>
+                <span>Contracts</span>
+              </a>
+              <a routerLink="/sales/communications" routerLinkActive="active">
+                <lucide-icon [img]="icons.MessageSquare" size="18"></lucide-icon>
+                <span>Communications</span>
+              </a>
+            </section>
           }
 
-        <a
-          routerLink="/profile"
-          routerLinkActive="active"
-          title="My Profile">
+          @if (session.roles.includes('ROLE_LEKAR')) {
+            <section class="nav-section" aria-labelledby="doctor-nav-title">
+              <p id="doctor-nav-title">Adverse effects</p>
+              <a routerLink="/adverse-effects/create-doctor-report" routerLinkActive="active">
+                <lucide-icon [img]="icons.Stethoscope" size="18"></lucide-icon>
+                <span>New doctor report</span>
+              </a>
+              <a routerLink="/adverse-effects/my-reports" routerLinkActive="active">
+                <lucide-icon [img]="icons.ClipboardList" size="18"></lucide-icon>
+                <span>My reports</span>
+              </a>
+            </section>
+          }
 
-          <span class="icon">👤</span>
-          <span class="label">Profile</span>
+          @if (session.roles.includes('ROLE_PACIJENT')) {
+            <section class="nav-section" aria-labelledby="patient-nav-title">
+              <p id="patient-nav-title">Patient portal</p>
+              <a routerLink="/adverse-effects/create-patient-report" routerLinkActive="active">
+                <lucide-icon [img]="icons.HeartPulse" size="18"></lucide-icon>
+                <span>Report effect</span>
+              </a>
+            </section>
+          }
+
+          @if (session.roles.includes('ROLE_FARMAKOVIGILANT')) {
+            <section class="nav-section" aria-labelledby="safety-nav-title">
+              <p id="safety-nav-title">Safety review</p>
+              <a routerLink="/adverse-effects/all-reports" routerLinkActive="active">
+                <lucide-icon [img]="icons.Activity" size="18"></lucide-icon>
+                <span>All reports</span>
+              </a>
+            </section>
+          }
+        </nav>
+
+        <a class="sidebar-profile" routerLink="/profile" routerLinkActive="active">
+          <lucide-icon [img]="icons.Settings" size="18"></lucide-icon>
+          <span>Profile settings</span>
         </a>
-      </nav>
+      }
     </aside>
 
     <main class="workspace">
       <app-header></app-header>
-      <router-outlet></router-outlet>
+      <div class="workspace-content">
+        <router-outlet></router-outlet>
+      </div>
     </main>
   </div>
 }

@@ -46,7 +46,7 @@ class PricelistActivityLogRepositoryTest {
                 99L,
                 5L,
                 PricelistActionType.CREATE,
-                "Kreiran cenovnik u statusu DRAFT",
+                "Created pricelist in DRAFT status",
                 OffsetDateTime.parse("2026-06-27T10:00:00Z")
         ));
 
@@ -148,7 +148,7 @@ class PricelistActivityLogRepositoryTest {
                 99L,
                 5L,
                 PricelistActionType.CREATE,
-                "Kreiran cenovnik u statusu DRAFT",
+                "Created pricelist in DRAFT status",
                 OffsetDateTime.parse("2026-06-01T09:00:00Z")
         ));
         repository.save(new PricelistActivityLog(
@@ -156,7 +156,7 @@ class PricelistActivityLogRepositoryTest {
                 42L,
                 6L,
                 PricelistActionType.UPDATE_ITEMS,
-                "Izmenjene stavke cenovnika",
+                "Updated pricelist items",
                 OffsetDateTime.parse("2026-06-15T12:00:00Z")
         ));
         repository.save(new PricelistActivityLog(
@@ -164,7 +164,7 @@ class PricelistActivityLogRepositoryTest {
                 99L,
                 5L,
                 PricelistActionType.STATUS_CHANGE,
-                "Promenjen status iz DRAFT u IN_REVIEW",
+                "Changed status from DRAFT to IN_REVIEW",
                 OffsetDateTime.parse("2026-06-25T08:30:00Z")
         ));
     }
@@ -187,7 +187,7 @@ class PricelistActivityLogRepositoryTest {
                 99L,
                 teamId,
                 PricelistActionType.CREATE,
-                "Kreiran cenovnik u statusu DRAFT",
+                "Created pricelist in DRAFT status",
                 OffsetDateTime.parse("2026-06-01T09:00:00Z")
         );
     }

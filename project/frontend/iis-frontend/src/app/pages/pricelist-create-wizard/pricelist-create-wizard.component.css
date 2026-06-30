@@ -36,9 +36,13 @@
   align-items: center;
   gap: 0.55rem;
   min-width: 0;
-  padding: 0.7rem;
+  min-height: 5.35rem;
+  padding: 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
   color: var(--color-muted);
   background: #f8fafc;
 }
@@ -56,11 +60,31 @@
   font-size: 0.8rem;
 }
 
-.progress-step strong {
+.progress-step div {
+  min-width: 0;
+}
+
+.progress-step strong,
+.progress-step small {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.progress-step strong {
   white-space: nowrap;
   font-size: 0.9rem;
+}
+
+.progress-step small {
+  display: -webkit-box;
+  margin-top: 0.2rem;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.25;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .progress-step.active {
@@ -77,6 +101,23 @@
 
 .progress-step.complete {
   color: var(--color-text);
+}
+
+.progress-step.disabled {
+  cursor: not-allowed;
+  color: #94a3b8;
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+.progress-step.disabled span {
+  color: #64748b;
+  background: #e2e8f0;
+}
+
+.progress-step.active small,
+.progress-step.complete small {
+  color: inherit;
 }
 
 .wizard-meta {
@@ -141,6 +182,7 @@ button:disabled {
 
 .error-box,
 .success-box,
+.warning-box,
 :host ::ng-deep .inline-error,
 :host ::ng-deep .success-box {
   margin: 0 0 1rem;
@@ -161,6 +203,34 @@ button:disabled {
   background: #ecfdf5;
   color: #065f46;
   border: 1px solid #a7f3d0;
+}
+
+.warning-box {
+  display: grid;
+  gap: 0.35rem;
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.warning-box p {
+  margin: 0;
+}
+
+.load-error {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.load-error-actions {
+  justify-content: flex-start;
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.load-error-actions a {
+  text-decoration: none;
 }
 
 :host ::ng-deep .wizard-form,

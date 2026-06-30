@@ -6,7 +6,9 @@ import com.example.iisdrugcrm.domain.pricelist.PricelistCreationStep;
 import com.example.iisdrugcrm.domain.pricelist.PricelistItem;
 import com.example.iisdrugcrm.domain.pricelist.QuantityThreshold;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 
@@ -30,7 +32,11 @@ public class PricelistResponseDTO {
     private boolean canCreateNewVersion;
     private boolean owner;
     private boolean canCollaborate;
+    private boolean canEditDraft;
+    private boolean canSubmitForReview;
     private boolean canManageOffers;
+    private boolean canActivate;
+    private boolean canReject;
     private OffsetDateTime periodStart;
     private OffsetDateTime periodEnd;
     private List<PricelistItemResponseDTO> items;
@@ -199,6 +205,38 @@ public class PricelistResponseDTO {
         this.canManageOffers = canManageOffers;
     }
 
+    public boolean isCanActivate() {
+        return canActivate;
+    }
+
+    public void setCanActivate(boolean canActivate) {
+        this.canActivate = canActivate;
+    }
+
+    public boolean isCanEditDraft() {
+        return canEditDraft;
+    }
+
+    public void setCanEditDraft(boolean canEditDraft) {
+        this.canEditDraft = canEditDraft;
+    }
+
+    public boolean isCanSubmitForReview() {
+        return canSubmitForReview;
+    }
+
+    public void setCanSubmitForReview(boolean canSubmitForReview) {
+        this.canSubmitForReview = canSubmitForReview;
+    }
+
+    public boolean isCanReject() {
+        return canReject;
+    }
+
+    public void setCanReject(boolean canReject) {
+        this.canReject = canReject;
+    }
+
     public void setPeriodEnd(OffsetDateTime periodEnd) {
         this.periodEnd = periodEnd;
     }
@@ -234,7 +272,7 @@ public class PricelistResponseDTO {
             dto.setTeamId(pricelist.getTeam().getId());
             dto.setTeamName(pricelist.getTeam().getName());
         }
-        dto.setCanCreateNewVersion(pricelist.getStatus() == PricelistStatus.IN_REVIEW || pricelist.getStatus() == PricelistStatus.ACTIVE);
+        dto.setCanCreateNewVersion(pricelist.getStatus() == PricelistStatus.ACTIVE);
         dto.setPeriodStart(pricelist.getPeriodStart());
         dto.setPeriodEnd(pricelist.getPeriodEnd());
         dto.setItems(pricelist.getItems().stream().map(item -> PricelistItemResponseDTO.fromEntity(item, activeVariantsById)).toList());
@@ -248,9 +286,61 @@ public class PricelistResponseDTO {
                 && pricelist.getCreatedBy().equals(currentUserId);
         dto.setOwner(owner);
         dto.setCanCollaborate(canCollaborate);
-        dto.setCanManageOffers(canCollaborate);
-        dto.setCanCreateNewVersion(canCollaborate && (pricelist.getStatus() == PricelistStatus.IN_REVIEW || pricelist.getStatus() == PricelistStatus.ACTIVE));
+        dto.setCanEditDraft(canCollaborate && pricelist.getStatus() == PricelistStatus.DRAFT);
+        dto.setCanSubmitForReview(owner && isReadyForReview(pricelist, activeVariantsById));
+        dto.setCanManageOffers(canCollaborate && pricelist.getStatus() == PricelistStatus.ACTIVE);
+        dto.setCanCreateNewVersion(canCollaborate && pricelist.getStatus() == PricelistStatus.ACTIVE);
         return dto;
+    }
+
+    private static boolean isReadyForReview(Pricelist pricelist, Map<Long, CatalogVariantDTO> activeVariantsById) {
+        if (pricelist.getStatus() != PricelistStatus.DRAFT) {
+            return false;
+        }
+        if (pricelist.getCreationStep() != PricelistCreationStep.REVIEW
+                && pricelist.getCreationStep() != PricelistCreationStep.COMPLETED) {
+            return false;
+        }
+        if (pricelist.getRegion() == null) {
+            return false;
+        }
+        if (pricelist.getCustomerSegment() == null
+                || pricelist.getCustomerSegment().isBlank()
+                || "UNDEFINED".equals(pricelist.getCustomerSegment())) {
+            return false;
+        }
+        if (pricelist.getCurrency() == null || pricelist.getCurrency().isBlank()) {
+            return false;
+        }
+        if (pricelist.getPeriodStart() == null
+                || pricelist.getPeriodEnd() == null
+                || !pricelist.getPeriodStart().isBefore(pricelist.getPeriodEnd())
+                || isStartDateInPast(pricelist.getPeriodStart())) {
+            return false;
+        }
+        if (pricelist.getItems() == null || pricelist.getItems().isEmpty()) {
+            return false;
+        }
+        for (PricelistItem item : pricelist.getItems()) {
+            if (item.getVariantId() == null || activeVariantsById == null || !activeVariantsById.containsKey(item.getVariantId())) {
+                return false;
+            }
+            if (item.getThresholds() == null || item.getThresholds().isEmpty()) {
+                return false;
+            }
+        }
+        try {
+            pricelist.validateThresholds();
+            return true;
+        } catch (RuntimeException exception) {
+            return false;
+        }
+    }
+
+    private static boolean isStartDateInPast(OffsetDateTime periodStart) {
+        ZoneId businessZone = ZoneId.systemDefault();
+        LocalDate startDate = periodStart.atZoneSameInstant(businessZone).toLocalDate();
+        return startDate.isBefore(LocalDate.now(businessZone));
     }
 
     public static class PricelistItemResponseDTO {

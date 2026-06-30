@@ -39,7 +39,7 @@ class PricelistActivityLogListenerTest {
                 99L,
                 null,
                 PricelistActionType.CREATE,
-                "Kreiran cenovnik u statusu DRAFT"
+                "Created pricelist in DRAFT status"
         );
 
         listener.handle(event);
@@ -51,7 +51,7 @@ class PricelistActivityLogListenerTest {
         assertEquals(99L, log.getUserId());
         assertEquals(null, log.getTeamId());
         assertEquals(PricelistActionType.CREATE, log.getActionType());
-        assertEquals("Kreiran cenovnik u statusu DRAFT", log.getDescription());
+        assertEquals("Created pricelist in DRAFT status", log.getDescription());
         assertEquals(ZoneOffset.UTC, log.getTimestamp().getOffset());
         assertEquals(null, log.getStatusFrom());
         assertEquals(null, log.getStatusTo());
@@ -64,7 +64,7 @@ class PricelistActivityLogListenerTest {
                 99L,
                 null,
                 PricelistActionType.STATUS_CHANGE,
-                "Promenjen status iz DRAFT u IN_REVIEW",
+                "Changed status from DRAFT to IN_REVIEW",
                 PricelistStatus.DRAFT,
                 PricelistStatus.IN_REVIEW
         );
@@ -87,7 +87,7 @@ class PricelistActivityLogListenerTest {
                 99L,
                 null,
                 PricelistActionType.STATUS_CHANGE,
-                "Promenjen status iz DRAFT u IN_REVIEW"
+                "Changed status from DRAFT to IN_REVIEW"
         );
 
         assertDoesNotThrow(() -> listener.handle(event));

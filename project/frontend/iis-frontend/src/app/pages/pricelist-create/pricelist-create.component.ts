@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AbstractControl, FormArray, ReactiveFormsModule, UntypedFormArray, UntypedFormBuilder, UntypedFormControl, UntypedFormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -9,6 +9,7 @@ import { PortfolioService } from '../../core/portfolio.service';
 import { Category, Product, Subcategory, Variant } from '../../core/portfolio.models';
 import { PricelistService } from '../../core/pricelist.service';
 import { CreatePricelistPayload, Pricelist, PricelistItem, QuantityThreshold } from '../../core/pricelist.models';
+import { ERROR_MESSAGE_MS, SUCCESS_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 
 type ThresholdGroup = UntypedFormGroup;
 type ItemGroup = UntypedFormGroup;
@@ -21,13 +22,14 @@ type PricelistFormGroup = UntypedFormGroup;
   templateUrl: './pricelist-create.component.html',
   styleUrl: './pricelist-create.component.css',
 })
-export class PricelistCreateComponent implements OnInit {
+export class PricelistCreateComponent implements OnInit, OnDestroy {
   private readonly fb = inject(UntypedFormBuilder);
   private readonly regionService = inject(RegionService);
   private readonly portfolioService = inject(PortfolioService);
   private readonly pricelistService = inject(PricelistService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly transientMessages = inject(TransientMessageService);
 
   loadingRegions = false;
   loadingLookup = false;
@@ -37,6 +39,7 @@ export class PricelistCreateComponent implements OnInit {
   successMessage = '';
   isEditMode = false;
   private editingPricelistId: number | null = null;
+  readonly minPeriodStart = PricelistCreateComponent.todayStartInputValue();
 
   regions: Region[] = [];
   categories: Category[] = [];
@@ -65,6 +68,10 @@ export class PricelistCreateComponent implements OnInit {
     if (this.isEditMode && this.editingPricelistId != null) {
       this.loadPricelist(this.editingPricelistId);
     }
+  }
+
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
   }
 
   get items(): FormArray<ItemGroup> {
@@ -185,8 +192,8 @@ export class PricelistCreateComponent implements OnInit {
 
     const payload = this.buildPayload();
     this.saving = true;
-    this.errorMessage = '';
-    this.successMessage = '';
+    this.transientMessages.clearField(this, 'errorMessage');
+    this.transientMessages.clearField(this, 'successMessage');
 
     const request = this.isEditMode && this.editingPricelistId != null
       ? this.pricelistService.update(this.editingPricelistId, payload)
@@ -199,7 +206,7 @@ export class PricelistCreateComponent implements OnInit {
           this.router.navigate(['/content/mine']);
           return;
         }
-        this.successMessage = 'Pricelist was successfully created in DRAFT status.';
+        this.transientMessages.setField(this, 'successMessage', 'Pricelist was successfully created in DRAFT status.', SUCCESS_MESSAGE_MS);
         this.form.reset({
           regionId: null,
           customerSegment: '',
@@ -215,7 +222,7 @@ export class PricelistCreateComponent implements OnInit {
       },
       error: (err: HttpErrorResponse) => {
         this.saving = false;
-        this.errorMessage = this.createErrorMessage(err);
+        this.transientMessages.setField(this, 'errorMessage', this.createErrorMessage(err), ERROR_MESSAGE_MS);
       },
     });
   }
@@ -270,11 +277,6 @@ export class PricelistCreateComponent implements OnInit {
     return '';
   }
 
-  private isEnglishMessage(message: string): boolean {
-    const serbianTerms = /\b(cenovnik|postoji|pokusajte|izabrani|vec|već|periodu|pragovi|varijantu)\b/i;
-    return message.length > 0 && !serbianTerms.test(message);
-  }
-
   private loadRegions(): void {
     this.loadingRegions = true;
     this.regionService.list().subscribe({
@@ -302,20 +304,20 @@ export class PricelistCreateComponent implements OnInit {
 
   private loadPricelist(id: number): void {
     this.loadingPricelist = true;
-    this.errorMessage = '';
+    this.transientMessages.clearField(this, 'errorMessage');
 
     this.pricelistService.getById(id).subscribe({
       next: (pricelist) => {
         this.loadingPricelist = false;
         if (pricelist.status !== 'DRAFT') {
-          this.errorMessage = 'Only draft pricelists can be edited.';
+          this.transientMessages.setField(this, 'errorMessage', 'Only draft pricelists can be edited.', ERROR_MESSAGE_MS);
           return;
         }
         this.populateForm(pricelist);
       },
       error: (err: HttpErrorResponse) => {
         this.loadingPricelist = false;
-        this.errorMessage = this.createErrorMessage(err);
+        this.transientMessages.setField(this, 'errorMessage', this.createErrorMessage(err), ERROR_MESSAGE_MS);
       },
     });
   }
@@ -374,8 +376,8 @@ export class PricelistCreateComponent implements OnInit {
       regionId: raw.regionId as number,
       customerSegment: raw.customerSegment.trim(),
       currency: raw.currency.trim().toUpperCase(),
-      periodStart: new Date(raw.periodStart).toISOString(),
-      periodEnd: new Date(raw.periodEnd).toISOString(),
+      periodStart: this.toOffsetDateTime(raw.periodStart),
+      periodEnd: this.toOffsetDateTime(raw.periodEnd),
       items: raw.items.map((item: any) => ({
         id: undefined,
         variantId: item.variantId as number,
@@ -397,6 +399,17 @@ export class PricelistCreateComponent implements OnInit {
       }
     }
     return `Variant ${variantId}`;
+  }
+
+  private toOffsetDateTime(value: string): string {
+    const date = new Date(value);
+    const offsetMinutes = -date.getTimezoneOffset();
+    const sign = offsetMinutes >= 0 ? '+' : '-';
+    const absoluteOffset = Math.abs(offsetMinutes);
+    const hours = String(Math.floor(absoluteOffset / 60)).padStart(2, '0');
+    const minutes = String(absoluteOffset % 60).padStart(2, '0');
+    const localDateTime = value.length === 16 ? `${value}:00` : value;
+    return `${localDateTime}${sign}${hours}:${minutes}`;
   }
 
   controlError(itemIndex: number, controlName: 'categoryId' | 'subcategoryId' | 'productId' | 'variantId'): string {
@@ -425,6 +438,10 @@ export class PricelistCreateComponent implements OnInit {
   }
 
   periodError(): string {
+    if (this.form.hasError('periodStartInPast')) {
+      return 'Pricelist start date cannot be in the past.';
+    }
+
     if (!this.form.touched && !this.form.dirty) {
       return '';
     }
@@ -439,11 +456,33 @@ export class PricelistCreateComponent implements OnInit {
   static periodValidator(control: AbstractControl): ValidationErrors | null {
     const periodStart = control.get('periodStart')?.value;
     const periodEnd = control.get('periodEnd')?.value;
+    const errors: ValidationErrors = {};
 
-    if (!periodStart || !periodEnd) {
-      return null;
+    if (periodStart && PricelistCreateComponent.isBeforeToday(periodStart)) {
+      errors['periodStartInPast'] = true;
     }
 
-    return new Date(periodStart) < new Date(periodEnd) ? null : { periodOrder: true };
+    if (periodStart && periodEnd && !(new Date(periodStart) < new Date(periodEnd))) {
+      errors['periodOrder'] = true;
+    }
+
+    return Object.keys(errors).length ? errors : null;
+  }
+
+  private static isBeforeToday(value: string): boolean {
+    const datePart = value.slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(datePart) && datePart < PricelistCreateComponent.todayDateValue();
+  }
+
+  private static todayStartInputValue(): string {
+    return `${PricelistCreateComponent.todayDateValue()}T00:00`;
+  }
+
+  private static todayDateValue(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }

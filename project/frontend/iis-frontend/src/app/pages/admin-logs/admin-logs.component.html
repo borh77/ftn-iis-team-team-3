@@ -9,12 +9,12 @@
     <form class="filters" [formGroup]="filtersForm" (ngSubmit)="applyFilters()">
       <label>
         <span>Team ID</span>
-        <input type="number" min="1" formControlName="teamId" placeholder="Svi timovi" />
+        <input type="number" min="1" formControlName="teamId" placeholder="All teams" />
       </label>
 
       <label>
         <span>User ID</span>
-        <input type="number" min="1" formControlName="userId" placeholder="Svi korisnici" />
+        <input type="number" min="1" formControlName="userId" placeholder="All users" />
       </label>
 
       <label>
@@ -78,7 +78,7 @@
                 <td>
                   <span class="action-pill">{{ log.actionType }}</span>
                 </td>
-                <td>{{ log.description }}</td>
+                <td>{{ displayLogDescription(log) }}</td>
               </tr>
             }
           </tbody>

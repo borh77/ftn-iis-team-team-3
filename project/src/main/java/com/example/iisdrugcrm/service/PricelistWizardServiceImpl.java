@@ -19,6 +19,7 @@ import com.example.iisdrugcrm.dto.pricelist.SaveThresholdsStepDTO;
 import com.example.iisdrugcrm.dto.pricelist.StartPricelistWizardResponseDTO;
 import com.example.iisdrugcrm.exception.PricelistConflictException;
 import com.example.iisdrugcrm.exception.PricelistNotFoundException;
+import com.example.iisdrugcrm.exception.PricelistSubmissionValidationException;
 import com.example.iisdrugcrm.exception.VariantNotFoundException;
 import com.example.iisdrugcrm.repository.PricelistRepository;
 import com.example.iisdrugcrm.repository.PricelistTeamRepository;
@@ -86,7 +87,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
         pricelist.setLastEditedAt(now);
 
         Pricelist saved = pricelistRepository.save(pricelist);
-        publishAction(saved, currentUserId, PricelistActionType.CREATE, "Zapocet wizard za kreiranje cenovnika");
+        publishAction(saved, currentUserId, PricelistActionType.CREATE, "Started pricelist creation wizard");
         return new StartPricelistWizardResponseDTO(saved.getId(), toState(saved, currentUserId));
     }
 
@@ -111,6 +112,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
         Pricelist pricelist = requireEditableDraft(pricelistId, currentUserId);
         Region region = regionRepository.findById(dto.getRegionId())
                 .orElseThrow(() -> new IllegalArgumentException("Region not found"));
+        PricelistDateRules.validateStartDateNotPast(dto.getPeriodStart());
         OffsetDateTime periodStart = dto.getPeriodStart().withOffsetSameInstant(ZoneOffset.UTC);
         OffsetDateTime periodEnd = dto.getPeriodEnd().withOffsetSameInstant(ZoneOffset.UTC);
         validatePeriod(periodStart, periodEnd);
@@ -123,7 +125,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
         markProgress(pricelist, PricelistCreationStep.TEAM_ACCESS);
 
         Pricelist saved = pricelistRepository.save(pricelist);
-        publishAction(saved, currentUserId, PricelistActionType.UPDATE_METADATA, "Azurirani osnovni podaci cenovnika u wizardu");
+        publishAction(saved, currentUserId, PricelistActionType.UPDATE_METADATA, "Updated pricelist wizard basic information");
         return toState(saved, currentUserId);
     }
 
@@ -131,6 +133,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
     @Transactional
     public PricelistWizardStateDTO saveTeamAccess(Long pricelistId, SaveTeamAccessStepDTO dto, Long currentUserId) {
         Pricelist pricelist = requireEditableDraft(pricelistId, currentUserId);
+        PricelistDateRules.validateStartDateNotPast(pricelist.getPeriodStart());
         PricelistTeam team = null;
         if (dto.getTeamId() != null) {
             team = teamRepository.findById(dto.getTeamId())
@@ -149,6 +152,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
     @Transactional
     public PricelistWizardStateDTO saveItems(Long pricelistId, SaveItemsStepDTO dto, Long currentUserId) {
         Pricelist pricelist = requireEditableDraft(pricelistId, currentUserId);
+        PricelistDateRules.validateStartDateNotPast(pricelist.getPeriodStart());
         validateUniqueVariants(dto.getItems().stream().map(SaveItemsStepDTO.PricelistWizardItemDTO::getVariantId).toList());
         Map<Long, CatalogVariantDTO> activeVariants = resolveActiveVariants(dto.getItems().stream()
                 .map(SaveItemsStepDTO.PricelistWizardItemDTO::getVariantId)
@@ -165,7 +169,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
         markProgress(pricelist, PricelistCreationStep.THRESHOLDS);
 
         Pricelist saved = pricelistRepository.save(pricelist);
-        publishAction(saved, currentUserId, PricelistActionType.UPDATE_ITEMS, "Azurirane stavke cenovnika u wizardu");
+        publishAction(saved, currentUserId, PricelistActionType.UPDATE_ITEMS, "Updated pricelist wizard items");
         return toState(saved, currentUserId);
     }
 
@@ -173,6 +177,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
     @Transactional
     public PricelistWizardStateDTO saveThresholds(Long pricelistId, SaveThresholdsStepDTO dto, Long currentUserId) {
         Pricelist pricelist = requireEditableDraft(pricelistId, currentUserId);
+        PricelistDateRules.validateStartDateNotPast(pricelist.getPeriodStart());
         Map<Long, PricelistItem> itemsByVariantId = itemsByVariantId(pricelist);
         if (itemsByVariantId.size() != dto.getItems().size()) {
             throw new IllegalArgumentException("Thresholds must be provided for every selected item.");
@@ -193,7 +198,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
 
         markProgress(pricelist, PricelistCreationStep.REVIEW);
         Pricelist saved = pricelistRepository.save(pricelist);
-        publishAction(saved, currentUserId, PricelistActionType.UPDATE_THRESHOLDS, "Azurirani pragovi cena cenovnika u wizardu");
+        publishAction(saved, currentUserId, PricelistActionType.UPDATE_THRESHOLDS, "Updated pricelist wizard price thresholds");
         return toState(saved, currentUserId);
     }
 
@@ -208,20 +213,23 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
     @Transactional
     public PricelistWizardStateDTO finishWizard(Long pricelistId, Long currentUserId) {
         Pricelist pricelist = requireEditableDraft(pricelistId, currentUserId);
+        accessService.validateOwnerOnly(pricelist, currentUserId);
+        PricelistDateRules.validateStartDateNotPast(pricelist.getPeriodStart());
         List<String> validationMessages = validationMessages(pricelist);
         if (!validationMessages.isEmpty()) {
-            throw new IllegalArgumentException(String.join(" ", validationMessages));
+            throw new PricelistSubmissionValidationException(String.join(" ", validationMessages));
         }
 
         validateAllVariantsActive(pricelist);
         pricelist.validateThresholds();
         validateNoBlockingOverlapExcludingCurrent(pricelist);
         pricelist.setCreationCompleted(true);
-        pricelist.setCreationStep(PricelistCreationStep.COMPLETED);
+        pricelist.setCreationStep(PricelistCreationStep.REVIEW);
+        pricelist.setStatus(PricelistStatus.IN_REVIEW);
         pricelist.setLastEditedAt(OffsetDateTime.now(ZoneOffset.UTC));
 
         Pricelist saved = pricelistRepository.save(pricelist);
-        publishAction(saved, currentUserId, PricelistActionType.UPDATE_METADATA, "Kompletiran wizard za kreiranje cenovnika");
+        publishAction(saved, currentUserId, PricelistActionType.STATUS_CHANGE, "Submitted pricelist for review");
         return toState(saved, currentUserId);
     }
 
@@ -245,7 +253,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
 
     private void validatePeriod(OffsetDateTime periodStart, OffsetDateTime periodEnd) {
         if (!periodStart.isBefore(periodEnd)) {
-            throw new IllegalArgumentException("Period od mora biti strogo manji od perioda do.");
+            throw new IllegalArgumentException("Period start must be strictly before period end.");
         }
     }
 
@@ -264,7 +272,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
                 .filter(variantId -> !activeVariants.containsKey(variantId))
                 .toList();
         if (!missingVariantIds.isEmpty()) {
-            throw new VariantNotFoundException("Varijante " + missingVariantIds + " ne postoje ili nisu aktivne u katalogu");
+            throw new VariantNotFoundException("Variants " + missingVariantIds + " do not exist or are not active in the catalog");
         }
         return activeVariants;
     }
@@ -304,6 +312,9 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
         }
         if (pricelist.getPeriodStart() == null || pricelist.getPeriodEnd() == null || !pricelist.getPeriodStart().isBefore(pricelist.getPeriodEnd())) {
             messages.add("Valid period start and end are required.");
+        }
+        if (PricelistDateRules.isStartDateInPast(pricelist.getPeriodStart())) {
+            messages.add("Pricelist start date cannot be in the past.");
         }
         if (pricelist.getItems().isEmpty()) {
             messages.add("At least one item is required.");
@@ -347,8 +358,8 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
         }
         Pricelist conflict = conflicts.get(0);
         throw new PricelistConflictException(
-                "Cenovnik za region [" + pricelist.getRegion().getName() + "] i segment [" + pricelist.getCustomerSegment()
-                        + "] vec postoji u periodu [" + conflict.getPeriodStart().toLocalDate()
+                "Pricelist for region [" + pricelist.getRegion().getName() + "] and segment [" + pricelist.getCustomerSegment()
+                        + "] already exists in period [" + conflict.getPeriodStart().toLocalDate()
                         + " - " + conflict.getPeriodEnd().toLocalDate() + "]."
         );
     }

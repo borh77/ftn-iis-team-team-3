@@ -13,7 +13,7 @@ import { Region } from '../../core/region.model';
         <label>
           <span>Region</span>
           <select formControlName="regionId">
-            <option [ngValue]="null">Izaberite region</option>
+            <option [ngValue]="null">Select region</option>
             @for (region of regions; track region.id) {
               <option [ngValue]="region.id">{{ region.name }} ({{ region.code }})</option>
             }
@@ -41,7 +41,7 @@ import { Region } from '../../core/region.model';
 
         <label>
           <span>Period start</span>
-          <input type="datetime-local" formControlName="periodStart" />
+          <input type="datetime-local" formControlName="periodStart" [min]="minPeriodStart" />
           @if (fieldError('periodStart')) {
             <small class="field-error">{{ fieldError('periodStart') }}</small>
           }
@@ -65,9 +65,13 @@ import { Region } from '../../core/region.model';
 export class PricelistWizardBasicInfoStepComponent {
   @Input({ required: true }) form!: UntypedFormGroup;
   @Input() regions: Region[] = [];
+  @Input() minPeriodStart = '';
 
   fieldError(controlName: string): string {
     const control = this.form.get(controlName);
+    if (controlName === 'periodStart' && this.form.hasError('periodStartInPast')) {
+      return 'Pricelist start date cannot be in the past.';
+    }
     if (!control || (!control.touched && !control.dirty)) {
       return '';
     }

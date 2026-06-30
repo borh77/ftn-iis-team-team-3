@@ -1,9 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, inject } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subscription, debounceTime, distinctUntilChanged, finalize } from 'rxjs';
+import { extractBackendErrorMessage } from '../../core/http-error-message';
 import { PricelistTeam, TeamMember } from '../../core/team.models';
 import { TeamService } from '../../core/team.service';
+import { ERROR_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 
 @Component({
   selector: 'app-team-members-modal',
@@ -18,6 +20,7 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
   @Output() teamChanged = new EventEmitter<PricelistTeam>();
 
   private readonly teamService = inject(TeamService);
+  private readonly transientMessages = inject(TransientMessageService);
   private searchSub: Subscription | null = null;
 
   currentTeam: PricelistTeam | null = null;
@@ -35,7 +38,7 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
         memberIds: [...this.team.memberIds],
         members: [...this.team.members],
       };
-      this.errorMessage = '';
+      this.clearError();
       this.searchResults = [];
       this.searchControl.setValue('', { emitEvent: false });
       this.bindSearch();
@@ -44,6 +47,7 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this.searchSub?.unsubscribe();
+    this.transientMessages.clearAll(this);
   }
 
   close(): void {
@@ -56,10 +60,9 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
     }
 
     this.submittingMemberId = memberId;
-    this.errorMessage = '';
-    this.teamService.addMember(this.currentTeam.id, { memberId }).subscribe({
+    this.clearError();
+    this.teamService.addMember(this.currentTeam.id, { memberId }).pipe(finalize(() => (this.submittingMemberId = null))).subscribe({
       next: (team) => {
-        this.submittingMemberId = null;
         this.currentTeam = {
           ...team,
           memberIds: [...team.memberIds],
@@ -70,8 +73,7 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
         this.teamChanged.emit(this.currentTeam);
       },
       error: (error) => {
-        this.submittingMemberId = null;
-        this.errorMessage = error?.error?.error ?? 'Neuspešno dodavanje člana.';
+        this.showError(extractBackendErrorMessage(error, 'Failed to add member.'));
       },
     });
   }
@@ -82,10 +84,9 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
     }
 
     this.submittingMemberId = memberId;
-    this.errorMessage = '';
-    this.teamService.removeMember(this.currentTeam.id, { memberId }).subscribe({
+    this.clearError();
+    this.teamService.removeMember(this.currentTeam.id, { memberId }).pipe(finalize(() => (this.submittingMemberId = null))).subscribe({
       next: (team) => {
-        this.submittingMemberId = null;
         this.currentTeam = {
           ...team,
           memberIds: [...team.memberIds],
@@ -94,8 +95,7 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
         this.teamChanged.emit(this.currentTeam);
       },
       error: (error) => {
-        this.submittingMemberId = null;
-        this.errorMessage = error?.error?.error ?? 'Neuspešno uklanjanje člana.';
+        this.showError(extractBackendErrorMessage(error, 'Failed to remove member.'));
       },
     });
   }
@@ -144,10 +144,19 @@ export class TeamMembersModalComponent implements OnChanges, OnDestroy {
         this.searchResults = results.filter((member) => !blockedIds.has(member.id));
         this.loadingSearch = false;
       },
-      error: () => {
+      error: (error) => {
         this.searchResults = [];
         this.loadingSearch = false;
+        this.showError(extractBackendErrorMessage(error, 'User search failed.'));
       },
     });
+  }
+
+  private showError(message: string): void {
+    this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS);
+  }
+
+  private clearError(): void {
+    this.transientMessages.clearField(this, 'errorMessage');
   }
 }

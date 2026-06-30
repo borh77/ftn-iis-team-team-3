@@ -65,6 +65,14 @@ import { ReactiveFormsModule, UntypedFormArray, UntypedFormGroup } from '@angula
                 </div>
               }
             </div>
+
+            @if (thresholdRangeErrors(itemIndex).length) {
+              <div class="inline-error" role="alert">
+                @for (message of thresholdRangeErrors(itemIndex); track message) {
+                  <p>{{ message }}</p>
+                }
+              </div>
+            }
           </section>
         }
       </div>
@@ -86,6 +94,15 @@ export class PricelistWizardThresholdsStepComponent {
 
   thresholdsFor(itemIndex: number): UntypedFormArray {
     return this.itemGroup(itemIndex).get('thresholds') as UntypedFormArray;
+  }
+
+  thresholdRangeErrors(itemIndex: number): string[] {
+    const thresholds = this.thresholdsFor(itemIndex);
+    if (!thresholds.touched && !thresholds.dirty) {
+      return [];
+    }
+    const messages = thresholds.errors?.['thresholdRange'];
+    return Array.isArray(messages) ? messages.map((message) => String(message)) : [];
   }
 
   thresholdError(itemIndex: number, thresholdIndex: number, controlName: string): string {

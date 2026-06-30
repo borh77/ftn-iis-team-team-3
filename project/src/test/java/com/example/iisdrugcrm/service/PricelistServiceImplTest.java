@@ -1,6 +1,7 @@
 package com.example.iisdrugcrm.service;
 
 import com.example.iisdrugcrm.domain.PricelistStatus;
+import com.example.iisdrugcrm.domain.PricelistTeam;
 import com.example.iisdrugcrm.domain.Region;
 import com.example.iisdrugcrm.domain.pricelist.*;
 import com.example.iisdrugcrm.dto.pricelist.CatalogVariantDTO;
@@ -9,12 +10,15 @@ import com.example.iisdrugcrm.dto.pricelist.CreatePricelistDTO;
 import com.example.iisdrugcrm.exception.InvalidPricelistThresholdException;
 import com.example.iisdrugcrm.exception.InvalidPricelistStatusTransitionException;
 import com.example.iisdrugcrm.exception.PricelistConflictException;
+import com.example.iisdrugcrm.exception.PricelistStartDateInPastException;
+import com.example.iisdrugcrm.exception.PricelistSubmissionValidationException;
 import com.example.iisdrugcrm.repository.PricelistRepository;
 import com.example.iisdrugcrm.repository.RegionRepository;
 import com.example.iisdrugcrm.service.event.PricelistActionEvent;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,6 +30,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.access.AccessDeniedException;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -110,6 +115,43 @@ class PricelistServiceImplTest {
     }
 
     @Test
+    void createFailsWhenStartDateIsYesterday() {
+        CreatePricelistDTO dto = validDto();
+        dto.setPeriodStart(dateAtStartOfDay(today().minusDays(1)));
+        dto.setPeriodEnd(dateAtStartOfDay(today().plusDays(10)));
+
+        PricelistStartDateInPastException exception = assertThrows(PricelistStartDateInPastException.class,
+                () -> service.createCenovnik(dto, 99L));
+
+        assertEquals("Pricelist start date cannot be in the past.", exception.getMessage());
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
+    }
+
+    @Test
+    void createSucceedsWhenStartDateIsToday() {
+        noBlockingConflict();
+        CreatePricelistDTO dto = validDto();
+        dto.setPeriodStart(dateAtStartOfDay(today()));
+        dto.setPeriodEnd(dateAtStartOfDay(today().plusDays(10)));
+
+        service.createCenovnik(dto, 99L);
+
+        verify(pricelistRepository).save(any(Pricelist.class));
+    }
+
+    @Test
+    void createSucceedsWhenStartDateIsFuture() {
+        noBlockingConflict();
+        CreatePricelistDTO dto = validDto();
+        dto.setPeriodStart(dateAtStartOfDay(today().plusDays(1)));
+        dto.setPeriodEnd(dateAtStartOfDay(today().plusDays(10)));
+
+        service.createCenovnik(dto, 99L);
+
+        verify(pricelistRepository).save(any(Pricelist.class));
+    }
+
+    @Test
     void createPublishesActivityEvent() {
         noBlockingConflict();
 
@@ -119,7 +161,7 @@ class PricelistServiceImplTest {
         assertEquals(1000L, event.pricelistId());
         assertEquals(99L, event.userId());
         assertEquals(PricelistActionType.CREATE, event.actionType());
-        assertEquals("Kreiran cenovnik u statusu DRAFT", event.description());
+        assertEquals("Created pricelist in DRAFT status", event.description());
     }
 
     @Test
@@ -154,7 +196,7 @@ class PricelistServiceImplTest {
         assertEquals(100L, event.pricelistId());
         assertEquals(99L, event.userId());
         assertEquals(PricelistActionType.UPDATE_THRESHOLDS, event.actionType());
-        assertEquals("Azurirani pragovi cena cenovnika", event.description());
+        assertEquals("Updated pricelist price thresholds", event.description());
     }
 
     @Test
@@ -163,6 +205,19 @@ class PricelistServiceImplTest {
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
 
         assertThrows(IllegalArgumentException.class, () -> service.update(100L, validDto(), 99L));
+
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
+    }
+
+    @Test
+    void updateDraftFailsWhenStartDateIsYesterday() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        CreatePricelistDTO dto = validDto();
+        dto.setPeriodStart(dateAtStartOfDay(today().minusDays(1)));
+        dto.setPeriodEnd(dateAtStartOfDay(today().plusDays(10)));
+
+        assertThrows(PricelistStartDateInPastException.class, () -> service.update(100L, dto, 99L));
 
         verify(pricelistRepository, never()).save(any(Pricelist.class));
     }
@@ -180,8 +235,8 @@ class PricelistServiceImplTest {
     void nonOverlappingPeriodSucceeds() {
         noBlockingConflict();
         CreatePricelistDTO dto = validDto();
-        dto.setPeriodStart(OffsetDateTime.of(2026, 10, 1, 0, 0, 0, 0, ZoneOffset.UTC));
-        dto.setPeriodEnd(OffsetDateTime.of(2026, 12, 31, 0, 0, 0, 0, ZoneOffset.UTC));
+        dto.setPeriodStart(dateAtStartOfDay(today().plusDays(30)));
+        dto.setPeriodEnd(dateAtStartOfDay(today().plusDays(90)));
 
         assertDoesNotThrow(() -> service.createCenovnik(dto, 99L));
 
@@ -268,10 +323,10 @@ class PricelistServiceImplTest {
         pricelist.setCreationCompleted(false);
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+        PricelistSubmissionValidationException exception = assertThrows(PricelistSubmissionValidationException.class,
                 () -> service.changeStatus(100L, statusDto(PricelistStatus.IN_REVIEW, null)));
 
-        assertEquals("Cenovnik nije kompletiran kroz wizard i ne moze biti poslat na proveru.", exception.getMessage());
+        assertEquals("Pricelist was not completed through the wizard and cannot be submitted for review.", exception.getMessage());
         assertEquals(PricelistStatus.DRAFT, pricelist.getStatus());
         verify(pricelistRepository, never()).save(any(Pricelist.class));
     }
@@ -300,7 +355,7 @@ class PricelistServiceImplTest {
         assertEquals(100L, event.pricelistId());
         assertEquals(99L, event.userId());
         assertEquals(PricelistActionType.STATUS_CHANGE, event.actionType());
-        assertEquals("Promenjen status iz DRAFT u IN_REVIEW", event.description());
+        assertEquals("Changed status from DRAFT to IN_REVIEW", event.description());
         assertEquals(PricelistStatus.DRAFT, event.statusFrom());
         assertEquals(PricelistStatus.IN_REVIEW, event.statusTo());
     }
@@ -311,9 +366,65 @@ class PricelistServiceImplTest {
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
         noActivationConflict();
 
-        service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null));
+        service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null), 7L);
 
         assertEquals(PricelistStatus.ACTIVE, pricelist.getStatus());
+        verify(pricelistRepository).save(pricelist);
+    }
+
+    @Test
+    void ownerCannotActivateOwnInReviewPricelist() {
+        Pricelist pricelist = pricelist(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        doThrow(new AccessDeniedException(PricelistAccessService.SELF_ACTIVATION_MESSAGE))
+                .when(accessService).validateActivationReviewer(pricelist, 99L, false);
+
+        AccessDeniedException exception = assertThrows(AccessDeniedException.class,
+                () -> service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null), 99L));
+
+        assertEquals(PricelistAccessService.SELF_ACTIVATION_MESSAGE, exception.getMessage());
+        assertEquals(PricelistStatus.IN_REVIEW, pricelist.getStatus());
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
+    }
+
+    @Test
+    void teammateCanActivateTeamPricelist() {
+        Pricelist pricelist = pricelist(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
+        pricelist.setTeam(team(10L, 99L, 7L));
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        noActivationConflict();
+
+        service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null), 7L);
+
+        assertEquals(PricelistStatus.ACTIVE, pricelist.getStatus());
+        verify(accessService).validateActivationReviewer(pricelist, 7L, false);
+        verify(pricelistRepository).save(pricelist);
+    }
+
+    @Test
+    void unrelatedCreatorCannotActivateInReviewPricelist() {
+        Pricelist pricelist = pricelist(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        doThrow(new AccessDeniedException(PricelistAccessService.REVIEWER_REQUIRED_MESSAGE))
+                .when(accessService).validateActivationReviewer(pricelist, 7L, false);
+
+        assertThrows(AccessDeniedException.class,
+                () -> service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null), 7L));
+
+        assertEquals(PricelistStatus.IN_REVIEW, pricelist.getStatus());
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
+    }
+
+    @Test
+    void adminCanActivatePrivateInReviewPricelistWhenNotOwner() {
+        Pricelist pricelist = pricelist(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        noActivationConflict();
+
+        service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null), 1L, true);
+
+        assertEquals(PricelistStatus.ACTIVE, pricelist.getStatus());
+        verify(accessService).validateActivationReviewer(pricelist, 1L, true);
         verify(pricelistRepository).save(pricelist);
     }
 
@@ -322,10 +433,25 @@ class PricelistServiceImplTest {
         Pricelist pricelist = pricelist(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
 
-        service.changeStatus(100L, statusDto(PricelistStatus.DRAFT, "Needs correction"));
+        service.changeStatus(100L, statusDto(PricelistStatus.DRAFT, "Needs correction"), 7L);
 
         assertEquals(PricelistStatus.DRAFT, pricelist.getStatus());
         verify(pricelistRepository).save(pricelist);
+    }
+
+    @Test
+    void ownerCannotReturnOwnInReviewPricelistToDraft() {
+        Pricelist pricelist = pricelist(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        doThrow(new AccessDeniedException(PricelistAccessService.SELF_ACTIVATION_MESSAGE))
+                .when(accessService).validateActivationReviewer(pricelist, 99L, false);
+
+        AccessDeniedException exception = assertThrows(AccessDeniedException.class,
+                () -> service.changeStatus(100L, statusDto(PricelistStatus.DRAFT, "Needs correction"), 99L));
+
+        assertEquals(PricelistAccessService.SELF_ACTIVATION_MESSAGE, exception.getMessage());
+        assertEquals(PricelistStatus.IN_REVIEW, pricelist.getStatus());
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
     }
 
     @Test
@@ -334,7 +460,7 @@ class PricelistServiceImplTest {
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
 
         assertThrows(InvalidPricelistStatusTransitionException.class,
-                () -> service.changeStatus(100L, statusDto(PricelistStatus.DRAFT, " ")));
+                () -> service.changeStatus(100L, statusDto(PricelistStatus.DRAFT, " "), 7L));
 
         assertEquals(PricelistStatus.IN_REVIEW, pricelist.getStatus());
         verify(pricelistRepository, never()).save(any(Pricelist.class));
@@ -407,7 +533,7 @@ class PricelistServiceImplTest {
                 .thenReturn(List.of(pricelist(101L, PricelistStatus.ACTIVE, serbia, "Lanci apoteka")));
 
         assertThrows(PricelistConflictException.class,
-                () -> service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null)));
+                () -> service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null), 7L));
 
         assertEquals(PricelistStatus.IN_REVIEW, pricelist.getStatus());
         verify(pricelistRepository, never()).save(any(Pricelist.class));
@@ -421,7 +547,7 @@ class PricelistServiceImplTest {
                 .thenReturn(List.of(pricelist(101L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka")));
 
         assertThrows(PricelistConflictException.class,
-                () -> service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null)));
+                () -> service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null), 7L));
 
         assertEquals(PricelistStatus.IN_REVIEW, pricelist.getStatus());
         verify(pricelistRepository, never()).save(any(Pricelist.class));
@@ -433,7 +559,7 @@ class PricelistServiceImplTest {
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
         noActivationConflict();
 
-        service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null));
+        service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null), 7L);
 
         assertEquals(PricelistStatus.ACTIVE, pricelist.getStatus());
         verify(pricelistRepository).save(pricelist);
@@ -445,7 +571,7 @@ class PricelistServiceImplTest {
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
         noActivationConflict();
 
-        service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null));
+        service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null), 7L);
 
         assertEquals(PricelistStatus.ACTIVE, pricelist.getStatus());
         verify(pricelistRepository).save(pricelist);
@@ -457,7 +583,7 @@ class PricelistServiceImplTest {
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
         noActivationConflict();
 
-        service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null));
+        service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null), 7L);
 
         assertEquals(PricelistStatus.ACTIVE, pricelist.getStatus());
         verify(pricelistRepository).save(pricelist);
@@ -469,7 +595,7 @@ class PricelistServiceImplTest {
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
         noActivationConflict();
 
-        service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null));
+        service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null), 7L);
 
         assertEquals(PricelistStatus.ACTIVE, pricelist.getStatus());
         verify(pricelistRepository).save(pricelist);
@@ -481,7 +607,7 @@ class PricelistServiceImplTest {
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
         noActivationConflict();
 
-        service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null));
+        service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null), 7L);
 
         verify(pricelistRepository).findOverlappingBlockingPricelistsExcludingCurrent(
                 eq(1L),
@@ -560,7 +686,7 @@ class PricelistServiceImplTest {
         assertEquals(1000L, event.pricelistId());
         assertEquals(99L, event.userId());
         assertEquals(PricelistActionType.CREATE_VERSION, event.actionType());
-        assertEquals("Kreirana nova verzija cenovnika", event.description());
+        assertEquals("Created new pricelist version", event.description());
     }
 
     @Test
@@ -679,7 +805,7 @@ class PricelistServiceImplTest {
         assertEquals(100L, event.pricelistId());
         assertEquals(99L, event.userId());
         assertEquals(PricelistActionType.REPLACE_ITEM, event.actionType());
-        assertEquals("Zamenjena stavka cenovnika", event.description());
+        assertEquals("Replaced pricelist item", event.description());
     }
 
     @Test
@@ -709,12 +835,40 @@ class PricelistServiceImplTest {
     }
 
     @Test
+    void draftToInReviewFailsIfStartDateIsYesterday() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        pricelist.setPeriodStart(dateAtStartOfDay(today().minusDays(1)));
+        pricelist.setPeriodEnd(dateAtStartOfDay(today().plusDays(10)));
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+
+        assertThrows(PricelistStartDateInPastException.class,
+                () -> service.changeStatus(100L, statusDto(PricelistStatus.IN_REVIEW, null)));
+
+        assertEquals(PricelistStatus.DRAFT, pricelist.getStatus());
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
+    }
+
+    @Test
     void inReviewToActiveFailsIfVariantIsInactive() {
         Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
         when(catalogService.findActiveVariantsByIds(List.of(10L))).thenReturn(Map.of());
 
-        assertThrows(IllegalArgumentException.class, () -> service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null)));
+        assertThrows(IllegalArgumentException.class, () -> service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null), 7L));
+    }
+
+    @Test
+    void inReviewToActiveFailsIfStartDateIsYesterday() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
+        pricelist.setPeriodStart(dateAtStartOfDay(today().minusDays(1)));
+        pricelist.setPeriodEnd(dateAtStartOfDay(today().plusDays(10)));
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+
+        assertThrows(PricelistStartDateInPastException.class,
+                () -> service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null), 7L));
+
+        assertEquals(PricelistStatus.IN_REVIEW, pricelist.getStatus());
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
     }
 
     private void noBlockingConflict() {
@@ -745,8 +899,8 @@ class PricelistServiceImplTest {
         dto.setRegionId(1L);
         dto.setCustomerSegment("Lanci apoteka");
         dto.setCurrency("RSD");
-        dto.setPeriodStart(OffsetDateTime.of(2026, 7, 1, 0, 0, 0, 0, ZoneOffset.UTC));
-        dto.setPeriodEnd(OffsetDateTime.of(2026, 9, 30, 0, 0, 0, 0, ZoneOffset.UTC));
+        dto.setPeriodStart(dateAtStartOfDay(today().plusDays(1)));
+        dto.setPeriodEnd(dateAtStartOfDay(today().plusDays(90)));
 
         CreatePricelistDTO.PricelistItemDTO item = new CreatePricelistDTO.PricelistItemDTO();
         item.setVariantId(10L);
@@ -779,10 +933,18 @@ class PricelistServiceImplTest {
         pricelist.setCustomerSegment(customerSegment);
         pricelist.setCurrency("RSD");
         pricelist.setStatus(status);
-        pricelist.setPeriodStart(OffsetDateTime.of(2026, 7, 1, 0, 0, 0, 0, ZoneOffset.UTC));
-        pricelist.setPeriodEnd(OffsetDateTime.of(2026, 9, 30, 0, 0, 0, 0, ZoneOffset.UTC));
+        pricelist.setPeriodStart(dateAtStartOfDay(today().plusDays(1)));
+        pricelist.setPeriodEnd(dateAtStartOfDay(today().plusDays(90)));
         pricelist.setCreatedBy(99L);
         return pricelist;
+    }
+
+    private LocalDate today() {
+        return LocalDate.now(ZoneId.systemDefault());
+    }
+
+    private OffsetDateTime dateAtStartOfDay(LocalDate date) {
+        return date.atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime();
     }
 
     private Pricelist pricelistWithItem(Long id, PricelistStatus status, Region region, String customerSegment) {
@@ -794,6 +956,13 @@ class PricelistServiceImplTest {
         item.setThresholds(List.of(quantityThreshold(1, 10, "100.00"), quantityThreshold(11, null, "95.00")));
         pricelist.addItem(item);
         return pricelist;
+    }
+
+    private PricelistTeam team(Long id, Long leaderId, Long memberId) {
+        PricelistTeam team = new PricelistTeam("Review team", leaderId);
+        team.setId(id);
+        team.addMember(memberId);
+        return team;
     }
 
     private QuantityThreshold quantityThreshold(Integer quantityFrom, Integer quantityTo, String price) {

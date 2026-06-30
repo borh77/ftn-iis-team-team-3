@@ -8,6 +8,10 @@
   </section>
 
   <section class="table-card">
+    <div *ngIf="errorMessage" class="error-box" role="alert">
+      {{ errorMessage }}
+    </div>
+
     <div *ngIf="loading" class="loading">Loading offers...</div>
 
     <table *ngIf="!loading && offers.length > 0">
@@ -38,8 +42,9 @@
                     *ngIf="offer.status !== 'ACCEPTED'"
                     type="button"
                     class="secondary-button"
-                    (click)="acceptOffer(offer)">
-                    Accept
+                    (click)="acceptOffer(offer)"
+                    [disabled]="acceptingOfferId === offer.id">
+                    {{ acceptingOfferId === offer.id ? 'Accepting...' : 'Accept' }}
                 </button>
 
                 <button
@@ -90,7 +95,9 @@
                   />
                 </label>
 
-                <button type="submit" class="primary-button">Save Contract</button>
+                <button type="submit" class="primary-button" [disabled]="savingContract">
+                  {{ savingContract ? 'Saving...' : 'Save Contract' }}
+                </button>
               </form>
             </td>
           </tr>

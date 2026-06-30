@@ -57,7 +57,7 @@ public class PerformanceReportPdfService {
     }
 
     private void addTitle(Document document) throws DocumentException {
-        Paragraph title = new Paragraph("Izveštaj o performansama timova", font(18, Font.BOLD));
+        Paragraph title = new Paragraph("Team Performance Report", font(18, Font.BOLD));
         title.setAlignment(Element.ALIGN_CENTER);
         title.setSpacingAfter(18);
         document.add(title);
@@ -65,13 +65,13 @@ public class PerformanceReportPdfService {
 
     private void addMetadata(Document document, TeamPerformanceReportDTO report) throws DocumentException {
         PdfPTable table = table(2);
-        table.addCell(labelCell("Tim"));
-        table.addCell(valueCell(report.getTeamId() == null ? "Svi timovi" : "Team ID " + report.getTeamId()));
-        table.addCell(labelCell("Period od"));
+        table.addCell(labelCell("Team"));
+        table.addCell(valueCell(report.getTeamId() == null ? "All teams" : "Team ID " + report.getTeamId()));
+        table.addCell(labelCell("Period start"));
         table.addCell(valueCell(formatTimestamp(report.getPeriodStart())));
-        table.addCell(labelCell("Period do"));
+        table.addCell(labelCell("Period end"));
         table.addCell(valueCell(formatTimestamp(report.getPeriodEnd())));
-        table.addCell(labelCell("Generisano"));
+        table.addCell(labelCell("Generated"));
         table.addCell(valueCell(formatTimestamp(OffsetDateTime.now(ZoneOffset.UTC))));
         table.setSpacingAfter(16);
         document.add(table);
@@ -83,32 +83,32 @@ public class PerformanceReportPdfService {
         document.add(heading);
 
         PdfPTable table = table(2);
-        table.addCell(labelCell("Prosečno vreme obrade"));
+        table.addCell(labelCell("Average processing time"));
         table.addCell(valueCell(formatHours(report.getAverageTotalProcessingTimeHours())));
-        table.addCell(labelCell("Prosečno vreme u review fazi"));
+        table.addCell(labelCell("Average review time"));
         table.addCell(valueCell(formatHours(report.getAverageReviewTimeHours())));
-        table.addCell(labelCell("Broj aktiviranih cenovnika"));
+        table.addCell(labelCell("Activated pricelists"));
         table.addCell(valueCell(String.valueOf(nullSafe(report.getActivatedPricelistsCount()))));
-        table.addCell(labelCell("Broj zaglavljenih u DRAFT"));
+        table.addCell(labelCell("Pricelists stuck in DRAFT"));
         table.addCell(valueCell(String.valueOf(nullSafe(report.getStuckDraftCount()))));
-        table.addCell(labelCell("Broj zaglavljenih u IN_REVIEW"));
+        table.addCell(labelCell("Pricelists stuck in IN_REVIEW"));
         table.addCell(valueCell(String.valueOf(nullSafe(report.getStuckInReviewCount()))));
         table.setSpacingAfter(16);
         document.add(table);
     }
 
     private void addMonthlyTrend(Document document, List<MonthlyPerformancePointDTO> monthlyTrend) throws DocumentException {
-        Paragraph heading = new Paragraph("Mesečni trend", font(14, Font.BOLD));
+        Paragraph heading = new Paragraph("Monthly trend", font(14, Font.BOLD));
         heading.setSpacingAfter(8);
         document.add(heading);
 
         PdfPTable table = table(3);
-        table.addCell(headerCell("Mesec"));
-        table.addCell(headerCell("Prosečno vreme obrade (h)"));
-        table.addCell(headerCell("Aktivirani cenovnici"));
+        table.addCell(headerCell("Month"));
+        table.addCell(headerCell("Average processing time (h)"));
+        table.addCell(headerCell("Activated pricelists"));
 
         if (monthlyTrend == null || monthlyTrend.isEmpty()) {
-            PdfPCell emptyCell = valueCell("Nema podataka za izabrani period.");
+            PdfPCell emptyCell = valueCell("No data for the selected period.");
             emptyCell.setColspan(3);
             table.addCell(emptyCell);
         } else {
@@ -128,7 +128,7 @@ public class PerformanceReportPdfService {
             return;
         }
 
-        Paragraph note = new Paragraph("Napomena: " + limitation, font(9, Font.ITALIC));
+        Paragraph note = new Paragraph("Note: " + limitation, font(9, Font.ITALIC));
         note.setSpacingBefore(8);
         document.add(note);
     }

@@ -3,27 +3,51 @@
     <div>
       <p class="kicker">Pricelist wizard</p>
       <h2>Create pricelist</h2>
-      <p>Build the draft step by step. Every step is saved to the backend and can be continued later.</p>
+      <p>Define the region, team access, product variants, quantity thresholds, and review the draft before submitting.</p>
     </div>
 
     <a class="ghost hero-action" routerLink="/content/mine">Back to pricelists</a>
   </header>
 
   <section class="panel wizard-panel">
-    @if (loadingState || starting) {
+    @if (wizardLoading && !wizardReady) {
       <p class="muted">Loading wizard...</p>
+    } @else if (loadError) {
+      <div class="error-box load-error" role="alert">
+        <strong>Could not load pricelist wizard.</strong>
+        <span>{{ loadError }}</span>
+      </div>
+
+      <div class="wizard-actions load-error-actions">
+        <button type="button" class="primary" (click)="retryLoad()">
+          Retry
+        </button>
+        <a class="ghost" routerLink="/content/mine">Back to pricelists</a>
+      </div>
     } @else {
       <nav class="wizard-progress" aria-label="Pricelist creation steps">
         @for (step of steps; track step.id; let stepIndex = $index) {
-          <div class="progress-step" [class]="stepClass(stepIndex)">
+          <button
+            type="button"
+            class="progress-step"
+            [ngClass]="stepClass(stepIndex)"
+            [attr.aria-current]="stepIndex === activeStepIndex ? 'step' : null"
+            (click)="goToStep(stepIndex)"
+            [disabled]="wizardLoading || saveAction !== null || !canAccessStep(stepIndex)"
+            [title]="canAccessStep(stepIndex) ? step.label : 'Complete the previous step before continuing.'"
+          >
             <span>{{ stepIndex + 1 }}</span>
-            <strong>{{ step.label }}</strong>
-          </div>
+            <div>
+              <strong>{{ step.label }}</strong>
+              <small>{{ step.description }}</small>
+            </div>
+          </button>
         }
       </nav>
 
       <div class="wizard-meta">
         <span>Draft #{{ wizardId || '-' }}</span>
+        <span>Step {{ activeStepIndex + 1 }} of {{ steps.length }}</span>
         <span>Current step: {{ activeStep.label }}</span>
         @if (state?.lastEditedAt) {
           <span>Last edited: {{ state?.lastEditedAt | date:'dd.MM.yyyy HH:mm' }}</span>
@@ -38,12 +62,21 @@
         <p class="success-box">{{ successMessage }}</p>
       }
 
+      @if (lookupWarningMessages.length) {
+        <div class="warning-box" role="status">
+          @for (warning of lookupWarningMessages; track warning) {
+            <p>{{ warning }}</p>
+          }
+        </div>
+      }
+
       <section class="step-panel">
         @switch (activeStep.id) {
           @case ('BASIC_INFO') {
             <app-pricelist-wizard-basic-info-step
               [form]="basicInfoForm"
               [regions]="regions"
+              [minPeriodStart]="minPeriodStart"
             />
           }
           @case ('TEAM_ACCESS') {
@@ -56,6 +89,7 @@
             <app-pricelist-wizard-items-step
               [form]="itemsForm"
               [categories]="categories"
+              [availableVariants]="availableVariants"
               [subcategoriesByItem]="subcategoriesByItem"
               [productsByItem]="productsByItem"
               [variantsByItem]="variantsByItem"
@@ -77,37 +111,37 @@
           @case ('REVIEW') {
             <app-pricelist-wizard-review-step
               [summary]="summary"
-              [loading]="loadingSummary"
+              [loading]="summaryLoading"
             />
           }
         }
       </section>
 
       <div class="wizard-actions">
-        <button type="button" class="ghost" (click)="goBack()" [disabled]="activeStepIndex === 0 || saving">
-          Nazad
+        <button type="button" class="ghost" (click)="goBack()" [disabled]="activeStepIndex === 0 || saveAction !== null">
+          Back
         </button>
 
         @if (activeStep.id !== 'REVIEW') {
-          <button type="button" class="secondary" (click)="saveCurrentStep(false)" [disabled]="saving">
-            {{ saving ? 'Čuvanje...' : 'Sačuvaj' }}
+          <button type="button" class="secondary" (click)="saveCurrentStep(false)" [disabled]="stepActionDisabled()">
+            {{ saveAction === 'draft' ? 'Saving...' : 'Save draft' }}
           </button>
 
-          <button type="button" class="primary" (click)="saveCurrentStep(true)" [disabled]="saving">
-            {{ saving ? 'Čuvanje...' : 'Sačuvaj i nastavi' }}
+          <button type="button" class="primary" (click)="saveCurrentStep(true)" [disabled]="stepActionDisabled()">
+            {{ saveAction === 'next' ? 'Saving and continuing...' : 'Next' }}
           </button>
         } @else {
-          <button type="button" class="secondary" (click)="saveCurrentStep(false)" [disabled]="loadingSummary">
-            {{ loadingSummary ? 'Osvežavanje...' : 'Osveži pregled' }}
+          <button type="button" class="secondary" (click)="saveCurrentStep(false)" [disabled]="summaryLoading || saveAction !== null">
+            {{ summaryLoading ? 'Refreshing...' : 'Refresh review' }}
           </button>
 
           <button
             type="button"
             class="primary"
             (click)="finish()"
-            [disabled]="saving || loadingSummary || summary?.readyToFinish === false"
+            [disabled]="submitDisabled()"
           >
-            {{ saving ? 'Završavanje...' : 'Završi' }}
+            {{ saveAction === 'submit' ? 'Submitting...' : 'Submit for review' }}
           </button>
         }
       </div>

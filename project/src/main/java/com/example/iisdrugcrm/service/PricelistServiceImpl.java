@@ -14,6 +14,7 @@ import com.example.iisdrugcrm.dto.pricelist.PricelistResponseDTO;
 import com.example.iisdrugcrm.exception.PricelistConflictException;
 import com.example.iisdrugcrm.exception.PricelistLockedException;
 import com.example.iisdrugcrm.exception.PricelistNotFoundException;
+import com.example.iisdrugcrm.exception.PricelistSubmissionValidationException;
 import com.example.iisdrugcrm.exception.VariantNotFoundException;
 import com.example.iisdrugcrm.repository.PricelistRepository;
 import com.example.iisdrugcrm.repository.RegionRepository;
@@ -60,6 +61,7 @@ public class PricelistServiceImpl implements PricelistService {
     @Transactional(rollbackFor = Exception.class)
     public PricelistResponseDTO createCenovnik(CreatePricelistDTO dto, Long currentUserId) {
         Region region = resolveRegion(dto);
+        PricelistDateRules.validateStartDateNotPast(dto.getPeriodStart());
         OffsetDateTime periodStart = utcPeriodStart(dto);
         OffsetDateTime periodEnd = utcPeriodEnd(dto);
         validatePeriod(periodStart, periodEnd);
@@ -86,7 +88,7 @@ public class PricelistServiceImpl implements PricelistService {
         validateNoBlockingOverlap(region, pricelist.getCustomerSegment(), periodStart, periodEnd);
 
         Pricelist saved = pricelistRepository.save(pricelist);
-        publishPricelistAction(saved, currentUserId, PricelistActionType.CREATE, "Kreiran cenovnik u statusu DRAFT");
+        publishPricelistAction(saved, currentUserId, PricelistActionType.CREATE, "Created pricelist in DRAFT status");
         LOGGER.info("Created pricelist {} for region {} and customer segment {}", saved.getId(), region.getId(), saved.getCustomerSegment());
         return toResponse(saved);
     }
@@ -116,6 +118,7 @@ public class PricelistServiceImpl implements PricelistService {
         }
 
         Region region = resolveRegion(dto);
+        PricelistDateRules.validateStartDateNotPast(dto.getPeriodStart());
         OffsetDateTime periodStart = utcPeriodStart(dto);
         OffsetDateTime periodEnd = utcPeriodEnd(dto);
         validatePeriod(periodStart, periodEnd);
@@ -176,6 +179,7 @@ public class PricelistServiceImpl implements PricelistService {
                 ? maxVersion
                 : source.getVersionNumber() != null ? source.getVersionNumber() : 1;
         newVersion.setVersionNumber(currentVersion + 1);
+        PricelistDateRules.validateStartDateNotPast(newVersion.getPeriodStart());
 
         for (PricelistItem sourceItem : source.getItems()) {
             PricelistItem item = new PricelistItem();
@@ -195,7 +199,7 @@ public class PricelistServiceImpl implements PricelistService {
         }
 
         Pricelist saved = pricelistRepository.save(newVersion);
-        publishPricelistAction(saved, currentUserId, PricelistActionType.CREATE_VERSION, "Kreirana nova verzija cenovnika");
+        publishPricelistAction(saved, currentUserId, PricelistActionType.CREATE_VERSION, "Created new pricelist version");
         LOGGER.info("Created draft version {} from pricelist {}", saved.getId(), source.getId());
         return toResponse(saved);
     }
@@ -230,15 +234,22 @@ public class PricelistServiceImpl implements PricelistService {
     public PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto) {
         Pricelist pricelist = pricelistRepository.findById(id)
                 .orElseThrow(() -> new PricelistNotFoundException("Pricelist not found"));
+        validateStatusChangeAccess(pricelist, dto.getTargetStatus(), pricelist.getCreatedBy(), false);
         return changeStatus(pricelist, dto, pricelist.getCreatedBy());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto, Long currentUserId) {
+        return changeStatus(id, dto, currentUserId, false);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto, Long currentUserId, boolean currentUserAdmin) {
         Pricelist pricelist = pricelistRepository.findById(id)
                 .orElseThrow(() -> new PricelistNotFoundException("Pricelist not found"));
-        accessService.validateOwnerOnly(pricelist, currentUserId);
+        validateStatusChangeAccess(pricelist, dto.getTargetStatus(), currentUserId, currentUserAdmin);
         return changeStatus(pricelist, dto, currentUserId);
     }
 
@@ -246,10 +257,11 @@ public class PricelistServiceImpl implements PricelistService {
         if (pricelist.getStatus() == PricelistStatus.DRAFT
                 && dto.getTargetStatus() == PricelistStatus.IN_REVIEW
                 && !pricelist.isCreationCompleted()) {
-            throw new IllegalArgumentException("Cenovnik nije kompletiran kroz wizard i ne moze biti poslat na proveru.");
+            throw new PricelistSubmissionValidationException("Pricelist was not completed through the wizard and cannot be submitted for review.");
         }
         if ((pricelist.getStatus() == PricelistStatus.DRAFT && dto.getTargetStatus() == PricelistStatus.IN_REVIEW)
                 || (pricelist.getStatus() == PricelistStatus.IN_REVIEW && dto.getTargetStatus() == PricelistStatus.ACTIVE)) {
+            PricelistDateRules.validateStartDateNotPast(pricelist.getPeriodStart());
             validateAllVariantsActive(pricelist);
         }
         if (pricelist.getStatus() == PricelistStatus.IN_REVIEW && dto.getTargetStatus() == PricelistStatus.ACTIVE) {
@@ -269,12 +281,21 @@ public class PricelistServiceImpl implements PricelistService {
                 saved,
                 currentUserId,
                 PricelistActionType.STATUS_CHANGE,
-                "Promenjen status iz " + previousStatus + " u " + saved.getStatus(),
+                "Changed status from " + previousStatus + " to " + saved.getStatus(),
                 previousStatus,
                 saved.getStatus()
         );
         LOGGER.info("Changed pricelist {} status from {} to {}", saved.getId(), previousStatus, saved.getStatus());
-        return toResponse(saved);
+        return toResponse(saved, currentUserId, accessService.canCollaborate(saved, currentUserId));
+    }
+
+    private void validateStatusChangeAccess(Pricelist pricelist, PricelistStatus targetStatus, Long currentUserId, boolean currentUserAdmin) {
+        if (pricelist.getStatus() == PricelistStatus.IN_REVIEW
+                && (targetStatus == PricelistStatus.ACTIVE || targetStatus == PricelistStatus.DRAFT)) {
+            accessService.validateActivationReviewer(pricelist, currentUserId, currentUserAdmin);
+            return;
+        }
+        accessService.validateOwnerOnly(pricelist, currentUserId);
     }
 
     @Override
@@ -307,7 +328,7 @@ public class PricelistServiceImpl implements PricelistService {
         item.setVariantId(replacement.getId());
         item.setVariantName(replacement.getName());
         Pricelist saved = pricelistRepository.save(pricelist);
-        publishPricelistAction(saved, currentUserId, PricelistActionType.REPLACE_ITEM, "Zamenjena stavka cenovnika");
+        publishPricelistAction(saved, currentUserId, PricelistActionType.REPLACE_ITEM, "Replaced pricelist item");
         return toResponse(saved, currentUserId, accessService.canCollaborate(saved, currentUserId));
     }
 
@@ -317,7 +338,7 @@ public class PricelistServiceImpl implements PricelistService {
         } catch (PessimisticLockingFailureException
                  | LockTimeoutException
                  | PessimisticLockException exception) {
-            throw new PricelistLockedException("Cenovnici za izabrani region i segment se trenutno menjaju. Pokusajte ponovo.");
+            throw new PricelistLockedException("Pricelists for the selected region and segment are currently being changed. Please try again.");
         }
     }
 
@@ -336,7 +357,7 @@ public class PricelistServiceImpl implements PricelistService {
 
     private void validatePeriod(OffsetDateTime periodStart, OffsetDateTime periodEnd) {
         if (!periodStart.isBefore(periodEnd)) {
-            throw new IllegalArgumentException("Period od mora biti strogo manji od perioda do.");
+            throw new IllegalArgumentException("Period start must be strictly before period end.");
         }
     }
 
@@ -352,7 +373,7 @@ public class PricelistServiceImpl implements PricelistService {
                 .toList();
 
         if (!missingVariantIds.isEmpty()) {
-            throw new VariantNotFoundException("Varijante " + missingVariantIds + " ne postoje ili nisu aktivne u katalogu");
+            throw new VariantNotFoundException("Variants " + missingVariantIds + " do not exist or are not active in the catalog");
         }
     }
 
@@ -447,9 +468,9 @@ public class PricelistServiceImpl implements PricelistService {
 
     private String updateDescription(PricelistActionType actionType) {
         return switch (actionType) {
-            case UPDATE_ITEMS -> "Azurirane stavke cenovnika";
-            case UPDATE_THRESHOLDS -> "Azurirani pragovi cena cenovnika";
-            default -> "Azurirani metapodaci cenovnika";
+            case UPDATE_ITEMS -> "Updated pricelist items";
+            case UPDATE_THRESHOLDS -> "Updated pricelist price thresholds";
+            default -> "Updated pricelist metadata";
         };
     }
 
@@ -498,8 +519,8 @@ public class PricelistServiceImpl implements PricelistService {
 
         Pricelist conflict = conflicts.get(0);
         throw new PricelistConflictException(
-                "Cenovnik za region [" + region.getName() + "] i segment [" + customerSegment
-                        + "] vec postoji u periodu [" + conflict.getPeriodStart().toLocalDate()
+                "Pricelist for region [" + region.getName() + "] and segment [" + customerSegment
+                        + "] already exists in period [" + conflict.getPeriodStart().toLocalDate()
                         + " - " + conflict.getPeriodEnd().toLocalDate() + "]."
         );
     }
@@ -520,7 +541,12 @@ public class PricelistServiceImpl implements PricelistService {
     }
 
     private PricelistResponseDTO toResponse(Pricelist pricelist, Long currentUserId, boolean canCollaborate) {
-        return PricelistResponseDTO.fromEntity(pricelist, currentUserId, canCollaborate, activeVariantsFor(pricelist));
+        PricelistResponseDTO response = PricelistResponseDTO.fromEntity(pricelist, currentUserId, canCollaborate, activeVariantsFor(pricelist));
+        boolean canReview = pricelist.getStatus() == PricelistStatus.IN_REVIEW
+                && accessService.canActivateAsReviewer(pricelist, currentUserId);
+        response.setCanActivate(canReview);
+        response.setCanReject(canReview);
+        return response;
     }
 
     private Map<Long, CatalogVariantDTO> activeVariantsFor(Pricelist pricelist) {
@@ -546,8 +572,8 @@ public class PricelistServiceImpl implements PricelistService {
 
         Pricelist conflict = conflicts.get(0);
         throw new PricelistConflictException(
-                "Cenovnik za region [" + pricelist.getRegion().getName() + "] i segment [" + pricelist.getCustomerSegment()
-                        + "] vec postoji u periodu [" + conflict.getPeriodStart().toLocalDate()
+                "Pricelist for region [" + pricelist.getRegion().getName() + "] and segment [" + pricelist.getCustomerSegment()
+                        + "] already exists in period [" + conflict.getPeriodStart().toLocalDate()
                         + " - " + conflict.getPeriodEnd().toLocalDate() + "]."
         );
     }
