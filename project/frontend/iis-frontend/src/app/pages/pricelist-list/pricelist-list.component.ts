@@ -144,7 +144,19 @@ export class PricelistListComponent implements OnInit, OnDestroy {
   }
 
   submitForReview(pricelist: Pricelist): void {
-    this.changeStatus(pricelist, 'IN_REVIEW');
+    this.changingStatusId = pricelist.id;
+    this.clearResultMessages();
+    this.wizardService.finishWizard(pricelist.id).pipe(finalize(() => (this.changingStatusId = null))).subscribe({
+      next: () => {
+        this.showSuccess('Pricelist was submitted for review.');
+        this.loadDrafts();
+        this.load();
+      },
+      error: (error) => {
+        this.showError(extractBackendErrorMessage(error, 'Pricelist could not be submitted for review.'));
+        this.cdr.detectChanges();
+      },
+    });
   }
 
   editPricelist(pricelist: Pricelist): void {
@@ -214,11 +226,15 @@ export class PricelistListComponent implements OnInit, OnDestroy {
   }
 
   canSubmitForReview(pricelist: Pricelist): boolean {
-    return this.isOwner(pricelist) && pricelist.status === 'DRAFT' && pricelist.creationCompleted !== false;
+    return pricelist.canSubmitForReview ?? (
+      this.isOwner(pricelist)
+      && pricelist.status === 'DRAFT'
+      && (pricelist.creationStep === 'REVIEW' || pricelist.creationStep === 'COMPLETED')
+    );
   }
 
   canEdit(pricelist: Pricelist): boolean {
-    return pricelist.status === 'DRAFT' && this.canCollaborate(pricelist);
+    return pricelist.canEditDraft ?? (pricelist.status === 'DRAFT' && this.canCollaborate(pricelist));
   }
 
   canActivate(pricelist: Pricelist): boolean {
@@ -227,11 +243,14 @@ export class PricelistListComponent implements OnInit, OnDestroy {
   }
 
   canReturnToDraft(pricelist: Pricelist): boolean {
-    return pricelist.status === 'IN_REVIEW' && pricelist.canActivate === true;
+    return pricelist.status === 'IN_REVIEW' && pricelist.canReject === true;
   }
 
   isWaitingForExternalReview(pricelist: Pricelist): boolean {
-    return pricelist.status === 'IN_REVIEW' && this.isOwner(pricelist) && pricelist.canActivate !== true;
+    return pricelist.status === 'IN_REVIEW'
+      && this.isOwner(pricelist)
+      && pricelist.canActivate !== true
+      && pricelist.canReject !== true;
   }
 
   canArchive(pricelist: Pricelist): boolean {
@@ -239,15 +258,15 @@ export class PricelistListComponent implements OnInit, OnDestroy {
   }
 
   canCreateNewVersion(pricelist: Pricelist): boolean {
-    return pricelist.canCreateNewVersion || ((pricelist.status === 'IN_REVIEW' || pricelist.status === 'ACTIVE') && this.canCollaborate(pricelist));
+    return pricelist.canCreateNewVersion === true;
   }
 
   canManageOffers(pricelist: Pricelist): boolean {
-    return pricelist.canManageOffers ?? this.canCollaborate(pricelist);
+    return pricelist.canManageOffers === true;
   }
 
   canReplaceVariants(pricelist: Pricelist): boolean {
-    return pricelist.status === 'DRAFT' && this.canCollaborate(pricelist);
+    return pricelist.canEditDraft ?? (pricelist.status === 'DRAFT' && this.canCollaborate(pricelist));
   }
 
   requiresReplacement(pricelist: Pricelist): boolean {
@@ -487,7 +506,7 @@ export class PricelistListComponent implements OnInit, OnDestroy {
 
     this.service.changeStatus(pricelist.id, { targetStatus, reason }).pipe(finalize(() => (this.changingStatusId = null))).subscribe({
       next: () => {
-        this.showSuccess('Pricelist status was updated successfully.');
+        this.showSuccess(this.statusChangeSuccessMessage(targetStatus));
         this.load();
       },
       error: (error) => {
@@ -523,6 +542,16 @@ export class PricelistListComponent implements OnInit, OnDestroy {
       }
     }
     return extractBackendErrorMessage(error, 'Pricelist status update failed.');
+  }
+
+  private statusChangeSuccessMessage(targetStatus: Pricelist['status']): string {
+    const messages: Record<Pricelist['status'], string> = {
+      DRAFT: 'Pricelist was returned for correction.',
+      IN_REVIEW: 'Pricelist was submitted for review.',
+      ACTIVE: 'Pricelist activated.',
+      ARCHIVED: 'Pricelist archived.',
+    };
+    return messages[targetStatus];
   }
 
   private versionErrorMessage(error: unknown): string {

@@ -33,8 +33,11 @@ export interface Pricelist {
   canCreateNewVersion: boolean;
   owner: boolean;
   canCollaborate: boolean;
+  canEditDraft?: boolean;
+  canSubmitForReview?: boolean;
   canManageOffers: boolean;
   canActivate?: boolean;
+  canReject?: boolean;
   periodStart: string;
   periodEnd: string;
   items: PricelistItem[];

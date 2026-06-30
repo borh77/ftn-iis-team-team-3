@@ -224,7 +224,7 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
         pricelist.validateThresholds();
         validateNoBlockingOverlapExcludingCurrent(pricelist);
         pricelist.setCreationCompleted(true);
-        pricelist.setCreationStep(PricelistCreationStep.COMPLETED);
+        pricelist.setCreationStep(PricelistCreationStep.REVIEW);
         pricelist.setStatus(PricelistStatus.IN_REVIEW);
         pricelist.setLastEditedAt(OffsetDateTime.now(ZoneOffset.UTC));
 

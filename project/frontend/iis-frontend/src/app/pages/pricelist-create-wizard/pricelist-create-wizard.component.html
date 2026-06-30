@@ -33,7 +33,7 @@
             [ngClass]="stepClass(stepIndex)"
             [attr.aria-current]="stepIndex === activeStepIndex ? 'step' : null"
             (click)="goToStep(stepIndex)"
-            [disabled]="wizardLoading || stepSaving || finishing || !canAccessStep(stepIndex)"
+            [disabled]="wizardLoading || saveAction !== null || !canAccessStep(stepIndex)"
             [title]="canAccessStep(stepIndex) ? step.label : 'Complete the previous step before continuing.'"
           >
             <span>{{ stepIndex + 1 }}</span>
@@ -118,7 +118,7 @@
       </section>
 
       <div class="wizard-actions">
-        <button type="button" class="ghost" (click)="goBack()" [disabled]="activeStepIndex === 0 || stepSaving || finishing">
+        <button type="button" class="ghost" (click)="goBack()" [disabled]="activeStepIndex === 0 || saveAction !== null">
           Back
         </button>
 
@@ -131,17 +131,17 @@
             {{ saveAction === 'next' ? 'Saving and continuing...' : 'Next' }}
           </button>
         } @else {
-          <button type="button" class="secondary" (click)="saveCurrentStep(false)" [disabled]="summaryLoading || finishing || stepSaving">
-            {{ saveAction === 'review' ? 'Refreshing...' : 'Refresh review' }}
+          <button type="button" class="secondary" (click)="saveCurrentStep(false)" [disabled]="summaryLoading || saveAction !== null">
+            {{ summaryLoading ? 'Refreshing...' : 'Refresh review' }}
           </button>
 
           <button
             type="button"
             class="primary"
             (click)="finish()"
-            [disabled]="finishing || summaryLoading || !summary || summary.readyToFinish === false"
+            [disabled]="submitDisabled()"
           >
-            {{ finishing ? 'Submitting...' : 'Submit for review' }}
+            {{ saveAction === 'submit' ? 'Submitting...' : 'Submit for review' }}
           </button>
         }
       </div>

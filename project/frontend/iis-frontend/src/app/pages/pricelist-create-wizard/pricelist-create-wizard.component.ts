@@ -42,7 +42,7 @@ interface WizardStepDefinition {
   description: string;
 }
 
-type SaveAction = 'draft' | 'next' | 'review' | null;
+type SaveAction = 'draft' | 'next' | 'submit' | null;
 
 @Component({
   selector: 'app-pricelist-create-wizard',
@@ -71,7 +71,6 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   private readonly transientMessages = inject(TransientMessageService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly ngZone = inject(NgZone);
-  private readonly debugWizard = true;
 
   readonly steps: WizardStepDefinition[] = [
     { id: 'BASIC_INFO', label: 'Basic information', description: 'Region, segment, currency, and validity dates' },
@@ -121,7 +120,6 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   starting = false;
   saveAction: SaveAction = null;
   summaryLoading = false;
-  finishing = false;
   loadError: string | null = null;
   errorMessage = '';
   successMessage = '';
@@ -142,7 +140,6 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     this.loadLookups();
     this.routeSubscription = this.route.paramMap.subscribe((params) => {
       const id = params.get('id');
-      this.logWizardDebug('route id received', id);
       if (id) {
         const wizardId = Number(id);
         if (!Number.isFinite(wizardId) || wizardId <= 0) {
@@ -191,7 +188,11 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   }
 
   get stepSaving(): boolean {
-    return this.saveAction === 'draft' || this.saveAction === 'next' || this.saveAction === 'review';
+    return this.saveAction === 'draft' || this.saveAction === 'next';
+  }
+
+  get submitting(): boolean {
+    return this.saveAction === 'submit';
   }
 
   retryLoad(): void {
@@ -215,7 +216,7 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   }
 
   goToStep(stepIndex: number): void {
-    if (stepIndex < 0 || stepIndex >= this.steps.length || this.wizardLoading || this.stepSaving || this.finishing) {
+    if (stepIndex < 0 || stepIndex >= this.steps.length || this.wizardLoading || this.saveAction) {
       return;
     }
     if (!this.canAccessStep(stepIndex)) {
@@ -228,7 +229,7 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   }
 
   saveCurrentStep(advance: boolean): void {
-    if (!this.wizardId || this.stepSaving || this.finishing) {
+    if (!this.wizardId || this.saveAction) {
       return;
     }
 
@@ -248,22 +249,21 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
         this.saveThresholds(advance);
         break;
       case 'REVIEW':
-        this.loadSummary(true, true);
+        this.loadSummary(true);
         break;
     }
   }
 
   finish(): void {
-    if (!this.wizardId || this.finishing || this.stepSaving) {
+    if (this.submitDisabled()) {
       return;
     }
-    if (!this.summary?.readyToFinish) {
-      this.showError('Review the validation messages before submitting for review.');
-      return;
-    }
-    this.finishing = true;
+    this.saveAction = 'submit';
     this.clearResultMessages();
-    this.wizardService.finishWizard(this.wizardId).pipe(finalize(() => (this.finishing = false))).subscribe({
+    this.wizardService.finishWizard(this.wizardId!).pipe(finalize(() => {
+      this.saveAction = null;
+      this.requestWizardRender();
+    })).subscribe({
       next: () => {
         this.router.navigate(['/content/mine'], {
           state: { successMessage: 'Pricelist was submitted for review.' },
@@ -391,7 +391,7 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   }
 
   stepActionDisabled(): boolean {
-    if (this.stepSaving || this.finishing || !this.canAccessStep(this.activeStepIndex)) {
+    if (this.saveAction || !this.canAccessStep(this.activeStepIndex)) {
       return true;
     }
 
@@ -407,6 +407,15 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
       default:
         return false;
     }
+  }
+
+  submitDisabled(): boolean {
+    return !this.wizardId
+      || this.activeStep.id !== 'REVIEW'
+      || this.summaryLoading
+      || !this.summary
+      || this.summary.readyToFinish !== true
+      || this.saveAction !== null;
   }
 
   private startWizard(): void {
@@ -449,7 +458,6 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     if (this.wizardReady && this.wizardId === id && this.state?.pricelistId === id) {
       return;
     }
-    this.logWizardDebug('getWizardState request started', id);
     this.wizardId = id;
     this.wizardLoading = true;
     this.wizardReady = false;
@@ -459,13 +467,10 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     this.requestWizardRender();
     this.wizardService.getWizardState(id).pipe(timeout(30000), finalize(() => {
       this.wizardLoading = false;
-      this.logWizardDebug('getWizardState finalize', this.wizardDebugState());
       this.requestWizardRender();
     })).subscribe({
       next: (response) => {
-        this.logWizardDebug('getWizardState response received', response);
         const state = this.normalizeWizardState(response) ?? this.createFallbackWizardState(id, response);
-        this.logWizardDebug('normalized wizard state', state);
         this.finishWizardLoad(state);
       },
       error: (error: HttpErrorResponse) => {
@@ -475,14 +480,12 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   }
 
   private applyState(state: PricelistWizardState, followBackendStep: boolean): void {
-    this.logWizardDebug('applyState start', state);
     this.state = state;
     this.wizardId = state.pricelistId ?? this.wizardId;
     this.populateForms(state);
     if (followBackendStep) {
       this.setActiveStep(this.resolveCreationStep(state), state.status);
     }
-    this.logWizardDebug('applyState completed', this.wizardDebugState());
   }
 
   private finishWizardLoad(state: PricelistWizardState): void {
@@ -501,7 +504,6 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
         this.loadError = 'Wizard data was loaded but could not be rendered.';
       } finally {
         this.starting = false;
-        this.logWizardDebug('finishWizardLoad completed', this.wizardDebugState());
         this.requestWizardRender();
       }
 
@@ -611,7 +613,10 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   private saveStep(request: Observable<PricelistWizardState>, advance: boolean): void {
     const startedFromIndex = this.activeStepIndex;
     this.saveAction = advance ? 'next' : 'draft';
-    request.pipe(finalize(() => (this.saveAction = null))).subscribe({
+    request.pipe(finalize(() => {
+      this.saveAction = null;
+      this.requestWizardRender();
+    })).subscribe({
       next: (state) => {
         this.showSuccess('Step saved.');
         this.applyState(state, false);
@@ -628,7 +633,7 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     });
   }
 
-  private loadSummary(force = false, userInitiated = false): void {
+  private loadSummary(force = false): void {
     if (!this.wizardId) {
       return;
     }
@@ -639,9 +644,6 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
       return;
     }
     const wizardId = this.wizardId;
-    if (userInitiated) {
-      this.saveAction = 'review';
-    }
     this.summaryLoading = true;
     this.summaryLoadingForWizardId = wizardId;
     this.summary = null;
@@ -650,9 +652,7 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
       finalize(() => {
         this.summaryLoading = false;
         this.summaryLoadingForWizardId = null;
-        if (this.saveAction === 'review') {
-          this.saveAction = null;
-        }
+        this.requestWizardRender();
       })
     ).subscribe({
       next: (summary) => {
@@ -1125,7 +1125,6 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     this.starting = false;
     this.wizardReady = false;
     this.loadError = message;
-    this.logWizardDebug('loadError set', this.wizardDebugState());
     this.requestWizardRender();
   }
 
@@ -1139,27 +1138,10 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
       try {
         this.cdr.markForCheck();
         this.cdr.detectChanges();
-      } catch (error) {
-        console.warn('Wizard change detection skipped.', error);
+      } catch {
+        // Change detection may be skipped after route changes destroy the view.
       }
     });
-  }
-
-  private logWizardDebug(message: string, value?: unknown): void {
-    if (!this.debugWizard) {
-      return;
-    }
-    console.debug(`[PricelistWizard] ${message}`, value ?? '');
-  }
-
-  private wizardDebugState(): Record<string, unknown> {
-    return {
-      wizardLoading: this.wizardLoading,
-      wizardReady: this.wizardReady,
-      loadError: this.loadError,
-      wizardId: this.wizardId,
-      activeStep: this.activeStep.id,
-    };
   }
 
   private addLookupWarning(message: string): void {

@@ -171,7 +171,7 @@ class PricelistWizardServiceImplTest {
         service.finishWizard(100L, 99L);
 
         assertTrue(draft.isCreationCompleted());
-        assertEquals(PricelistCreationStep.COMPLETED, draft.getCreationStep());
+        assertEquals(PricelistCreationStep.REVIEW, draft.getCreationStep());
         assertEquals(PricelistStatus.IN_REVIEW, draft.getStatus());
         verify(pricelistRepository).save(draft);
     }

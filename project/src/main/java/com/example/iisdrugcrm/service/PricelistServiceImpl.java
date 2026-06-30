@@ -542,8 +542,10 @@ public class PricelistServiceImpl implements PricelistService {
 
     private PricelistResponseDTO toResponse(Pricelist pricelist, Long currentUserId, boolean canCollaborate) {
         PricelistResponseDTO response = PricelistResponseDTO.fromEntity(pricelist, currentUserId, canCollaborate, activeVariantsFor(pricelist));
-        response.setCanActivate(pricelist.getStatus() == PricelistStatus.IN_REVIEW
-                && accessService.canActivateAsReviewer(pricelist, currentUserId));
+        boolean canReview = pricelist.getStatus() == PricelistStatus.IN_REVIEW
+                && accessService.canActivateAsReviewer(pricelist, currentUserId);
+        response.setCanActivate(canReview);
+        response.setCanReject(canReview);
         return response;
     }
 
