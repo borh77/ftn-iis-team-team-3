@@ -43,3 +43,47 @@ export interface ValidationResult {
   invalidItems: InvalidOrderItem[];
   replacements: ReplacementSuggestion[];
 }
+
+export interface ConfirmProcurementItem {
+  variantId: number;
+  requestedQuantity: number;
+  originalVariantId?: number | null;
+  originalVariantName?: string | null;
+  replacementAccepted: boolean;
+}
+
+export interface ConfirmProcurementRequest {
+  sourceFileName?: string | null;
+  items: ConfirmProcurementItem[];
+}
+
+export interface ProcurementOrderItem {
+  id: number;
+  originalVariantId?: number | null;
+  originalVariantName?: string | null;
+  variantId: number;
+  variantName: string;
+  requestedQuantity: number;
+  unitPrice: number;
+  discountType?: DiscountType | null;
+  discountValue?: number | null;
+  finalUnitPrice: number;
+  lineTotal: number;
+  replacementAccepted: boolean;
+}
+
+export interface ProcurementOrder {
+  id: number;
+  status: 'SUBMITTED' | 'CANCELLED' | 'FULFILLED';
+  buyerName?: string | null;
+  buyerUsername: string;
+  regionName?: string | null;
+  customerSegment: string;
+  pricelistId?: number | null;
+  sourceFileName?: string | null;
+  totalPrice: number;
+  currency?: string | null;
+  createdAt: string;
+  confirmedAt: string;
+  items: ProcurementOrderItem[];
+}

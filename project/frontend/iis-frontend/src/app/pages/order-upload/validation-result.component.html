@@ -181,8 +181,8 @@
 
   @if (result.valid || canShowConfirmStep) {
     <div class="confirm-row">
-      <button type="button" class="primary" disabled title="Purchase confirmation is planned for a later ticket">
-        Confirm procurement
+      <button type="button" class="primary" (click)="confirm()" [disabled]="confirming">
+        {{ confirming ? 'Confirming...' : 'Confirm procurement' }}
       </button>
     </div>
   }

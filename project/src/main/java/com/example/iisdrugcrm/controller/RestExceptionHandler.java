@@ -5,6 +5,7 @@ import com.example.iisdrugcrm.exception.DuplicateTeamException;
 import com.example.iisdrugcrm.exception.InvalidPricelistThresholdException;
 import com.example.iisdrugcrm.exception.InvalidPricelistStatusTransitionException;
 import com.example.iisdrugcrm.exception.InvalidCatalogReplacementException;
+import com.example.iisdrugcrm.exception.InvalidProcurementConfirmationException;
 import com.example.iisdrugcrm.exception.PricelistConflictException;
 import com.example.iisdrugcrm.exception.PricelistLockedException;
 import com.example.iisdrugcrm.exception.PricelistNotFoundException;
@@ -89,6 +90,11 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(PricelistSubmissionValidationException.class)
     public ResponseEntity<Map<String, String>> handlePricelistSubmissionValidation(PricelistSubmissionValidationException exception) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", exception.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidProcurementConfirmationException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidProcurementConfirmation(InvalidProcurementConfirmationException exception) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", exception.getMessage()));
     }
 

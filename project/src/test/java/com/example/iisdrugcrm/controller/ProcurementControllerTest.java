@@ -1,8 +1,12 @@
 package com.example.iisdrugcrm.controller;
 
 import com.example.iisdrugcrm.dto.order.ValidationResultDTO;
+import com.example.iisdrugcrm.dto.procurement.ConfirmProcurementRequestDTO;
+import com.example.iisdrugcrm.dto.procurement.ProcurementOrderResponseDTO;
 import com.example.iisdrugcrm.service.OrderValidationService;
+import com.example.iisdrugcrm.service.ProcurementOrderService;
 import java.lang.reflect.Method;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -17,7 +21,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -26,12 +32,14 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standal
 class ProcurementControllerTest {
 
     private OrderValidationService orderValidationService;
+    private ProcurementOrderService procurementOrderService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         orderValidationService = mock(OrderValidationService.class);
-        mockMvc = standaloneSetup(new ProcurementController(orderValidationService))
+        procurementOrderService = mock(ProcurementOrderService.class);
+        mockMvc = standaloneSetup(new ProcurementController(orderValidationService, procurementOrderService))
                 .setControllerAdvice(new RestExceptionHandler())
                 .build();
     }
@@ -86,5 +94,49 @@ class ProcurementControllerTest {
         PreAuthorize preAuthorize = method.getAnnotation(PreAuthorize.class);
 
         assertEquals("hasRole('BUYER')", preAuthorize.value());
+    }
+
+    @Test
+    void confirmOrderDelegatesToServiceWithAuthenticatedUsername() throws Exception {
+        ProcurementOrderResponseDTO response = new ProcurementOrderResponseDTO();
+        response.setId(15L);
+        when(procurementOrderService.confirm(eq("buyer"), any(ConfirmProcurementRequestDTO.class))).thenReturn(response);
+
+        mockMvc.perform(post("/api/procurement/orders")
+                        .principal(new TestingAuthenticationToken("buyer", null))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sourceFileName\":\"order.csv\",\"items\":[{\"variantId\":2,\"requestedQuantity\":10}]}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(15));
+
+        verify(procurementOrderService).confirm(eq("buyer"), any(ConfirmProcurementRequestDTO.class));
+    }
+
+    @Test
+    void listMyOrdersDelegatesToServiceWithAuthenticatedUsername() throws Exception {
+        ProcurementOrderResponseDTO response = new ProcurementOrderResponseDTO();
+        response.setId(15L);
+        when(procurementOrderService.listMine("buyer")).thenReturn(List.of(response));
+
+        mockMvc.perform(get("/api/procurement/orders")
+                        .principal(new TestingAuthenticationToken("buyer", null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(15));
+
+        verify(procurementOrderService).listMine("buyer");
+    }
+
+    @Test
+    void getMyOrderDelegatesToServiceWithAuthenticatedUsername() throws Exception {
+        ProcurementOrderResponseDTO response = new ProcurementOrderResponseDTO();
+        response.setId(15L);
+        when(procurementOrderService.getMine("buyer", 15L)).thenReturn(response);
+
+        mockMvc.perform(get("/api/procurement/orders/15")
+                        .principal(new TestingAuthenticationToken("buyer", null)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(15));
+
+        verify(procurementOrderService).getMine("buyer", 15L);
     }
 }

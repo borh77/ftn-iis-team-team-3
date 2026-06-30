@@ -67,13 +67,15 @@ class OrderValidationServiceImplTest {
     private OrderDocumentParser parser;
 
     private OrderValidationServiceImpl service;
+    private ProcurementPricingService pricingService;
     private MockMultipartFile file;
     private User buyer;
     private Pricelist pricelist;
 
     @BeforeEach
     void setUp() throws Exception {
-        service = new OrderValidationServiceImpl(userRepository, pricelistRepository, specialOfferRepository, catalogService, parserResolver);
+        pricingService = new ProcurementPricingService(specialOfferRepository);
+        service = new OrderValidationServiceImpl(userRepository, pricelistRepository, catalogService, parserResolver, pricingService);
         file = new MockMultipartFile("file", "order.csv", "text/csv", "variantId,requestedQuantity\n".getBytes());
         Region region = region(1L, "Srbija", "RS");
         buyer = buyer("buyer", region, "Pharmacy chains");

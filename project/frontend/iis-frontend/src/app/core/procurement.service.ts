@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from './api.token';
-import { ValidationResult } from './procurement.models';
+import { ConfirmProcurementRequest, ProcurementOrder, ValidationResult } from './procurement.models';
 
 @Injectable({ providedIn: 'root' })
 export class ProcurementService {
@@ -14,5 +14,9 @@ export class ProcurementService {
     formData.append('file', file);
 
     return this.http.post<ValidationResult>(`${this.apiBaseUrl}/api/procurement/validation`, formData);
+  }
+
+  confirmOrder(request: ConfirmProcurementRequest): Observable<ProcurementOrder> {
+    return this.http.post<ProcurementOrder>(`${this.apiBaseUrl}/api/procurement/orders`, request);
   }
 }

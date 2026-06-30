@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
-import { ReplacementSuggestion, ValidationResult } from '../../core/procurement.models';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { ConfirmProcurementItem, ReplacementSuggestion, ValidationResult } from '../../core/procurement.models';
 
 @Component({
   selector: 'app-validation-result',
@@ -11,6 +11,8 @@ import { ReplacementSuggestion, ValidationResult } from '../../core/procurement.
 })
 export class ValidationResultComponent {
   @Input({ required: true }) result!: ValidationResult;
+  @Input() confirming = false;
+  @Output() confirmProcurement = new EventEmitter<ConfirmProcurementItem[]>();
 
   private readonly acceptedReplacementsSet = new Set<ReplacementSuggestion>();
 
@@ -34,4 +36,23 @@ export class ValidationResultComponent {
     return this.result.invalidItems.length === 0 && !this.hasPendingReplacements;
   }
 
+  confirm(): void {
+    if (!this.canShowConfirmStep || this.confirming) {
+      return;
+    }
+    this.confirmProcurement.emit([
+      ...this.result.validatedItems.map((item) => ({
+        variantId: item.variantId,
+        requestedQuantity: item.requestedQuantity,
+        replacementAccepted: false,
+      })),
+      ...this.acceptedReplacements.map((replacement) => ({
+        variantId: replacement.newVariantId,
+        requestedQuantity: replacement.requestedQuantity,
+        originalVariantId: replacement.oldVariantId,
+        originalVariantName: replacement.oldVariantName,
+        replacementAccepted: true,
+      })),
+    ]);
+  }
 }

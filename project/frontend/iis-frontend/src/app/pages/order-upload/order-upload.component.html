@@ -54,6 +54,10 @@
     <div class="error-box" role="alert">{{ errorMessage }}</div>
   }
 
+  @if (successMessage) {
+    <div class="success-box" role="status">{{ successMessage }}</div>
+  }
+
   <div class="action-row">
     <button type="button" class="primary" (click)="validateSelectedFile()" [disabled]="loading || !selectedFile">
       {{ loading ? 'Validating...' : 'Validate document' }}
@@ -65,6 +69,10 @@
   }
 
   @if (!loading && result) {
-    <app-validation-result [result]="result" />
+    <app-validation-result
+      [result]="result"
+      [confirming]="confirming"
+      (confirmProcurement)="confirmProcurement($event)"
+    />
   }
 </section>

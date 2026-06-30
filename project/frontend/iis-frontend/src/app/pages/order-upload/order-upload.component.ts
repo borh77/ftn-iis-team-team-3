@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, ElementRef, OnDestroy, ViewChild, inject } from '@angular/core';
 import { finalize, take } from 'rxjs';
 import { ProcurementService } from '../../core/procurement.service';
-import { ValidationResult } from '../../core/procurement.models';
+import { ConfirmProcurementItem, ValidationResult } from '../../core/procurement.models';
 import { ERROR_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 import { ValidationResultComponent } from './validation-result.component';
 
@@ -24,7 +24,9 @@ export class OrderUploadComponent implements OnDestroy {
   selectedFile: File | null = null;
   result: ValidationResult | null = null;
   loading = false;
+  confirming = false;
   errorMessage = '';
+  successMessage = '';
   dragActive = false;
 
   ngOnDestroy(): void {
@@ -70,7 +72,7 @@ export class OrderUploadComponent implements OnDestroy {
     }
 
     this.loading = true;
-    this.clearError();
+    this.clearMessages();
     this.result = null;
 
     this.procurementService.validateOrderDocument(this.selectedFile)
@@ -98,16 +100,48 @@ export class OrderUploadComponent implements OnDestroy {
   clearSelection(): void {
     this.selectedFile = null;
     this.result = null;
-    this.clearError();
+    this.clearMessages();
     if (this.fileInput?.nativeElement) {
       this.fileInput.nativeElement.value = '';
     }
   }
 
+  confirmProcurement(items: ConfirmProcurementItem[]): void {
+    if (!items.length) {
+      this.showError('Procurement cannot be confirmed because it contains invalid items.');
+      return;
+    }
+
+    this.confirming = true;
+    this.clearMessages();
+    this.procurementService.confirmOrder({
+      sourceFileName: this.selectedFile?.name ?? null,
+      items,
+    })
+      .pipe(
+        take(1),
+        finalize(() => {
+          this.confirming = false;
+          this.cdr.detectChanges();
+        }),
+      )
+      .subscribe({
+        next: (order) => {
+          this.result = null;
+          this.showSuccess(`Procurement order #${order.id} was submitted.`);
+          this.cdr.detectChanges();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.showError(this.createErrorMessage(error));
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
   private setSelectedFile(file: File | null): void {
     this.selectedFile = file;
     this.result = null;
-    this.clearError();
+    this.clearMessages();
 
     if (file && !this.isSupportedFile(file)) {
       this.showError('Only CSV files are supported for procurement validation.');
@@ -143,7 +177,20 @@ export class OrderUploadComponent implements OnDestroy {
     this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
   }
 
+  private showSuccess(message: string): void {
+    this.transientMessages.setField(this, 'successMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
   private clearError(): void {
     this.transientMessages.clearField(this, 'errorMessage', () => this.cdr.detectChanges());
+  }
+
+  private clearSuccess(): void {
+    this.transientMessages.clearField(this, 'successMessage', () => this.cdr.detectChanges());
+  }
+
+  private clearMessages(): void {
+    this.clearError();
+    this.clearSuccess();
   }
 }

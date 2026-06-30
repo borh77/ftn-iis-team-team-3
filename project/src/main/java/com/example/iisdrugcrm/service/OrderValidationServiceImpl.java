@@ -15,16 +15,13 @@ import com.example.iisdrugcrm.dto.order.ValidatedOrderItemDTO;
 import com.example.iisdrugcrm.dto.order.ValidationResultDTO;
 import com.example.iisdrugcrm.dto.pricelist.CatalogVariantDTO;
 import com.example.iisdrugcrm.repository.PricelistRepository;
-import com.example.iisdrugcrm.repository.SpecialOfferRepository;
 import com.example.iisdrugcrm.repository.UserRepository;
 import com.example.iisdrugcrm.service.order.OrderDocumentParser;
 import com.example.iisdrugcrm.service.order.OrderDocumentParserResolver;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -42,22 +39,22 @@ public class OrderValidationServiceImpl implements OrderValidationService {
 
     private final UserRepository userRepository;
     private final PricelistRepository pricelistRepository;
-    private final SpecialOfferRepository specialOfferRepository;
     private final CatalogService catalogService;
     private final OrderDocumentParserResolver parserResolver;
+    private final ProcurementPricingService pricingService;
 
     public OrderValidationServiceImpl(
             UserRepository userRepository,
             PricelistRepository pricelistRepository,
-            SpecialOfferRepository specialOfferRepository,
             CatalogService catalogService,
-            OrderDocumentParserResolver parserResolver
+            OrderDocumentParserResolver parserResolver,
+            ProcurementPricingService pricingService
     ) {
         this.userRepository = userRepository;
         this.pricelistRepository = pricelistRepository;
-        this.specialOfferRepository = specialOfferRepository;
         this.catalogService = catalogService;
         this.parserResolver = parserResolver;
+        this.pricingService = pricingService;
     }
 
     @Override
@@ -96,10 +93,7 @@ public class OrderValidationServiceImpl implements OrderValidationService {
             Map<Long, CatalogVariantDTO> replacementVariants = catalogService.findVariantsByIdsIncludingInactive(replacementVariantIds);
             catalogVariants.putAll(replacementVariants);
         }
-        Map<Long, SpecialOffer> activeOffersByVariantId = specialOfferRepository
-                .findActiveOffersForPricelist(pricelist.getId(), now)
-                .stream()
-                .collect(Collectors.toMap(SpecialOffer::getVariantId, Function.identity(), (first, ignored) -> first));
+        Map<Long, SpecialOffer> activeOffersByVariantId = pricingService.activeOffersByVariantId(pricelist.getId(), now);
 
         BigDecimal totalPrice = BigDecimal.ZERO;
 
@@ -142,7 +136,7 @@ public class OrderValidationServiceImpl implements OrderValidationService {
             }
 
             PricelistItem pricelistItem = pricelistItemsByVariantId.get(orderItem.getVariantId());
-            QuantityThreshold threshold = findMatchingThreshold(pricelistItem, orderItem.getRequestedQuantity());
+            QuantityThreshold threshold = pricingService.findMatchingThreshold(pricelistItem, orderItem.getRequestedQuantity());
             if (threshold == null) {
                 result.getInvalidItems().add(new InvalidOrderItemDTO(
                         orderItem.getVariantId(),
@@ -162,7 +156,7 @@ public class OrderValidationServiceImpl implements OrderValidationService {
             totalPrice = totalPrice.add(validItem.getLineTotal());
         }
 
-        result.setTotalPrice(scaleMoney(totalPrice));
+        result.setTotalPrice(pricingService.scaleMoney(totalPrice));
         result.setValid(result.getInvalidItems().isEmpty() && result.getReplacements().isEmpty());
         return result;
     }
@@ -320,7 +314,7 @@ public class OrderValidationServiceImpl implements OrderValidationService {
             ));
         }
 
-        QuantityThreshold threshold = findMatchingThreshold(replacementItem, orderItem.getRequestedQuantity());
+        QuantityThreshold threshold = pricingService.findMatchingThreshold(replacementItem, orderItem.getRequestedQuantity());
         if (threshold == null) {
             return ReplacementResolution.invalid(new InvalidOrderItemDTO(
                     orderItem.getVariantId(),
@@ -343,24 +337,15 @@ public class OrderValidationServiceImpl implements OrderValidationService {
         ));
     }
 
-    private QuantityThreshold findMatchingThreshold(PricelistItem item, Integer requestedQuantity) {
-        return item.getThresholds().stream()
-                .sorted(Comparator.comparing(QuantityThreshold::getQuantityFrom))
-                .filter(threshold -> threshold.getQuantityFrom() <= requestedQuantity)
-                .filter(threshold -> threshold.getQuantityTo() == null || requestedQuantity <= threshold.getQuantityTo())
-                .findFirst()
-                .orElse(null);
-    }
-
     private ValidatedOrderItemDTO buildValidItem(
             OrderDocumentItemDTO orderItem,
             PricelistItem pricelistItem,
             QuantityThreshold threshold,
             SpecialOffer activeOffer
     ) {
-        BigDecimal unitPrice = scaleMoney(threshold.getPrice());
-        BigDecimal finalUnitPrice = applyDiscount(unitPrice, activeOffer);
-        BigDecimal lineTotal = scaleMoney(finalUnitPrice.multiply(BigDecimal.valueOf(orderItem.getRequestedQuantity())));
+        BigDecimal unitPrice = pricingService.scaleMoney(threshold.getPrice());
+        BigDecimal finalUnitPrice = pricingService.applyDiscount(unitPrice, activeOffer);
+        BigDecimal lineTotal = pricingService.scaleMoney(finalUnitPrice.multiply(BigDecimal.valueOf(orderItem.getRequestedQuantity())));
 
         ValidatedOrderItemDTO dto = new ValidatedOrderItemDTO();
         dto.setVariantId(orderItem.getVariantId());
@@ -369,7 +354,7 @@ public class OrderValidationServiceImpl implements OrderValidationService {
         dto.setUnitPrice(unitPrice);
         if (activeOffer != null) {
             dto.setDiscountType(activeOffer.getDiscountType());
-            dto.setDiscountValue(scaleMoney(activeOffer.getDiscountValue()));
+            dto.setDiscountValue(pricingService.scaleMoney(activeOffer.getDiscountValue()));
         }
         dto.setFinalUnitPrice(finalUnitPrice);
         dto.setLineTotal(lineTotal);
@@ -383,9 +368,9 @@ public class OrderValidationServiceImpl implements OrderValidationService {
             QuantityThreshold threshold,
             SpecialOffer activeOffer
     ) {
-        BigDecimal currentUnitPrice = scaleMoney(threshold.getPrice());
-        BigDecimal finalUnitPrice = applyDiscount(currentUnitPrice, activeOffer);
-        BigDecimal lineTotal = scaleMoney(finalUnitPrice.multiply(BigDecimal.valueOf(orderItem.getRequestedQuantity())));
+        BigDecimal currentUnitPrice = pricingService.scaleMoney(threshold.getPrice());
+        BigDecimal finalUnitPrice = pricingService.applyDiscount(currentUnitPrice, activeOffer);
+        BigDecimal lineTotal = pricingService.scaleMoney(finalUnitPrice.multiply(BigDecimal.valueOf(orderItem.getRequestedQuantity())));
 
         ReplacementSuggestionDTO dto = new ReplacementSuggestionDTO();
         dto.setOldVariantId(orderItem.getVariantId());
@@ -396,32 +381,14 @@ public class OrderValidationServiceImpl implements OrderValidationService {
         dto.setCurrentUnitPrice(currentUnitPrice);
         if (activeOffer != null) {
             if (activeOffer.getDiscountType() == DiscountType.PERCENTAGE) {
-                dto.setDiscountPercentage(scaleMoney(activeOffer.getDiscountValue()));
+                dto.setDiscountPercentage(pricingService.scaleMoney(activeOffer.getDiscountValue()));
             }
-            dto.setDiscountAmount(scaleMoney(currentUnitPrice.subtract(finalUnitPrice)));
+            dto.setDiscountAmount(pricingService.scaleMoney(currentUnitPrice.subtract(finalUnitPrice)));
         }
         dto.setFinalUnitPrice(finalUnitPrice);
         dto.setLineTotal(lineTotal);
         dto.setMessage("Requested medicine is discontinued. Suggested replacement is priced from the active pricelist.");
         return dto;
-    }
-
-    private BigDecimal applyDiscount(BigDecimal unitPrice, SpecialOffer offer) {
-        if (offer == null) {
-            return unitPrice;
-        }
-        BigDecimal discounted;
-        if (offer.getDiscountType() == DiscountType.PERCENTAGE) {
-            BigDecimal discount = unitPrice.multiply(offer.getDiscountValue()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-            discounted = unitPrice.subtract(discount);
-        } else {
-            discounted = unitPrice.subtract(offer.getDiscountValue());
-        }
-        return scaleMoney(discounted.max(BigDecimal.ZERO));
-    }
-
-    private BigDecimal scaleMoney(BigDecimal value) {
-        return value.setScale(2, RoundingMode.HALF_UP);
     }
 
     private InvalidOrderItemDTO invalidItem(OrderDocumentItemDTO item, String errorCode, String message) {
