@@ -1,6 +1,7 @@
 package com.example.iisdrugcrm.domain.pricelist;
 
 import com.example.iisdrugcrm.domain.PricelistStatus;
+import com.example.iisdrugcrm.domain.PricelistTeam;
 import com.example.iisdrugcrm.domain.Region;
 import com.example.iisdrugcrm.exception.InvalidPricelistStatusTransitionException;
 import jakarta.persistence.Column;
@@ -63,6 +64,20 @@ public class Pricelist {
 
     @Column(name = "root_pricelist_id")
     private Long rootPricelistId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "creation_step", nullable = false, length = 32)
+    private PricelistCreationStep creationStep = PricelistCreationStep.COMPLETED;
+
+    @Column(name = "creation_completed", nullable = false)
+    private boolean creationCompleted = true;
+
+    @Column(name = "last_edited_at")
+    private OffsetDateTime lastEditedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id")
+    private PricelistTeam team;
 
     public Pricelist() {
     }
@@ -157,6 +172,38 @@ public class Pricelist {
 
     public void setRootPricelistId(Long rootPricelistId) {
         this.rootPricelistId = rootPricelistId;
+    }
+
+    public PricelistCreationStep getCreationStep() {
+        return creationStep;
+    }
+
+    public void setCreationStep(PricelistCreationStep creationStep) {
+        this.creationStep = creationStep;
+    }
+
+    public boolean isCreationCompleted() {
+        return creationCompleted;
+    }
+
+    public void setCreationCompleted(boolean creationCompleted) {
+        this.creationCompleted = creationCompleted;
+    }
+
+    public OffsetDateTime getLastEditedAt() {
+        return lastEditedAt;
+    }
+
+    public void setLastEditedAt(OffsetDateTime lastEditedAt) {
+        this.lastEditedAt = lastEditedAt;
+    }
+
+    public PricelistTeam getTeam() {
+        return team;
+    }
+
+    public void setTeam(PricelistTeam team) {
+        this.team = team;
     }
 
     public void setItems(List<PricelistItem> items) {

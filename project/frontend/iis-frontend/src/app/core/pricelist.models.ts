@@ -11,6 +11,9 @@ export interface PricelistItem {
   activeVariant: boolean;
   replacementRequired: boolean;
   catalogAvailable: boolean;
+  replacementVariantId?: number | null;
+  replacementVariantName?: string | null;
+  replacementAvailable?: boolean;
   thresholds: QuantityThreshold[];
 }
 
@@ -21,13 +24,23 @@ export interface Pricelist {
   customerSegment: string;
   currency: string;
   status: 'DRAFT' | 'IN_REVIEW' | 'ACTIVE' | 'ARCHIVED';
+  createdBy?: number | null;
+  creationStep?: PricelistCreationStep | null;
+  creationCompleted?: boolean;
+  lastEditedAt?: string | null;
+  teamId?: number | null;
+  teamName?: string | null;
   versionNumber: number;
   parentPricelistId: number | null;
   rootPricelistId: number | null;
   canCreateNewVersion: boolean;
   owner: boolean;
   canCollaborate: boolean;
+  canEditDraft?: boolean;
+  canSubmitForReview?: boolean;
   canManageOffers: boolean;
+  canActivate?: boolean;
+  canReject?: boolean;
   periodStart: string;
   periodEnd: string;
   items: PricelistItem[];
@@ -49,4 +62,62 @@ export interface ChangePricelistStatusPayload {
 
 export interface CreatePricelistErrorResponse {
   error?: string;
+}
+
+export type PricelistCreationStep =
+  | 'BASIC_INFO'
+  | 'TEAM_ACCESS'
+  | 'ITEMS'
+  | 'THRESHOLDS'
+  | 'REVIEW'
+  | 'COMPLETED';
+
+export interface PricelistWizardState {
+  pricelistId: number;
+  currentStep?: PricelistCreationStep | null;
+  creationStep: PricelistCreationStep;
+  creationCompleted: boolean;
+  status: Pricelist['status'];
+  teamId: number | null;
+  teamName: string | null;
+  lastEditedAt: string | null;
+  pricelist: Pricelist | null;
+}
+
+export interface StartPricelistWizardResponse {
+  pricelistId: number;
+  state: PricelistWizardState;
+}
+
+export interface SaveBasicInfoStepRequest {
+  regionId: number;
+  customerSegment: string;
+  currency: string;
+  periodStart: string;
+  periodEnd: string;
+}
+
+export interface SaveTeamAccessStepRequest {
+  teamId: number | null;
+}
+
+export interface SaveItemsStepRequest {
+  items: Array<{
+    variantId: number;
+    variantName: string;
+  }>;
+}
+
+export interface SaveThresholdsStepRequest {
+  items: Array<{
+    variantId: number;
+    thresholds: QuantityThreshold[];
+  }>;
+}
+
+export interface PricelistWizardSummary {
+  pricelistId: number;
+  readyToFinish: boolean;
+  validationMessages: string[];
+  pricelist: Pricelist | null;
 }

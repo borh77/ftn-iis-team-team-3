@@ -13,24 +13,24 @@ import java.util.List;
 
 public interface AdverseEffectReportService {
 
-    // US-01: Lekar kreira nalog
+    // US-01: Doctor creates a report
     AdverseEffectReportResponseDTO createDoctorReport(CreateDoctorReportRequestDTO dto, String username);
 
-    // US-02: Pacijent kreira nalog
+    // US-02: Patient creates a report
     AdverseEffectReportResponseDTO createPatientReport(CreatePatientReportRequestDTO dto, String username);
 
-    // US-03: Lekar vidi svoje naloge
+    // US-03: Doctor sees their reports
     List<AdverseEffectReportResponseDTO> getMyReports(String username);
 
-    // US-03: Editovanje naloga (samo dok je SUBMITTED)
+    // US-03: Report editing only while SUBMITTED
     AdverseEffectReportResponseDTO updateDoctorReport(Long id, UpdateDoctorReportRequestDTO dto, String username);
 
-    // US-04: Farmakovigilant vidi sve naloge
+    // US-04: Pharmacovigilance user sees all reports
     List<AdverseEffectReportResponseDTO> getAllReports();
 
     List<AdverseEffectReportResponseDTO> getAllReportsFiltered(String status, String medicationName, String severity);
 
-    // US-03: Detalji jednog naloga
+    // US-03: Single report details
     AdverseEffectReportResponseDTO getReportById(Long id);
 
     AdverseEffectReportResponseDTO changeStatus(Long reportId, ChangeStatusRequestDTO dto, String currentUsername);

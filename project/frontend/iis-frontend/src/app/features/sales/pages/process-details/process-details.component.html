@@ -1,4 +1,8 @@
 <main class="page">
+  <div *ngIf="errorMessage" class="error-box" role="alert">
+    {{ errorMessage }}
+  </div>
+
   <div *ngIf="loading" class="loading">Loading process details...</div>
 
   <ng-container *ngIf="!loading && process">
@@ -309,8 +313,8 @@
                 Cancel
                 </button>
 
-                <button type="submit" class="primary-button">
-                Create
+                <button type="submit" class="primary-button" [disabled]="savingCommunication">
+                {{ savingCommunication ? 'Saving...' : 'Save Communication' }}
                 </button>
             </div>
         </form>

@@ -1,12 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Region } from '../../core/region.model';
 import { RegionService } from '../../core/region.service';
 
 @Component({
   selector: 'app-region-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './region-list.component.html',
   styleUrl: './region-list.component.css',
 })
@@ -20,6 +21,7 @@ export class RegionListComponent implements OnInit, OnChanges {
 
   loading = false;
   items: Region[] = [];
+  searchQuery = '';
 
   ngOnInit(): void {
     this.reload();
@@ -45,5 +47,17 @@ export class RegionListComponent implements OnInit, OnChanges {
         this.cdr.detectChanges();
       },
     });
+  }
+
+  filteredRegions(): Region[] {
+    const query = this.searchQuery.trim().toLowerCase();
+
+    if (!query) {
+      return this.items;
+    }
+
+    return this.items.filter((region) =>
+      `${region.id} ${region.name} ${region.code}`.toLowerCase().includes(query),
+    );
   }
 }

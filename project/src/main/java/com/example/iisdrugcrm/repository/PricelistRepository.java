@@ -20,6 +20,8 @@ public interface PricelistRepository extends JpaRepository<Pricelist, Long> {
 
     List<Pricelist> findAllByCreatedByOrderByIdDesc(Long createdBy);
 
+    List<Pricelist> findAllByCreatedByAndCreationCompletedFalseOrderByLastEditedAtDescIdDesc(Long createdBy);
+
     List<Pricelist> findAllByCreatedByInOrderByIdDesc(Collection<Long> createdBy);
 
     List<Pricelist> findAllByRootPricelistIdOrderByVersionNumberDesc(Long rootPricelistId);
@@ -102,5 +104,43 @@ public interface PricelistRepository extends JpaRepository<Pricelist, Long> {
             @Param("regionId") Long regionId,
             @Param("customerSegment") String customerSegment,
             @Param("now") OffsetDateTime now
+    );
+
+    @EntityGraph(attributePaths = {"region", "items"})
+    @Query("""
+            select p
+            from Pricelist p
+            where p.status = com.example.iisdrugcrm.domain.PricelistStatus.ACTIVE
+              and lower(p.customerSegment) = lower(:customerSegment)
+              and p.periodStart <= :now
+              and p.periodEnd >= :now
+            order by p.periodStart desc, p.id desc
+            """)
+    List<Pricelist> findActivePricelistsByCustomerSegment(
+            @Param("customerSegment") String customerSegment,
+            @Param("now") OffsetDateTime now
+    );
+
+    @Query("""
+            select count(distinct p.id)
+            from Pricelist p
+            where p.status = :status
+              and (
+                  :teamId is null
+                  or p.team.id = :teamId
+                  or (
+                      p.team is null
+                      and exists (
+                          select 1
+                          from PricelistActivityLog log
+                          where log.pricelistId = p.id
+                            and log.teamId = :teamId
+                      )
+                  )
+              )
+            """)
+    Long countByStatusAndOptionalTeamId(
+            @Param("status") PricelistStatus status,
+            @Param("teamId") Long teamId
     );
 }

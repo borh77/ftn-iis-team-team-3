@@ -1,9 +1,16 @@
 package com.example.iisdrugcrm.service;
 
+import com.example.iisdrugcrm.domain.PricelistStatus;
 import com.example.iisdrugcrm.domain.pricelist.PricelistActivityLog;
+import com.example.iisdrugcrm.dto.pricelist.MonthlyPerformancePointDTO;
 import com.example.iisdrugcrm.dto.pricelist.PricelistActivityLogResponseDTO;
+import com.example.iisdrugcrm.dto.pricelist.TeamPerformanceReportDTO;
 import com.example.iisdrugcrm.repository.PricelistActivityLogRepository;
+import com.example.iisdrugcrm.repository.PricelistRepository;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -16,9 +23,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class PricelistActivityLogServiceImpl implements PricelistActivityLogService {
 
     private final PricelistActivityLogRepository repository;
+    private final PricelistRepository pricelistRepository;
 
-    public PricelistActivityLogServiceImpl(PricelistActivityLogRepository repository) {
+    public PricelistActivityLogServiceImpl(PricelistActivityLogRepository repository, PricelistRepository pricelistRepository) {
         this.repository = repository;
+        this.pricelistRepository = pricelistRepository;
     }
 
     @Override
@@ -27,6 +36,52 @@ public class PricelistActivityLogServiceImpl implements PricelistActivityLogServ
         Pageable effectivePageable = defaultSortIfUnsorted(pageable);
         return repository.findAll(filter(teamId, userId, from, to), effectivePageable)
                 .map(PricelistActivityLogResponseDTO::fromEntity);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TeamPerformanceReportDTO getPerformanceReport(Long teamId, OffsetDateTime start, OffsetDateTime end) {
+        if (start == null || end == null) {
+            throw new IllegalArgumentException("Start and end timestamps are required.");
+        }
+        if (start.isAfter(end)) {
+            throw new IllegalArgumentException("Start timestamp must be before or equal to end timestamp.");
+        }
+
+        OffsetDateTime normalizedStart = start.withOffsetSameInstant(ZoneOffset.UTC);
+        OffsetDateTime normalizedEnd = end.withOffsetSameInstant(ZoneOffset.UTC);
+        PricelistActivityLogRepository.PerformanceSummaryProjection summary =
+                repository.findPerformanceSummary(teamId, normalizedStart, normalizedEnd);
+
+        TeamPerformanceReportDTO report = new TeamPerformanceReportDTO();
+        report.setTeamId(teamId);
+        report.setPeriodStart(normalizedStart);
+        report.setPeriodEnd(normalizedEnd);
+        report.setActivatedPricelistsCount(nullSafe(summary.getActivatedPricelistsCount()));
+        report.setAverageTotalProcessingTimeHours(nullSafe(summary.getAverageTotalProcessingTimeHours()));
+        report.setAverageReviewTimeHours(nullSafe(summary.getAverageReviewTimeHours()));
+        report.setStuckDraftCount(nullSafe(pricelistRepository.countByStatusAndOptionalTeamId(PricelistStatus.DRAFT, teamId)));
+        report.setStuckInReviewCount(nullSafe(pricelistRepository.countByStatusAndOptionalTeamId(PricelistStatus.IN_REVIEW, teamId)));
+        report.setMonthlyTrend(monthlyTrend(teamId, normalizedStart, normalizedEnd));
+        return report;
+    }
+
+    private List<MonthlyPerformancePointDTO> monthlyTrend(Long teamId, OffsetDateTime start, OffsetDateTime end) {
+        return repository.findMonthlyPerformanceTrend(teamId, start, end).stream()
+                .map(point -> new MonthlyPerformancePointDTO(
+                        point.getMonth(),
+                        nullSafe(point.getAverageTotalProcessingTimeHours()),
+                        nullSafe(point.getActivatedPricelistsCount())
+                ))
+                .toList();
+    }
+
+    private BigDecimal nullSafe(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private Long nullSafe(Long value) {
+        return value == null ? 0L : value;
     }
 
     private Pageable defaultSortIfUnsorted(Pageable pageable) {

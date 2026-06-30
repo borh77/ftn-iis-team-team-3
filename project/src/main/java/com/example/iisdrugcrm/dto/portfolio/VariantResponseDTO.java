@@ -14,6 +14,8 @@ public class VariantResponseDTO {
     private String dosage;
 
     private EntityStatus status;
+    private Long replacementVariantId;
+    private String replacementVariantName;
 
     public static VariantResponseDTO fromEntity(Variant variant) {
         VariantResponseDTO dto = new VariantResponseDTO();
@@ -26,6 +28,12 @@ public class VariantResponseDTO {
         dto.dosage = variant.getDosage();
 
         dto.status = variant.getStatus();
+        if (variant.getReplacementVariant() != null) {
+            dto.replacementVariantId = variant.getReplacementVariant().getId();
+            dto.replacementVariantName = variant.getReplacementVariant().getProduct().getName()
+                    + " " + variant.getReplacementVariant().getForm()
+                    + " " + variant.getReplacementVariant().getDosage();
+        }
         return dto;
     }
 
@@ -51,5 +59,13 @@ public class VariantResponseDTO {
 
     public EntityStatus getStatus() {
         return status;
+    }
+
+    public Long getReplacementVariantId() {
+        return replacementVariantId;
+    }
+
+    public String getReplacementVariantName() {
+        return replacementVariantName;
     }
 }

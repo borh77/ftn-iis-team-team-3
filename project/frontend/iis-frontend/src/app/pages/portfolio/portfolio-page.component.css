@@ -147,3 +147,28 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+.actions-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.actions-cell button {
+  padding: 0.45rem 0.7rem;
+  font-size: 0.82rem;
+}
+
+.sub-panel {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: rgba(15, 23, 42, 0.03);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.sub-panel h4 {
+  margin: 0 0 0.25rem;
+}

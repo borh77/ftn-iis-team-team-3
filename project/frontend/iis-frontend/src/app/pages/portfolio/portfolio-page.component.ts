@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { PortfolioService } from '../../core/portfolio/portfolio.service';
 import {
   IngredientResponse,
@@ -9,26 +9,42 @@ import {
   VariantVersionIngredientsResponse,
   SubcategoryResponse,
   TherapeuticAreaResponse,
+  MarketProductResponse,
+  MarketLicenseResponse,
+  MarketLicenseStatus,
+  MarketLicenseHistoryResponse,
+  VariantVersionLifecycleHistoryResponse,
+  VariantVersionStatusCountResponse,
+  ProductCountByTherapeuticAreaResponse,
+  RegionResponse,
+  MarketLicenseStatusCountResponse,
+  MarketProductCountByRegionResponse,
 } from '../../core/portfolio/portfolio.models';
+import { ERROR_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 
 type PortfolioTab =
   | 'products'
   | 'variants'
   | 'versions'
   | 'ingredients'
-  | 'bom';
+  | 'bom'
+  | 'market-products'
+  | 'market-licenses'
+  | 'lifecycle'
+  | 'analytics';
 
 @Component({
   selector: 'app-portfolio-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './portfolio-page.component.html',
   styleUrl: './portfolio-page.component.css',
 })
-export class PortfolioPageComponent implements OnInit {
+export class PortfolioPageComponent implements OnInit, OnDestroy {
   private readonly portfolioService = inject(PortfolioService);
+  private readonly transientMessages = inject(TransientMessageService);
 
     readonly activeTab = signal<PortfolioTab>('products');
 
@@ -47,12 +63,43 @@ export class PortfolioPageComponent implements OnInit {
     readonly subcategories = signal<SubcategoryResponse[]>([]);
     readonly therapeuticAreas = signal<TherapeuticAreaResponse[]>([]);
 
+
+    readonly marketProducts = signal<MarketProductResponse[]>([]);
+    readonly marketLicenses = signal<MarketLicenseResponse[]>([]);
+    readonly marketLicenseHistory = signal<MarketLicenseHistoryResponse[]>([]);
+    readonly variantLifecycleHistory = signal<VariantVersionLifecycleHistoryResponse[]>([]);
+    readonly versionStatusCounts = signal<VariantVersionStatusCountResponse[]>([]);
+    readonly productsByTherapeuticArea = signal<ProductCountByTherapeuticAreaResponse[]>([]);
+    readonly expiringLicenses = signal<MarketLicenseResponse[]>([]);
+    readonly regions = signal<RegionResponse[]>([]);
+
+    readonly versionHistory = signal<VariantVersionLifecycleHistoryResponse[]>([]);
+    readonly loadingVersionHistory = signal(false);
+    readonly selectedVersionId = signal(0);
+
+    readonly loadingMarketProducts = signal(false);
+    readonly loadingMarketLicenses = signal(false);
+    readonly loadingMarketLicenseHistory = signal(false);
+    readonly loadingVariantLifecycleHistory = signal(false);
+    readonly loadingAnalytics = signal(false);
+
+    readonly marketLicenseStatusCounts = signal<MarketLicenseStatusCountResponse[]>([]);
+    readonly marketProductsByRegion = signal<MarketProductCountByRegionResponse[]>([]);
+
+
     savingProduct = false;
     savingVariant = false;
     savingIngredient = false;
     savingVersion = false;
     changingVersionStatus = false;
     savingVersionIngredient = false;
+
+    savingMarketProduct = false;
+    savingMarketLicense = false;
+    changingMarketLicenseStatus = false;
+    readonly lifecycleVariantId = signal(0);
+    readonly selectedMarketLicenseId = signal(0);
+    readonly expiringUntilDate = signal('2026-12-31');
 
     readonly errorMessage = signal('');
 
@@ -92,6 +139,24 @@ export class PortfolioPageComponent implements OnInit {
     });
 
 
+    readonly marketProductForm = this.fb.nonNullable.group({
+      variantId: [0, Validators.required],
+      regionId: [0, Validators.required],
+      localName: ['', [Validators.required, Validators.maxLength(255)]],
+      packagingDescription: ['', [Validators.maxLength(500)]],
+      barcode: ['', [Validators.maxLength(100)]],
+    });
+
+    readonly marketLicenseForm = this.fb.nonNullable.group({
+      marketProductId: [0, Validators.required],
+      variantVersionId: [0, Validators.required],
+      licenseNumber: ['', [Validators.required, Validators.maxLength(100)]],
+      issuedAt: [''],
+      validUntil: [''],
+    });
+
+
+
   ngOnInit(): void {
     this.loadProducts();
     this.loadIngredients();
@@ -99,6 +164,13 @@ export class PortfolioPageComponent implements OnInit {
     this.loadVersions();
     this.loadVersionIngredients();
     this.loadReferenceData();
+    this.loadMarketProducts();
+    this.loadMarketLicenses();
+    this.loadAnalytics();
+  }
+
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
   }
 
   setTab(tab: PortfolioTab): void {
@@ -107,7 +179,7 @@ export class PortfolioPageComponent implements OnInit {
 
   loadProducts(): void {
   this.loadingProducts.set(true);
-  this.errorMessage.set('');
+  this.clearError();
 
   this.portfolioService.getProducts().subscribe({
     next: (products) => {
@@ -116,14 +188,14 @@ export class PortfolioPageComponent implements OnInit {
     },
     error: () => {
       this.loadingProducts.set(false);
-      this.errorMessage.set('Failed to load products.');
+      this.showError('Failed to load products.');
     },
   });
 }
 
 loadIngredients(): void {
   this.loadingIngredients.set(true);
-  this.errorMessage.set('');
+  this.clearError();
 
   this.portfolioService.getIngredients().subscribe({
     next: (ingredients) => {
@@ -132,14 +204,14 @@ loadIngredients(): void {
     },
     error: () => {
       this.loadingIngredients.set(false);
-      this.errorMessage.set('Failed to load ingredients.');
+      this.showError('Failed to load ingredients.');
     },
   });
 }
 
 loadVariants(): void {
   this.loadingVariants.set(true);
-  this.errorMessage.set('');
+  this.clearError();
 
   this.portfolioService.getVariants().subscribe({
     next: (variants) => {
@@ -148,14 +220,14 @@ loadVariants(): void {
     },
     error: () => {
       this.loadingVariants.set(false);
-      this.errorMessage.set('Failed to load variants.');
+      this.showError('Failed to load variants.');
     },
   });
 }
 
 loadVersions(): void {
   this.loadingVersions.set(true);
-  this.errorMessage.set('');
+  this.clearError();
 
   this.portfolioService.getVariantVersions().subscribe({
     next: (versions) => {
@@ -164,14 +236,14 @@ loadVersions(): void {
     },
     error: () => {
       this.loadingVersions.set(false);
-      this.errorMessage.set('Failed to load versions.');
+      this.showError('Failed to load versions.');
     },
   });
 }
 
 loadVersionIngredients(): void {
   this.loadingVersionIngredients.set(true);
-  this.errorMessage.set('');
+  this.clearError();
 
   this.portfolioService.getVersionIngredients().subscribe({
     next: (items) => {
@@ -180,7 +252,7 @@ loadVersionIngredients(): void {
     },
     error: () => {
       this.loadingVersionIngredients.set(false);
-      this.errorMessage.set('Failed to load version ingredients.');
+      this.showError('Failed to load version ingredients.');
     },
   });
 }
@@ -192,7 +264,7 @@ createIngredient(): void {
   }
 
   this.savingIngredient = true;
-  this.errorMessage.set('');
+  this.clearError();
 
   const payload = {
     name: this.ingredientForm.controls.name.value.trim(),
@@ -214,7 +286,7 @@ createIngredient(): void {
     },
     error: (error) => {
       this.savingIngredient = false;
-      this.errorMessage.set(error?.error?.message ?? 'Failed to create ingredient.');
+      this.showError(error?.error?.message ?? 'Failed to create ingredient.');
     },
   });
 }
@@ -227,6 +299,10 @@ loadReferenceData(): void {
   this.portfolioService.getTherapeuticAreas().subscribe({
     next: (items) => this.therapeuticAreas.set(items),
   });
+
+  this.portfolioService.getRegions().subscribe({
+    next: (items) => this.regions.set(items),
+  });
 }
 
 createProduct(): void {
@@ -236,7 +312,7 @@ createProduct(): void {
   }
 
   this.savingProduct = true;
-  this.errorMessage.set('');
+  this.clearError();
 
   const payload = {
     name: this.productForm.controls.name.value.trim(),
@@ -258,7 +334,7 @@ createProduct(): void {
     },
     error: (error) => {
       this.savingProduct = false;
-      this.errorMessage.set(error?.error?.message ?? 'Failed to create product.');
+      this.showError(error?.error?.message ?? 'Failed to create product.');
     },
   });
 }
@@ -270,7 +346,7 @@ createVariant(): void {
   }
 
   this.savingVariant = true;
-  this.errorMessage.set('');
+  this.clearError();
 
   const payload = {
     productId: this.variantForm.controls.productId.value,
@@ -290,7 +366,7 @@ createVariant(): void {
     },
     error: (error) => {
       this.savingVariant = false;
-      this.errorMessage.set(error?.error?.message ?? 'Failed to create variant.');
+      this.showError(error?.error?.message ?? 'Failed to create variant.');
     },
   });
 }
@@ -302,7 +378,7 @@ createVersion(): void {
   }
 
   this.savingVersion = true;
-  this.errorMessage.set('');
+  this.clearError();
 
   const payload = {
     variantId: this.versionForm.controls.variantId.value,
@@ -322,14 +398,14 @@ createVersion(): void {
     },
     error: (error) => {
       this.savingVersion = false;
-      this.errorMessage.set(error?.error?.message ?? 'Failed to create version.');
+      this.showError(error?.error?.message ?? 'Failed to create version.');
     },
   });
 }
 
 activateVersion(versionId: number): void {
   this.changingVersionStatus = true;
-  this.errorMessage.set('');
+  this.clearError();
 
   this.portfolioService.changeVariantVersionStatus(versionId, { status: 'ACTIVE' }).subscribe({
     next: () => {
@@ -338,7 +414,7 @@ activateVersion(versionId: number): void {
     },
     error: (error) => {
       this.changingVersionStatus = false;
-      this.errorMessage.set(error?.error?.message ?? 'Failed to activate version.');
+      this.showError(error?.error?.message ?? 'Failed to activate version.');
     },
   });
 }
@@ -354,7 +430,7 @@ createVersionIngredient(): void {
   }
 
   this.savingVersionIngredient = true;
-  this.errorMessage.set('');
+  this.clearError();
 
   const payload = {
     variantVersionId: this.versionIngredientForm.controls.variantVersionId.value,
@@ -376,9 +452,272 @@ createVersionIngredient(): void {
     },
     error: (error) => {
       this.savingVersionIngredient = false;
-      this.errorMessage.set(error?.error?.message ?? 'Failed to add BOM item.');
+      this.showError(error?.error?.message ?? 'Failed to add BOM item.');
     },
   });
 }
 
+//sprint2
+loadMarketProducts(): void {
+  this.loadingMarketProducts.set(true);
+  this.clearError();
+
+  this.portfolioService.getMarketProducts().subscribe({
+    next: (items) => {
+      this.marketProducts.set(items);
+      this.loadingMarketProducts.set(false);
+    },
+    error: () => {
+      this.loadingMarketProducts.set(false);
+      this.showError('Failed to load market products.');
+    },
+  });
+}
+
+createMarketProduct(): void {
+  if (
+    this.marketProductForm.invalid ||
+    this.marketProductForm.controls.variantId.value === 0 ||
+    this.marketProductForm.controls.regionId.value === 0
+  ) {
+    this.marketProductForm.markAllAsTouched();
+    return;
+  }
+
+  this.savingMarketProduct = true;
+  this.clearError();
+
+  const payload = {
+    variantId: this.marketProductForm.controls.variantId.value,
+    regionId: this.marketProductForm.controls.regionId.value,
+    localName: this.marketProductForm.controls.localName.value.trim(),
+    packagingDescription: this.marketProductForm.controls.packagingDescription.value.trim(),
+    barcode: this.marketProductForm.controls.barcode.value.trim(),
+  };
+
+  this.portfolioService.createMarketProduct(payload).subscribe({
+    next: () => {
+      this.savingMarketProduct = false;
+      this.marketProductForm.reset({
+        variantId: 0,
+        regionId: 0,
+        localName: '',
+        packagingDescription: '',
+        barcode: '',
+      });
+      this.loadMarketProducts();
+    },
+    error: (error) => {
+      this.savingMarketProduct = false;
+      this.showError(error?.error?.message ?? 'Failed to create market product.');
+    },
+  });
+}
+
+loadMarketLicenses(): void {
+  this.loadingMarketLicenses.set(true);
+  this.clearError();
+
+  this.portfolioService.getMarketLicenses().subscribe({
+    next: (items) => {
+      this.marketLicenses.set(items);
+      this.loadingMarketLicenses.set(false);
+    },
+    error: () => {
+      this.loadingMarketLicenses.set(false);
+      this.showError('Failed to load market licenses.');
+    },
+  });
+}
+
+createMarketLicense(): void {
+  if (
+    this.marketLicenseForm.invalid ||
+    this.marketLicenseForm.controls.marketProductId.value === 0 ||
+    this.marketLicenseForm.controls.variantVersionId.value === 0
+  ) {
+    this.marketLicenseForm.markAllAsTouched();
+    return;
+  }
+
+  this.savingMarketLicense = true;
+  this.clearError();
+
+  const payload = {
+    marketProductId: this.marketLicenseForm.controls.marketProductId.value,
+    variantVersionId: this.marketLicenseForm.controls.variantVersionId.value,
+    licenseNumber: this.marketLicenseForm.controls.licenseNumber.value.trim(),
+    issuedAt: this.marketLicenseForm.controls.issuedAt.value || null,
+    validUntil: this.marketLicenseForm.controls.validUntil.value || null,
+  };
+
+  this.portfolioService.createMarketLicense(payload).subscribe({
+    next: () => {
+      this.savingMarketLicense = false;
+      this.marketLicenseForm.reset({
+        marketProductId: 0,
+        variantVersionId: 0,
+        licenseNumber: '',
+        issuedAt: '',
+        validUntil: '',
+      });
+      this.loadMarketLicenses();
+    },
+    error: (error) => {
+      this.savingMarketLicense = false;
+      this.showError(error?.error?.message ?? 'Failed to create market license.');
+    },
+  });
+}
+
+changeMarketLicenseStatus(id: number, status: MarketLicenseStatus): void {
+  this.changingMarketLicenseStatus = true;
+  this.clearError();
+
+  this.portfolioService.changeMarketLicenseStatus(id, { status }).subscribe({
+    next: () => {
+      this.changingMarketLicenseStatus = false;
+      this.loadMarketLicenses();
+      if (this.selectedMarketLicenseId() === id) {
+        this.loadMarketLicenseHistory(id);
+      }
+    },
+    error: (error) => {
+      this.changingMarketLicenseStatus = false;
+      this.showError(error?.error?.message ?? 'Failed to change market license status.');
+    },
+  });
+}
+
+loadMarketLicenseHistory(id: number): void {
+  this.selectedMarketLicenseId.set(id);
+  this.loadingMarketLicenseHistory.set(true);
+  this.clearError();
+
+  this.portfolioService.getMarketLicenseHistory(id).subscribe({
+    next: (items) => {
+      this.marketLicenseHistory.set(items);
+      this.loadingMarketLicenseHistory.set(false);
+    },
+    error: () => {
+      this.loadingMarketLicenseHistory.set(false);
+      this.showError('Failed to load market license history.');
+    },
+  });
+}
+
+loadVariantLifecycleHistory(variantId: number): void {
+  if (!variantId) {
+    this.variantLifecycleHistory.set([]);
+    return;
+  }
+
+  this.lifecycleVariantId.set(variantId);
+  this.loadingVariantLifecycleHistory.set(true);
+  this.clearError();
+
+  this.portfolioService.getVariantLifecycleHistory(variantId).subscribe({
+    next: (items) => {
+      this.variantLifecycleHistory.set(items);
+      this.loadingVariantLifecycleHistory.set(false);
+    },
+    error: () => {
+      this.loadingVariantLifecycleHistory.set(false);
+      this.showError('Failed to load variant lifecycle history.');
+    },
+  });
+}
+
+loadAnalytics(): void {
+  this.loadingAnalytics.set(true);
+  this.clearError();
+
+  this.portfolioService.getVariantVersionStatusCount().subscribe({
+    next: (items) => this.versionStatusCounts.set(items),
+    error: () => this.showError('Failed to load status analytics.'),
+  });
+
+  this.portfolioService.getProductsByTherapeuticArea().subscribe({
+    next: (items) => this.productsByTherapeuticArea.set(items),
+    error: () => this.showError('Failed to load therapeutic area analytics.'),
+  });
+
+  this.portfolioService.getMarketLicenseStatusCount().subscribe({
+    next: (items) => this.marketLicenseStatusCounts.set(items),
+    error: () => this.showError('Failed to load market license status analytics.'),
+  });
+
+  this.portfolioService.getMarketProductsByRegion().subscribe({
+    next: (items) => this.marketProductsByRegion.set(items),
+    error: () => this.showError('Failed to load market products by region analytics.'),
+  });
+
+  this.portfolioService.getLicensesExpiringUntil(this.expiringUntilDate()).subscribe({
+    next: (items) => {
+      this.expiringLicenses.set(items);
+      this.loadingAnalytics.set(false);
+    },
+    error: () => {
+      this.loadingAnalytics.set(false);
+      this.showError('Failed to load expiring licenses.');
+    },
+  });
+}
+
+downloadAnalyticsReport(): void {
+  this.portfolioService
+    .downloadPortfolioAnalyticsReport(this.expiringUntilDate())
+    .subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'portfolio-analytics-report.pdf';
+
+        link.click();
+
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.showError('Failed to generate analytics report.');
+      },
+    });
+}
+
+loadVersionHistory(versionId: number): void {
+  this.selectedVersionId.set(versionId);
+  this.loadingVersionHistory.set(true);
+  this.clearError();
+
+  this.portfolioService.getVariantVersionHistory(versionId).subscribe({
+    next: (items) => {
+      this.versionHistory.set(items);
+      this.loadingVersionHistory.set(false);
+    },
+    error: () => {
+      this.loadingVersionHistory.set(false);
+      this.showError('Failed to load version history.');
+    },
+  });
+}
+
+private showError(message: string): void {
+  this.transientMessages.set(
+    this,
+    'errorMessage',
+    (value) => this.errorMessage.set(value),
+    () => this.errorMessage(),
+    message,
+    ERROR_MESSAGE_MS
+  );
+}
+
+private clearError(): void {
+  this.transientMessages.clear(
+    this,
+    'errorMessage',
+    () => this.errorMessage.set('')
+  );
+}
 }

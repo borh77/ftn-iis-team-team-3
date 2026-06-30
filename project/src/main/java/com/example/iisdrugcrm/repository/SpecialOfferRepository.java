@@ -37,4 +37,26 @@ public interface SpecialOfferRepository extends JpaRepository<SpecialOffer, Long
             @Param("variantId") Long variantId,
             @Param("now") OffsetDateTime now
     );
+
+    @Query("""
+            select o
+            from SpecialOffer o
+            where lower(o.pricelist.customerSegment) = lower(:customerSegment)
+              and o.status = com.example.iisdrugcrm.domain.pricelist.SpecialOfferStatus.ACTIVE
+              and o.startDate <= :now
+              and o.endDate >= :now
+            order by o.id desc
+            """)
+    List<SpecialOffer> findActiveOffersForCustomerSegment(
+            @Param("customerSegment") String customerSegment,
+            @Param("now") OffsetDateTime now
+    );
+
+    @Query("""
+            select o
+            from SpecialOffer o
+            where lower(o.pricelist.customerSegment) = lower(:customerSegment)
+            order by o.createdAt desc, o.id desc
+            """)
+    List<SpecialOffer> findAllOffersForCustomerSegment(@Param("customerSegment") String customerSegment);
 }

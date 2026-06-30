@@ -7,11 +7,11 @@
     </div>
 
     <button
-        *ngIf="canCreateProcess"
-        class="primary-button"
-        type="button"
-        (click)="showCreateForm = !showCreateForm">
-        Create Process
+      *ngIf="canCreateProcess"
+      class="primary-button"
+      type="button"
+      (click)="showCreateForm = !showCreateForm">
+      Create Process
     </button>
   </section>
 
@@ -49,7 +49,10 @@
           Cancel
         </button>
 
-        <button type="submit" class="primary-button" [disabled]="saving || newProcess.customerId === 0 || newProcess.workflowId === 0">
+        <button
+          type="submit"
+          class="primary-button"
+          [disabled]="saving || newProcess.customerId === 0 || newProcess.workflowId === 0">
           {{ saving ? 'Saving...' : 'Create' }}
         </button>
       </div>
@@ -57,6 +60,10 @@
   </section>
 
   <section class="table-card">
+    <div *ngIf="errorMessage" class="error-box" role="alert">
+      {{ errorMessage }}
+    </div>
+
     <div *ngIf="loading" class="loading">
       Loading sales processes...
     </div>

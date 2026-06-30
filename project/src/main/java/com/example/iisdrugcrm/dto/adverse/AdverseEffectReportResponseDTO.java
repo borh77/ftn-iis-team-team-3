@@ -12,14 +12,14 @@ public class AdverseEffectReportResponseDTO {
     private LocalDate symptomDate;
     private String status;
     private String medicationName;
-    private String reportType;       // DOCTOR ili PATIENT
+    private String reportType;       // DOCTOR or PATIENT
     private String reporterUsername;
 
-    // Polja specifična za DoctorReport
+    // Fields specific to DoctorReport
     private String effectDescription;
     private String additionalNotes;
 
-    // Polja specifična za PatientReport
+    // Fields specific to PatientReport
     private String symptoms;
     private String additionalDesc;
 

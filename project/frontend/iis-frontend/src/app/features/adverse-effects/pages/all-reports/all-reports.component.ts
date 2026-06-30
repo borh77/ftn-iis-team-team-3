@@ -1,9 +1,10 @@
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AdverseEffectsApiService } from '../../api/adverse-effects-api.service';
 import { AdverseEffectReport, ReportStatus } from '../../models/adverse-effect-report.model';
+import { ERROR_MESSAGE_MS, TransientMessageService } from '../../../../core/transient-message.service';
 
 @Component({
   selector: 'app-all-reports',
@@ -12,11 +13,12 @@ import { AdverseEffectReport, ReportStatus } from '../../models/adverse-effect-r
   templateUrl: './all-reports.component.html',
   styleUrls: ['./all-reports.component.css']
 })
-export class AllReportsComponent implements OnInit {
+export class AllReportsComponent implements OnInit, OnDestroy {
 
   private readonly api = inject(AdverseEffectsApiService);
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly transientMessages = inject(TransientMessageService);
 
   reports: AdverseEffectReport[] = [];
   loading = true;
@@ -30,6 +32,10 @@ export class AllReportsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadReports();
+  }
+
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
   }
 
   applyFilter(): void {
@@ -63,7 +69,7 @@ export class AllReportsComponent implements OnInit {
 
   private loadReports(filters: { status?: string; medicationName?: string; severity?: string } = {}): void {
     this.loading = true;
-    this.errorMessage = '';
+    this.clearError();
 
     this.api.getAllReportsFiltered(filters).subscribe({
       next: (data) => {
@@ -72,10 +78,18 @@ export class AllReportsComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => {
-        this.errorMessage = 'Error loading reports.';
+        this.showError('Error loading reports.');
         this.loading = false;
         this.cdr.detectChanges();
       }
     });
+  }
+
+  private showError(message: string): void {
+    this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private clearError(): void {
+    this.transientMessages.clearField(this, 'errorMessage', () => this.cdr.detectChanges());
   }
 }

@@ -1,0 +1,70 @@
+<section class="page-hero">
+  <div class="page-hero__head">
+    <div>
+      <p class="kicker">Procurement validation</p>
+      <h2>Procurement Document Validation</h2>
+      <p class="lede">Upload a CSV order document and validate requested variants against your active pricelist.</p>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <div
+    class="upload-zone"
+    [class.upload-zone--active]="dragActive"
+    [class.upload-zone--selected]="selectedFile"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)"
+  >
+    <input
+      #fileInput
+      type="file"
+      class="file-input"
+      accept=".csv,text/csv,application/csv"
+      (change)="onFileInputChange($event)"
+    />
+
+    <div class="upload-content">
+      <span class="upload-icon">CSV</span>
+      <div>
+        <h3>{{ selectedFile ? selectedFile.name : 'Drop your order document here' }}</h3>
+        <p class="muted">Supported format: CSV</p>
+        <ul class="csv-columns" aria-label="Supported CSV columns">
+          <li>variantId, requestedQuantity</li>
+          <li>variantName, requestedQuantity</li>
+          <li>productName, form, dosage, requestedQuantity</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="upload-actions">
+      <button type="button" class="secondary" (click)="openFilePicker()" [disabled]="loading">
+        Choose file
+      </button>
+      @if (selectedFile) {
+        <button type="button" class="ghost" (click)="clearSelection()" [disabled]="loading">
+          Reset
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (errorMessage) {
+    <div class="error-box" role="alert">{{ errorMessage }}</div>
+  }
+
+  <div class="action-row">
+    <button type="button" class="primary" (click)="validateSelectedFile()" [disabled]="loading || !selectedFile">
+      {{ loading ? 'Validating...' : 'Validate document' }}
+    </button>
+  </div>
+
+  @if (loading) {
+    <p class="muted">Validation is in progress...</p>
+  }
+
+  @if (!loading && result) {
+    <app-validation-result [result]="result" />
+  }
+</section>

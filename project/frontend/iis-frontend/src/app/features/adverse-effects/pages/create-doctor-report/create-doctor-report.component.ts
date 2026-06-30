@@ -1,9 +1,12 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { finalize } from 'rxjs';
 import { AdverseEffectsApiService } from '../../api/adverse-effects-api.service';
 import { CreateDoctorReportRequest } from '../../models/adverse-effect-report.model';
+import { extractBackendErrorMessage } from '../../../../core/http-error-message';
+import { ERROR_MESSAGE_MS, TransientMessageService } from '../../../../core/transient-message.service';
 
 @Component({
   selector: 'app-create-doctor-report',
@@ -12,10 +15,11 @@ import { CreateDoctorReportRequest } from '../../models/adverse-effect-report.mo
   templateUrl: './create-doctor-report.component.html',
   styleUrls: ['./create-doctor-report.component.css']
 })
-export class CreateDoctorReportComponent {
+export class CreateDoctorReportComponent implements OnDestroy {
 
   private readonly api = inject(AdverseEffectsApiService);
   private readonly router = inject(Router);
+  private readonly transientMessages = inject(TransientMessageService);
 
   saving = false;
   errorMessage = '';
@@ -36,23 +40,29 @@ export class CreateDoctorReportComponent {
     patientAge: undefined
   };
 
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
+  }
+
   submit(): void {
     this.saving = true;
-    this.errorMessage = '';
-    this.successMessage = '';
+    this.transientMessages.clearField(this, 'errorMessage');
+    this.transientMessages.clearField(this, 'successMessage');
 
-    this.api.createDoctorReport(this.form).subscribe({
+    this.api.createDoctorReport(this.form).pipe(finalize(() => (this.saving = false))).subscribe({
       next: (report) => {
-        this.saving = false;
         // Redirect to my-reports with success message passed via router state
         this.router.navigate(['/adverse-effects/my-reports'], {
           state: { successMessage: `Report #${report.id} created successfully! Status: ${report.status}` }
         });
       },
       error: (err) => {
-        this.saving = false;
-        this.errorMessage = 'Error creating report. Please check your input.';
-        console.error(err);
+        this.transientMessages.setField(
+          this,
+          'errorMessage',
+          extractBackendErrorMessage(err, 'Error creating report. Please check your input.'),
+          ERROR_MESSAGE_MS
+        );
       }
     });
   }

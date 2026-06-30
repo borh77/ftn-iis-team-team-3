@@ -1,13 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { finalize } from 'rxjs';
 
+import { extractBackendErrorMessage } from '../../../../core/http-error-message';
+import { ERROR_MESSAGE_MS, TransientMessageService } from '../../../../core/transient-message.service';
+import { SalesApiService } from '../../api/sales-api.service';
 import { Customer } from '../../models/customer.model';
 import { SalesProcess, SalesProcessRequest } from '../../models/sales-process.model';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { SalesWorkflow } from '../../models/sales-workflow.model';
-import { Router } from '@angular/router';
-import { SalesApiService } from '../../api/sales-api.service';
 
 @Component({
   selector: 'app-processes-list',
@@ -16,11 +19,12 @@ import { SalesApiService } from '../../api/sales-api.service';
   templateUrl: './processes-list.component.html',
   styleUrls: ['./processes-list.component.css'],
 })
-export class ProcessesListComponent implements OnInit {
+export class ProcessesListComponent implements OnInit, OnDestroy {
   private readonly salesApiService = inject(SalesApiService);
   private readonly authService = inject(AuthService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
+  private readonly transientMessages = inject(TransientMessageService);
 
   processes: SalesProcess[] = [];
   customers: Customer[] = [];
@@ -28,6 +32,7 @@ export class ProcessesListComponent implements OnInit {
 
   loading = true;
   saving = false;
+  errorMessage = '';
   showCreateForm = false;
 
   canCreateProcess = false;
@@ -43,19 +48,25 @@ export class ProcessesListComponent implements OnInit {
     this.loadData();
   }
 
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
+  }
+
   loadData(): void {
     this.loading = true;
+    this.clearError();
 
-    this.salesApiService.getSalesProcesses().subscribe({
+    this.salesApiService.getSalesProcesses().pipe(
+      finalize(() => {
+        this.loading = false;
+        this.cdr.detectChanges();
+      }),
+    ).subscribe({
       next: (response) => {
         this.processes = response ?? [];
-        this.loading = false;
-        this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('Failed to load sales processes:', error);
-        this.loading = false;
-        this.cdr.detectChanges();
+        this.showError(extractBackendErrorMessage(error, 'Failed to load sales processes.'));
       },
     });
 
@@ -65,7 +76,7 @@ export class ProcessesListComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('Failed to load customers:', error);
+        this.showError(extractBackendErrorMessage(error, 'Failed to load customers.'));
       },
     });
 
@@ -75,15 +86,21 @@ export class ProcessesListComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('Failed to load sales workflows:', error);
+        this.showError(extractBackendErrorMessage(error, 'Failed to load sales workflows.'));
       },
     });
   }
 
   createProcess(): void {
     this.saving = true;
+    this.clearError();
 
-    this.salesApiService.createSalesProcess(this.newProcess).subscribe({
+    this.salesApiService.createSalesProcess(this.newProcess).pipe(
+      finalize(() => {
+        this.saving = false;
+        this.cdr.detectChanges();
+      }),
+    ).subscribe({
       next: () => {
         this.newProcess = {
           customerId: 0,
@@ -91,18 +108,23 @@ export class ProcessesListComponent implements OnInit {
           workflowId: 0,
         };
         this.showCreateForm = false;
-        this.saving = false;
         this.loadData();
       },
       error: (error) => {
-        console.error('Failed to create sales process:', error);
-        this.saving = false;
-        this.cdr.detectChanges();
+        this.showError(extractBackendErrorMessage(error, 'Failed to create sales process.'));
       },
     });
   }
 
   viewDetails(process: SalesProcess): void {
     this.router.navigate(['/sales/processes', process.id]);
+  }
+
+  private showError(message: string): void {
+    this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private clearError(): void {
+    this.transientMessages.clearField(this, 'errorMessage', () => this.cdr.detectChanges());
   }
 }

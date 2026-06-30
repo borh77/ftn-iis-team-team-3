@@ -1,0 +1,137 @@
+<section class="page-shell">
+  <header class="page-hero">
+    <p class="kicker">Administrator</p>
+    <h2>Performance Reports</h2>
+    <p>Generate productivity reports for all pricelist teams or one selected team.</p>
+  </header>
+
+  <section class="panel">
+    <form class="filters" [formGroup]="form" (ngSubmit)="generateReport()">
+      <label>
+        <span>Team</span>
+        <select formControlName="teamId" [disabled]="lookupLoading">
+          <option value="">All teams</option>
+          @if (teamOptions.length === 0 && !lookupLoading) {
+            <option value="" disabled>No teams available</option>
+          }
+          @for (team of teamOptions; track team.id) {
+            <option [value]="team.id">{{ team.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Start date</span>
+        <input type="datetime-local" formControlName="start" />
+      </label>
+
+      <label>
+        <span>End date</span>
+        <input type="datetime-local" formControlName="end" />
+      </label>
+
+      <div class="actions">
+        <button type="submit" [disabled]="loading || pdfDownloading">Generate report</button>
+        <button type="button" class="secondary" [disabled]="loading || pdfDownloading" (click)="downloadPdf()">
+          {{ pdfDownloading ? 'Downloading...' : 'Download PDF' }}
+        </button>
+        <button type="button" class="secondary" [disabled]="loading || pdfDownloading" (click)="resetFilters()">
+          Reset filters
+        </button>
+      </div>
+    </form>
+
+    @if (submitted && form.invalid) {
+      <p class="error">Start and end dates are required.</p>
+    }
+
+    @if (lookupLoading) {
+      <p class="muted">Loading filter options...</p>
+    } @else if (lookupErrorMessage) {
+      <p class="error">{{ lookupErrorMessage }}</p>
+    }
+
+    @if (pdfErrorMessage) {
+      <p class="error">{{ pdfErrorMessage }}</p>
+    }
+  </section>
+
+  @if (loading) {
+    <section class="panel">
+      <p class="muted">Generating report...</p>
+    </section>
+  } @else if (errorMessage) {
+    <section class="panel">
+      <p class="error">{{ errorMessage }}</p>
+    </section>
+  } @else if (!report) {
+    <section class="panel empty-state">
+      <h3>No report generated yet</h3>
+      <p>Select a period and generate a report to review team performance metrics.</p>
+    </section>
+  } @else {
+    @if (report.teamFilterLimitation) {
+      <section class="notice">
+        {{ report.teamFilterLimitation }}
+      </section>
+    }
+
+    <section class="kpi-grid">
+      <article class="kpi-card">
+        <span>Average processing time</span>
+        <strong>{{ formatHours(report.averageTotalProcessingTimeHours) }}</strong>
+      </article>
+      <article class="kpi-card">
+        <span>Average review time</span>
+        <strong>{{ formatHours(report.averageReviewTimeHours) }}</strong>
+      </article>
+      <article class="kpi-card">
+        <span>Activated pricelists</span>
+        <strong>{{ report.activatedPricelistsCount }}</strong>
+      </article>
+      <article class="kpi-card warning">
+        <span>Stuck in DRAFT</span>
+        <strong>{{ report.stuckDraftCount }}</strong>
+      </article>
+      <article class="kpi-card warning">
+        <span>Stuck in IN_REVIEW</span>
+        <strong>{{ report.stuckInReviewCount }}</strong>
+      </article>
+    </section>
+
+    @if (showEmptyState()) {
+      <section class="panel empty-state">
+        <h3>No activated pricelists</h3>
+        <p>No pricelists reached ACTIVE during the selected period.</p>
+      </section>
+    }
+
+    <section class="panel">
+      <header class="panel-head">
+        <div>
+          <p class="kicker">Monthly trend</p>
+          <h3>Average total processing time</h3>
+        </div>
+      </header>
+
+      @if (report.monthlyTrend.length === 0) {
+        <p class="muted">No monthly trend data is available for the selected period.</p>
+      } @else {
+        <div class="trend-list">
+          @for (point of report.monthlyTrend; track point.month) {
+            <div class="trend-row">
+              <span class="trend-month">{{ point.month }}</span>
+              <div class="trend-bar-track">
+                <div class="trend-bar" [style.width]="trendWidth(point)"></div>
+              </div>
+              <span class="trend-value">
+                {{ formatHours(point.averageTotalProcessingTimeHours) }}
+                | {{ point.activatedPricelistsCount }} activated
+              </span>
+            </div>
+          }
+        </div>
+      }
+    </section>
+  }
+</section>

@@ -1,7 +1,11 @@
 package com.example.iisdrugcrm.repository;
 
+import com.example.iisdrugcrm.domain.PricelistStatus;
+import com.example.iisdrugcrm.domain.PricelistTeam;
+import com.example.iisdrugcrm.domain.Region;
 import com.example.iisdrugcrm.domain.pricelist.PricelistActionType;
 import com.example.iisdrugcrm.domain.pricelist.PricelistActivityLog;
+import com.example.iisdrugcrm.domain.pricelist.Pricelist;
 import com.example.iisdrugcrm.dto.pricelist.PricelistActivityLogResponseDTO;
 import com.example.iisdrugcrm.service.PricelistActivityLogServiceImpl;
 import java.time.OffsetDateTime;
@@ -23,11 +27,20 @@ class PricelistActivityLogRepositoryTest {
     @Autowired
     private PricelistActivityLogRepository repository;
 
+    @Autowired
+    private PricelistRepository pricelistRepository;
+
+    @Autowired
+    private RegionRepository regionRepository;
+
+    @Autowired
+    private PricelistTeamRepository teamRepository;
+
     private PricelistActivityLogServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new PricelistActivityLogServiceImpl(repository);
+        service = new PricelistActivityLogServiceImpl(repository, pricelistRepository);
     }
 
     @Test
@@ -37,7 +50,7 @@ class PricelistActivityLogRepositoryTest {
                 99L,
                 5L,
                 PricelistActionType.CREATE,
-                "Kreiran cenovnik u statusu DRAFT",
+                "Created pricelist in DRAFT status",
                 OffsetDateTime.parse("2026-06-27T10:00:00Z")
         ));
 
@@ -110,6 +123,34 @@ class PricelistActivityLogRepositoryTest {
                 );
     }
 
+    @Test
+    void countsStuckDraftAndInReviewByCurrentPricelistStatusAndOptionalTeam() {
+        Region region = regionRepository.save(new Region("Serbia", "RS"));
+        PricelistTeam teamFive = teamRepository.save(new PricelistTeam("Team Five", 99L));
+        PricelistTeam teamSix = teamRepository.save(new PricelistTeam("Team Six", 100L));
+        Pricelist teamFiveDraft = pricelist(region, PricelistStatus.DRAFT, "Hospitals");
+        Pricelist teamSixDraft = pricelist(region, PricelistStatus.DRAFT, "Pharmacies");
+        Pricelist teamFiveReview = pricelist(region, PricelistStatus.IN_REVIEW, "Clinics");
+        Pricelist active = pricelist(region, PricelistStatus.ACTIVE, "Distributors");
+        teamFiveDraft.setTeam(teamFive);
+        teamSixDraft.setTeam(teamSix);
+        teamFiveReview.setTeam(teamFive);
+        active.setTeam(teamFive);
+        pricelistRepository.save(teamFiveDraft);
+        pricelistRepository.save(teamSixDraft);
+        pricelistRepository.save(teamFiveReview);
+        pricelistRepository.save(active);
+        repository.save(log(teamFiveDraft.getId(), 5L));
+        repository.save(log(teamSixDraft.getId(), 6L));
+        repository.save(log(teamFiveReview.getId(), 5L));
+        repository.save(log(active.getId(), 5L));
+
+        assertThat(pricelistRepository.countByStatusAndOptionalTeamId(PricelistStatus.DRAFT, null)).isEqualTo(2L);
+        assertThat(pricelistRepository.countByStatusAndOptionalTeamId(PricelistStatus.IN_REVIEW, null)).isEqualTo(1L);
+        assertThat(pricelistRepository.countByStatusAndOptionalTeamId(PricelistStatus.DRAFT, teamFive.getId())).isEqualTo(1L);
+        assertThat(pricelistRepository.countByStatusAndOptionalTeamId(PricelistStatus.IN_REVIEW, teamFive.getId())).isEqualTo(1L);
+    }
+
     private void seedLogs() {
         repository.deleteAll();
         repository.save(new PricelistActivityLog(
@@ -117,7 +158,7 @@ class PricelistActivityLogRepositoryTest {
                 99L,
                 5L,
                 PricelistActionType.CREATE,
-                "Kreiran cenovnik u statusu DRAFT",
+                "Created pricelist in DRAFT status",
                 OffsetDateTime.parse("2026-06-01T09:00:00Z")
         ));
         repository.save(new PricelistActivityLog(
@@ -125,7 +166,7 @@ class PricelistActivityLogRepositoryTest {
                 42L,
                 6L,
                 PricelistActionType.UPDATE_ITEMS,
-                "Izmenjene stavke cenovnika",
+                "Updated pricelist items",
                 OffsetDateTime.parse("2026-06-15T12:00:00Z")
         ));
         repository.save(new PricelistActivityLog(
@@ -133,8 +174,31 @@ class PricelistActivityLogRepositoryTest {
                 99L,
                 5L,
                 PricelistActionType.STATUS_CHANGE,
-                "Promenjen status iz DRAFT u IN_REVIEW",
+                "Changed status from DRAFT to IN_REVIEW",
                 OffsetDateTime.parse("2026-06-25T08:30:00Z")
         ));
+    }
+
+    private Pricelist pricelist(Region region, PricelistStatus status, String segment) {
+        Pricelist pricelist = new Pricelist();
+        pricelist.setRegion(region);
+        pricelist.setStatus(status);
+        pricelist.setCustomerSegment(segment);
+        pricelist.setCurrency("EUR");
+        pricelist.setPeriodStart(OffsetDateTime.parse("2026-06-01T00:00:00Z"));
+        pricelist.setPeriodEnd(OffsetDateTime.parse("2026-06-30T23:59:59Z"));
+        pricelist.setCreatedBy(99L);
+        return pricelist;
+    }
+
+    private PricelistActivityLog log(Long pricelistId, Long teamId) {
+        return new PricelistActivityLog(
+                pricelistId,
+                99L,
+                teamId,
+                PricelistActionType.CREATE,
+                "Created pricelist in DRAFT status",
+                OffsetDateTime.parse("2026-06-01T09:00:00Z")
+        );
     }
 }

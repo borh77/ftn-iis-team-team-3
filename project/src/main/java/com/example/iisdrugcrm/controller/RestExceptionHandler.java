@@ -4,9 +4,12 @@ import com.example.iisdrugcrm.exception.DuplicateUserException;
 import com.example.iisdrugcrm.exception.DuplicateTeamException;
 import com.example.iisdrugcrm.exception.InvalidPricelistThresholdException;
 import com.example.iisdrugcrm.exception.InvalidPricelistStatusTransitionException;
+import com.example.iisdrugcrm.exception.InvalidCatalogReplacementException;
 import com.example.iisdrugcrm.exception.PricelistConflictException;
 import com.example.iisdrugcrm.exception.PricelistLockedException;
 import com.example.iisdrugcrm.exception.PricelistNotFoundException;
+import com.example.iisdrugcrm.exception.PricelistSubmissionValidationException;
+import com.example.iisdrugcrm.exception.PricelistStartDateInPastException;
 import com.example.iisdrugcrm.exception.RegionConflictException;
 import com.example.iisdrugcrm.exception.RegionInUseException;
 import com.example.iisdrugcrm.exception.VariantNotFoundException;
@@ -51,7 +54,12 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(InvalidPricelistThresholdException.class)
     public ResponseEntity<Map<String, String>> handleInvalidPricelistThreshold(InvalidPricelistThresholdException exception) {
-        return ResponseEntity.badRequest().body(Map.of("error", exception.getMessage()));
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", exception.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidCatalogReplacementException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidCatalogReplacement(InvalidCatalogReplacementException exception) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", exception.getMessage()));
     }
 
     @ExceptionHandler(InvalidPricelistStatusTransitionException.class)
@@ -72,6 +80,16 @@ public class RestExceptionHandler {
     @ExceptionHandler(PricelistLockedException.class)
     public ResponseEntity<Map<String, String>> handlePricelistLocked(PricelistLockedException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", exception.getMessage()));
+    }
+
+    @ExceptionHandler(PricelistStartDateInPastException.class)
+    public ResponseEntity<Map<String, String>> handlePricelistStartDateInPast(PricelistStartDateInPastException exception) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", exception.getMessage()));
+    }
+
+    @ExceptionHandler(PricelistSubmissionValidationException.class)
+    public ResponseEntity<Map<String, String>> handlePricelistSubmissionValidation(PricelistSubmissionValidationException exception) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", exception.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

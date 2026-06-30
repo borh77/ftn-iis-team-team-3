@@ -135,3 +135,123 @@ export interface VariantVersionIngredientsRequest {
   amount: number;
   unit: string;
 }
+
+//sprint2
+
+export type MarketLicenseStatus =
+  | 'SUBMITTED'
+  | 'APPROVED'
+  | 'RENEWAL_IN_PROGRESS'
+  | 'EXPIRED'
+  | 'SUSPENDED';
+
+export interface MarketProductResponse {
+  id: number;
+  variantId: number;
+  productName: string;
+  variantForm: string;
+  variantDosage: string;
+  regionId: number;
+  regionName: string;
+  regionCode: string;
+  localName: string;
+  packagingDescription: string | null;
+  barcode: string | null;
+  status: EntityStatus;
+}
+
+export interface MarketProductRequest {
+  variantId: number;
+  regionId: number;
+  localName: string;
+  packagingDescription: string;
+  barcode: string;
+}
+
+export interface MarketLicenseResponse {
+  id: number;
+  marketProductId: number;
+  localName: string;
+  regionName: string;
+  regionCode: string;
+  variantVersionId: number;
+  productName: string;
+  variantForm: string;
+  variantDosage: string;
+  versionLabel: string;
+  licenseNumber: string;
+  issuedAt: string | null;
+  validUntil: string | null;
+  status: MarketLicenseStatus;
+}
+
+export interface MarketLicenseRequest {
+  marketProductId: number;
+  variantVersionId: number;
+  licenseNumber: string;
+  issuedAt: string | null;
+  validUntil: string | null;
+}
+
+export interface MarketLicenseStatusRequest {
+  status: MarketLicenseStatus;
+}
+
+export interface MarketLicenseHistoryResponse {
+  id: number;
+  marketLicenseId: number;
+  licenseNumber: string;
+  localName: string;
+  regionName: string;
+  productName: string;
+  versionLabel: string;
+  oldStatus: MarketLicenseStatus | null;
+  newStatus: MarketLicenseStatus;
+  changedAt: string;
+  changedBy: number | null;
+  note: string | null;
+}
+
+export interface VariantVersionLifecycleHistoryResponse {
+  id: number;
+  variantVersionId: number;
+  productName: string;
+  variantForm: string;
+  variantDosage: string;
+  versionLabel: string;
+  oldStatus: VariantVersionStatus | null;
+  newStatus: VariantVersionStatus;
+  changedAt: string;
+  changedBy: number | null;
+  reason: string | null;
+  automaticTransition: boolean;
+}
+
+export interface VariantVersionStatusCountResponse {
+  status: VariantVersionStatus;
+  count: number;
+}
+
+export interface ProductCountByTherapeuticAreaResponse {
+  therapeuticAreaId: number;
+  therapeuticAreaName: string;
+  productCount: number;
+}
+
+export interface RegionResponse {
+  id: number;
+  name: string;
+  code: string;
+}
+
+export interface MarketLicenseStatusCountResponse {
+  status: MarketLicenseStatus;
+  count: number;
+}
+
+export interface MarketProductCountByRegionResponse {
+  regionId: number;
+  regionName: string;
+  regionCode: string;
+  marketProductCount: number;
+}

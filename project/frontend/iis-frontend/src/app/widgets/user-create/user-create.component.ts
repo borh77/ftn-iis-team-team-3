@@ -1,10 +1,11 @@
-import { Component, EventEmitter, OnInit, Output, inject } from '@angular/core';
+import { Component, EventEmitter, OnDestroy, OnInit, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { UserService } from '../../core/user.service';
 import { Region } from '../../core/region.model';
 import { RegionService } from '../../core/region.service';
 import { UserRole } from '../../core/auth/auth.models';
+import { ERROR_MESSAGE_MS, SUCCESS_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 
 @Component({
   selector: 'app-user-create',
@@ -13,12 +14,13 @@ import { UserRole } from '../../core/auth/auth.models';
   templateUrl: './user-create.component.html',
   styleUrl: './user-create.component.css',
 })
-export class UserCreateComponent implements OnInit {
+export class UserCreateComponent implements OnInit, OnDestroy {
   @Output() created = new EventEmitter<void>();
 
   private readonly fb = inject(FormBuilder);
   private readonly userService = inject(UserService);
   private readonly regionService = inject(RegionService);
+  private readonly transientMessages = inject(TransientMessageService);
 
   loading = false;
   loadingRegions = false;
@@ -41,6 +43,10 @@ export class UserCreateComponent implements OnInit {
     this.loadRegions();
   }
 
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
+  }
+
   get isBuyerRole(): boolean {
     return this.form.controls.role.value === 'ROLE_BUYER';
   }
@@ -52,8 +58,8 @@ export class UserCreateComponent implements OnInit {
     }
 
     this.loading = true;
-    this.successMessage = '';
-    this.errorMessage = '';
+    this.transientMessages.clearField(this, 'successMessage');
+    this.transientMessages.clearField(this, 'errorMessage');
 
     const raw = this.form.getRawValue();
     const payload = {
@@ -65,13 +71,13 @@ export class UserCreateComponent implements OnInit {
     this.userService.create(payload).subscribe({
       next: () => {
         this.loading = false;
-        this.successMessage = 'User created successfully.';
+        this.transientMessages.setField(this, 'successMessage', 'User created successfully.', SUCCESS_MESSAGE_MS);
         this.form.reset({ username: '', email: '', firstName: '', lastName: '', password: '', role: 'ROLE_ADMIN', regionId: null, customerSegment: '' });
         this.created.emit();
       },
       error: (error) => {
         this.loading = false;
-        this.errorMessage = error?.error?.error ?? 'Failed to create user.';
+        this.transientMessages.setField(this, 'errorMessage', error?.error?.error ?? 'Failed to create user.', ERROR_MESSAGE_MS);
       },
     });
   }

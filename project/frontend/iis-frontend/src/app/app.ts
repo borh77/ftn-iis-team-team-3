@@ -4,10 +4,40 @@ import { RouterLink, RouterOutlet } from '@angular/router';
 import { HeaderComponent } from './components/header/header.component';
 import { Router } from '@angular/router';
 import { AuthService } from './core/auth/auth.service';
+import {
+  Activity,
+  Boxes,
+  BriefcaseBusiness,
+  Building2,
+  ChartBar,
+  ClipboardList,
+  FilePenLine,
+  FileText,
+  FolderKanban,
+  HeartPulse,
+  LayoutDashboard,
+  MapPinned,
+  MessageSquare,
+  Pill,
+  Settings,
+  Shield,
+  ShoppingCart,
+  Stethoscope,
+  Tags,
+  TrendingUp,
+  Users,
+  LucideAngularModule,
+} from 'lucide-angular';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, RouterOutlet, RouterLink, HeaderComponent],
+  imports: [
+    CommonModule,
+    RouterOutlet,
+    RouterLink,
+    HeaderComponent,
+    LucideAngularModule,
+  ],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
@@ -15,4 +45,27 @@ export class App {
   protected readonly router = inject(Router);
   protected readonly authService = inject(AuthService);
   protected readonly title = signal('IIS Drug CRM');
+  protected readonly icons = {
+    Activity,
+    Boxes,
+    BriefcaseBusiness,
+    Building2,
+    ChartBar,
+    ClipboardList,
+    FilePenLine,
+    FileText,
+    FolderKanban,
+    HeartPulse,
+    LayoutDashboard,
+    MapPinned,
+    MessageSquare,
+    Pill,
+    Settings,
+    Shield,
+    ShoppingCart,
+    Stethoscope,
+    Tags,
+    TrendingUp,
+    Users,
+  };
 }

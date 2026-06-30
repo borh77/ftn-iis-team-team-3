@@ -12,10 +12,61 @@
       <p class="lede">Create and manage your pricelists before publishing.</p>
     </div>
 
-    <button type="button" class="secondary" (click)="reload()" [disabled]="loading">
-      {{ loading ? 'Refreshing...' : 'Refresh' }}
-    </button>
+    <div class="hero-actions">
+      <button type="button" class="primary" (click)="createWizard()">
+        Create new pricelist
+      </button>
+      <button type="button" class="secondary" (click)="reload()" [disabled]="loading || loadingDrafts">
+        {{ loading || loadingDrafts ? 'Refreshing...' : 'Refresh' }}
+      </button>
+    </div>
   </div>
+</section>
+
+<section class="panel drafts-panel">
+  <div class="panel-head">
+    <div>
+      <h3>Unfinished drafts</h3>
+      <p class="muted">Continue wizard drafts saved on the backend.</p>
+    </div>
+  </div>
+
+  @if (draftsErrorMessage) {
+    <p class="error-box">{{ draftsErrorMessage }}</p>
+  }
+
+  @if (loadingDrafts) {
+    <p class="muted">Loading unfinished drafts...</p>
+  } @else if (!wizardDrafts.length) {
+    <p class="muted">No unfinished wizard drafts.</p>
+  } @else {
+    <div class="draft-grid">
+      @for (draft of wizardDrafts; track draft.pricelistId) {
+        <article class="draft-card">
+          <div>
+            <p class="kicker">Draft #{{ draft.pricelistId }}</p>
+            <h4>{{ draft.pricelist?.regionName || 'Pricelist draft' }}</h4>
+            <p class="muted">{{ draft.pricelist?.customerSegment || 'Basic info not completed' }}</p>
+          </div>
+
+          <dl class="draft-meta">
+            <div>
+              <dt>Current step</dt>
+              <dd>{{ draftStepLabel(draft.creationStep) }}</dd>
+            </div>
+            <div>
+              <dt>Last edited</dt>
+              <dd>{{ draft.lastEditedAt ? (draft.lastEditedAt | date:'dd.MM.yyyy HH:mm') : '-' }}</dd>
+            </div>
+          </dl>
+
+          <button type="button" class="primary" (click)="continueDraft(draft)">
+            Continue creation
+          </button>
+        </article>
+      }
+    </div>
+  }
 </section>
 
 <section class="panel">
@@ -27,13 +78,30 @@
     <p class="success-box">{{ successMessage }}</p>
   }
 
+  <div class="filter-bar" aria-label="Pricelist filters">
+    <label>
+      <span>Status</span>
+      <select [(ngModel)]="selectedStatus" [ngModelOptions]="{standalone: true}">
+        @for (option of statusOptions; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </label>
+
+    <button type="button" class="ghost" (click)="resetFilters()" [disabled]="!statusFilterActive">
+      Reset filters
+    </button>
+  </div>
+
   @if (loading) {
     <p class="muted">Loading pricelists...</p>
   } @else if (!pricelists.length) {
     <p class="muted">You don't have any pricelists yet.</p>
+  } @else if (!filteredPricelists.length) {
+    <p class="muted">No pricelists found for the selected status.</p>
   } @else {
     <div class="pricelist-grid">
-      @for (p of pricelists; track p.id) {
+      @for (p of filteredPricelists; track p.id) {
         <article class="pricelist-card">
           <div class="pricelist-card__header">
             <div>
@@ -62,14 +130,14 @@
             </div>
             <div>
               <dt>Items</dt>
-              <dd>{{ p.items?.length ?? 0 }}</dd>
+              <dd>{{ p.items.length }}</dd>
             </div>
           </dl>
 
           <div class="pricelist-items">
             <h4>Items</h4>
             @if (requiresReplacement(p)) {
-              <p class="error-box">This pricelist contains inactive catalog variants.</p>
+              <p class="error-box">{{ inactiveVariantLifecycleMessage(p) }}</p>
             }
             @if (p.items && p.items.length) {
               @for (item of p.items; track item.variantId) {
@@ -91,22 +159,24 @@
                   </ul>
                   @if (item.replacementRequired) {
                     @if (canReplaceVariants(p)) {
-                      <div class="offer-form">
-                        <label>
-                          <span>Replacement variant</span>
-                          <select [(ngModel)]="replacementVariantIds[item.id!]" [ngModelOptions]="{standalone: true}">
-                            <option [ngValue]="null">Select active variant</option>
-                            @for (variant of activeVariants; track variant.id) {
-                              <option [ngValue]="variant.id">{{ variant.name }}</option>
-                            }
-                          </select>
-                        </label>
-                        <button type="button" class="secondary" (click)="replaceVariant(p, item)" [disabled]="isReplacing(item)">
-                          {{ isReplacing(item) ? 'Replacing...' : 'Replace variant' }}
-                        </button>
-                      </div>
+                      @if (item.replacementAvailable && item.replacementVariantId) {
+                        <div class="replacement-panel">
+                          <p class="muted">Suggested replacement: <strong>{{ item.replacementVariantName || ('Variant ' + item.replacementVariantId) }}</strong></p>
+                          <button type="button" class="secondary" (click)="replaceVariant(p, item)" [disabled]="isReplacing(item)">
+                            {{ isReplacing(item) ? 'Replacing...' : 'Replace variant' }}
+                          </button>
+                        </div>
+                      } @else {
+                        <p class="inline-error">No replacement is defined for this inactive variant.</p>
+                      }
                     } @else {
-                      <p class="muted">Create a new draft version before replacing inactive variants.</p>
+                      @if (p.status === 'IN_REVIEW') {
+                        <p class="muted">Return this pricelist to draft before replacing inactive variants.</p>
+                      } @else if (p.status === 'ACTIVE') {
+                        <p class="muted">Create a new version before replacing inactive variants.</p>
+                      } @else if (p.status === 'ARCHIVED') {
+                        <p class="muted">Archived pricelists are read-only.</p>
+                      }
                     }
                   }
                 </div>
@@ -119,7 +189,7 @@
           <div class="status-actions">
             @if (canEdit(p)) {
               <button type="button" class="primary" (click)="editPricelist(p)">
-                Edit
+                Edit draft
               </button>
             }
 
@@ -137,8 +207,12 @@
 
             @if (canReturnToDraft(p)) {
               <button type="button" class="secondary" (click)="returnToDraft(p)" [disabled]="isChanging(p)">
-                {{ isChanging(p) ? 'Updating...' : 'Return to draft' }}
+                {{ isChanging(p) ? 'Updating...' : 'Reject / return to draft' }}
               </button>
+            }
+
+            @if (isWaitingForExternalReview(p)) {
+              <p class="review-note">Waiting for review by another authorized user.</p>
             }
 
             @if (canArchive(p)) {
@@ -168,6 +242,82 @@
                   <p class="muted">Create variant-level discounts for this pricelist.</p>
                 </div>
               </div>
+
+              <section class="suggestions-panel">
+                <div class="panel-head compact">
+                  <div>
+                    <h4>System discount recommendations</h4>
+                    <p class="muted">Generate system recommendations for the selected customer segment, then copy one into the offer form.</p>
+                  </div>
+                </div>
+
+                <div class="suggestion-controls">
+                  <label>
+                    <span>Customer segment</span>
+                    <input
+                      type="text"
+                      list="promotion-segments"
+                      [(ngModel)]="suggestionSegmentByPricelist[p.id]"
+                      (change)="onSuggestionSegmentChanged(p)"
+                      [ngModelOptions]="{standalone: true}"
+                    />
+                    <datalist id="promotion-segments">
+                      @for (segment of segmentOptions(); track segment) {
+                        <option [value]="segment"></option>
+                      }
+                    </datalist>
+                  </label>
+
+                  <button type="button" class="secondary" (click)="generatePromotionSuggestions(p)" [disabled]="isLoadingSuggestions(p)">
+                    {{ suggestionButtonText(p) }}
+                  </button>
+                </div>
+
+                @if (suggestionErrorByPricelist[p.id]) {
+                  <p class="inline-error" role="alert">{{ suggestionErrorByPricelist[p.id] }}</p>
+                }
+
+                @if (isLoadingSuggestions(p)) {
+                  <p class="muted">Loading promotion suggestions...</p>
+                } @else if (promotionSuggestionsByPricelist[p.id]) {
+                  @if (promotionSuggestionsByPricelist[p.id].length) {
+                    <div class="suggestion-grid">
+                      @for (suggestion of promotionSuggestionsByPricelist[p.id]; track (suggestion.variantId ?? suggestion.brandId ?? 0) + '-' + $index) {
+                        <article class="suggestion-card">
+                          <div class="suggestion-card__head">
+                            <div>
+                              <span class="suggestion-type">{{ targetType(suggestion) }}</span>
+                              <h5>{{ suggestion.targetName }}</h5>
+                            </div>
+                            <strong>{{ suggestion.suggestedDiscountValue | number:'1.0-2' }}% off</strong>
+                          </div>
+
+                          <p>{{ suggestion.reason }}</p>
+
+                          @if (suggestion.expectedEffect) {
+                            <p class="muted">{{ suggestion.expectedEffect }}</p>
+                          }
+
+                          @if (suggestion.source) {
+                            <span class="source-badge">{{ suggestion.source }}</span>
+                          }
+
+                          <div class="suggestion-actions">
+                            <button type="button" class="primary" (click)="applyPromotionSuggestion(p, suggestion)">
+                              Create offer from suggestion
+                            </button>
+                            <button type="button" class="ghost" (click)="dismissPromotionSuggestion(p, suggestion)">
+                              Dismiss
+                            </button>
+                          </div>
+                        </article>
+                      }
+                    </div>
+                  } @else {
+                    <p class="muted">No suggestions are available for the selected segment.</p>
+                  }
+                }
+              </section>
 
               <div class="offer-form">
                 <label>

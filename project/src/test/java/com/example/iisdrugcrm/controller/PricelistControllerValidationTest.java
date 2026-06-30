@@ -2,6 +2,7 @@ package com.example.iisdrugcrm.controller;
 
 import com.example.iisdrugcrm.dto.pricelist.CreatePricelistDTO;
 import com.example.iisdrugcrm.service.PricelistService;
+import com.example.iisdrugcrm.service.PricelistWizardService;
 import com.example.iisdrugcrm.service.UserService;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -20,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -35,8 +37,10 @@ class PricelistControllerValidationTest {
         validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
-        PricelistController controller = new PricelistController(mock(PricelistService.class), mock(UserService.class));
-        mockMvc = standaloneSetup(controller)
+        UserService userService = mock(UserService.class);
+        PricelistController controller = new PricelistController(mock(PricelistService.class), userService);
+        PricelistWizardController wizardController = new PricelistWizardController(mock(PricelistWizardService.class), userService);
+        mockMvc = standaloneSetup(controller, wizardController)
                 .setControllerAdvice(new RestExceptionHandler())
                 .setValidator(validator)
                 .build();
@@ -124,6 +128,23 @@ class PricelistControllerValidationTest {
         Set<ConstraintViolation<CreatePricelistDTO>> violations = getValidator().validate(validDto());
 
         assertTrue(violations.isEmpty());
+    }
+
+    @Test
+    void wizardBasicInfoValidationReturnsClearError() throws Exception {
+        mockMvc.perform(put("/api/cenovnici/100/wizard/basic-info")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "customerSegment": "Lanci apoteka",
+                                  "currency": "RSD",
+                                  "periodStart": "2026-07-01T00:00:00Z",
+                                  "periodEnd": "2026-09-30T00:00:00Z"
+                                }
+                                """))
+                .andExpect(status().is(422))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.error").value("Region is required"));
     }
 
     private void assertInvalidThresholds(String thresholdsJson, String expectedMessage) throws Exception {

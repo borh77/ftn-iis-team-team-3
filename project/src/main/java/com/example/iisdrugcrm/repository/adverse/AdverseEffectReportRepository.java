@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface AdverseEffectReportRepository extends JpaRepository<AdverseEffectReport, Long> {
 
-    // Svi nalozi jednog korisnika (lekar vidi samo svoje)
+    // All reports for one user; doctors see only their own
     List<AdverseEffectReport> findByReporterIdOrderByCreatedAtDesc(Long reporterId);
 
     @Query("""

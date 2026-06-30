@@ -5,10 +5,14 @@ import com.example.iisdrugcrm.domain.pricelist.Pricelist;
 import com.example.iisdrugcrm.repository.PricelistTeamRepository;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 @Service
 public class PricelistAccessService {
+
+    public static final String SELF_ACTIVATION_MESSAGE = "You cannot activate a pricelist that you submitted for review.";
+    public static final String REVIEWER_REQUIRED_MESSAGE = "A pricelist must be reviewed by another authorized reviewer.";
 
     private final PricelistTeamRepository teamRepository;
 
@@ -28,7 +32,43 @@ public class PricelistAccessService {
     }
 
     public boolean canCollaborate(Pricelist pricelist, Long userId) {
-        return isOwner(pricelist, userId) || isSameTeamCreator(pricelist, userId);
+        if (isOwner(pricelist, userId) || isSameTeamCreator(pricelist, userId)) {
+            return true;
+        }
+        if (pricelist.getTeam() == null || userId == null) {
+            return false;
+        }
+        return pricelist.getTeam().getLeaderId().equals(userId) || pricelist.getTeam().getMemberIds().contains(userId);
+    }
+
+    public boolean canActivateAsReviewer(Pricelist pricelist, Long userId) {
+        return canActivateAsReviewer(pricelist, userId, false);
+    }
+
+    public boolean canActivateAsReviewer(Pricelist pricelist, Long userId, boolean admin) {
+        if (isOwner(pricelist, userId) || userId == null) {
+            return false;
+        }
+        if (admin) {
+            return true;
+        }
+        if (pricelist.getTeam() == null) {
+            return false;
+        }
+        return pricelist.getTeam().getLeaderId().equals(userId) || pricelist.getTeam().getMemberIds().contains(userId);
+    }
+
+    public void validateActivationReviewer(Pricelist pricelist, Long userId) {
+        validateActivationReviewer(pricelist, userId, false);
+    }
+
+    public void validateActivationReviewer(Pricelist pricelist, Long userId, boolean admin) {
+        if (isOwner(pricelist, userId)) {
+            throw new AccessDeniedException(SELF_ACTIVATION_MESSAGE);
+        }
+        if (!canActivateAsReviewer(pricelist, userId, admin)) {
+            throw new AccessDeniedException(REVIEWER_REQUIRED_MESSAGE);
+        }
     }
 
     public void validateOwnerOnly(Pricelist pricelist, Long userId) {

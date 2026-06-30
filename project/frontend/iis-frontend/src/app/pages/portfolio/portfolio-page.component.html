@@ -13,6 +13,10 @@
     <button type="button" [class.active]="activeTab() === 'versions'" (click)="setTab('versions')">Versions</button>
     <button type="button" [class.active]="activeTab() === 'ingredients'" (click)="setTab('ingredients')">Ingredients</button>
     <button type="button" [class.active]="activeTab() === 'bom'" (click)="setTab('bom')">Version Ingredients / BOM</button>
+    <button type="button" [class.active]="activeTab() === 'market-products'" (click)="setTab('market-products')">Market Products</button>
+    <button type="button" [class.active]="activeTab() === 'market-licenses'" (click)="setTab('market-licenses')">Market Licenses</button>
+    <button type="button" [class.active]="activeTab() === 'lifecycle'" (click)="setTab('lifecycle')">Lifecycle</button>
+    <button type="button" [class.active]="activeTab() === 'analytics'" (click)="setTab('analytics')">Analytics</button>
   </nav>
 
   <section class="panel">
@@ -431,4 +435,551 @@
 
 
   </section>
+
+    @if (activeTab() === 'market-products') {
+    <section class="panel-section">
+      <div class="panel-head">
+        <div>
+          <h3>Market Products</h3>
+          <p class="muted">Localize product variants for specific regions.</p>
+        </div>
+
+        <button type="button" class="secondary" (click)="loadMarketProducts()">Refresh</button>
+      </div>
+
+      <form [formGroup]="marketProductForm" (ngSubmit)="createMarketProduct()" class="inline-form">
+        <label>
+          <span>Variant</span>
+          <select formControlName="variantId">
+            <option [ngValue]="0">Select variant</option>
+            @for (variant of variants(); track variant.id) {
+              <option [ngValue]="variant.id">
+                {{ variant.productName }} / {{ variant.form }} {{ variant.dosage }}
+              </option>
+            }
+          </select>
+        </label>
+
+        <label>
+          <span>Region</span>
+          <select formControlName="regionId">
+            <option [ngValue]="0">Select region</option>
+            @for (region of regions(); track region.id) {
+              <option [ngValue]="region.id">
+                {{ region.name }} ({{ region.code }})
+              </option>
+            }
+          </select>
+        </label>
+
+        <label>
+          <span>Local name</span>
+          <input type="text" formControlName="localName" placeholder="Brufen 30mg Serbia" />
+        </label>
+
+        <label>
+          <span>Packaging</span>
+          <input type="text" formControlName="packagingDescription" placeholder="20 tablets blister pack" />
+        </label>
+
+        <label>
+          <span>Barcode</span>
+          <input type="text" formControlName="barcode" placeholder="860..." />
+        </label>
+
+        <button type="submit" class="primary" [disabled]="marketProductForm.invalid || savingMarketProduct">
+          {{ savingMarketProduct ? 'Saving...' : 'Add market product' }}
+        </button>
+      </form>
+
+      @if (loadingMarketProducts()) {
+        <p class="muted">Loading market products...</p>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Variant</th>
+                <th>Region</th>
+                <th>Local name</th>
+                <th>Packaging</th>
+                <th>Barcode</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (item of marketProducts(); track item.id) {
+                <tr>
+                  <td>{{ item.productName }}</td>
+                  <td>{{ item.variantForm }} {{ item.variantDosage }}</td>
+                  <td>{{ item.regionName }} ({{ item.regionCode }})</td>
+                  <td>{{ item.localName }}</td>
+                  <td>{{ item.packagingDescription || '-' }}</td>
+                  <td>{{ item.barcode || '-' }}</td>
+                  <td>{{ item.status }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="7">No market products found.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+
+  @if (activeTab() === 'market-licenses') {
+  <section class="panel-section">
+    <div class="panel-head">
+      <div>
+        <h3>Market Licenses</h3>
+        <p class="muted">Manage regulatory approvals for market products and their variant versions.</p>
+      </div>
+
+      <button type="button" class="secondary" (click)="loadMarketLicenses()">Refresh</button>
+    </div>
+
+    <form [formGroup]="marketLicenseForm" (ngSubmit)="createMarketLicense()" class="inline-form">
+      <label>
+        <span>Market product</span>
+        <select formControlName="marketProductId">
+          <option [ngValue]="0">Select market product</option>
+          @for (marketProduct of marketProducts(); track marketProduct.id) {
+            <option [ngValue]="marketProduct.id">
+              {{ marketProduct.localName }} / {{ marketProduct.regionName }} / {{ marketProduct.variantForm }} {{ marketProduct.variantDosage }}
+            </option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>Variant version</span>
+        <select formControlName="variantVersionId">
+          <option [ngValue]="0">Select version</option>
+          @for (version of versions(); track version.id) {
+            <option [ngValue]="version.id">
+              {{ version.productName }} / {{ version.variantForm }} {{ version.variantDosage }} / {{ version.versionLabel }} ({{ version.status }})
+            </option>
+          }
+        </select>
+      </label>
+
+      <label>
+        <span>License number</span>
+        <input type="text" formControlName="licenseNumber" placeholder="ALIMS-2026-001" />
+      </label>
+
+      <label>
+        <span>Issued at</span>
+        <input type="date" formControlName="issuedAt" />
+      </label>
+
+      <label>
+        <span>Valid until</span>
+        <input type="date" formControlName="validUntil" />
+      </label>
+
+      <button type="submit" class="primary" [disabled]="marketLicenseForm.invalid || savingMarketLicense">
+        {{ savingMarketLicense ? 'Saving...' : 'Add license' }}
+      </button>
+    </form>
+
+    @if (loadingMarketLicenses()) {
+      <p class="muted">Loading market licenses...</p>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>License</th>
+              <th>Market product</th>
+              <th>Region</th>
+              <th>Version</th>
+              <th>Issued</th>
+              <th>Valid until</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (license of marketLicenses(); track license.id) {
+              <tr>
+                <td>{{ license.licenseNumber }}</td>
+                <td>{{ license.localName }}</td>
+                <td>{{ license.regionName }} ({{ license.regionCode }})</td>
+                <td>{{ license.productName }} / {{ license.variantForm }} {{ license.variantDosage }} / {{ license.versionLabel }}</td>
+                <td>{{ license.issuedAt || '-' }}</td>
+                <td>{{ license.validUntil || '-' }}</td>
+                <td>{{ license.status }}</td>
+                <td class="actions-cell">
+                  <button
+                    type="button"
+                    class="secondary"
+                    (click)="changeMarketLicenseStatus(license.id, 'APPROVED')"
+                    [disabled]="changingMarketLicenseStatus || license.status === 'APPROVED'">
+                    Approve
+                  </button>
+
+                  <button
+                    type="button"
+                    class="secondary"
+                    (click)="changeMarketLicenseStatus(license.id, 'RENEWAL_IN_PROGRESS')"
+                    [disabled]="changingMarketLicenseStatus || license.status === 'RENEWAL_IN_PROGRESS'">
+                    Renewal
+                  </button>
+
+                  <button
+                    type="button"
+                    class="secondary"
+                    (click)="changeMarketLicenseStatus(license.id, 'EXPIRED')"
+                    [disabled]="changingMarketLicenseStatus || license.status === 'EXPIRED'">
+                    Expire
+                  </button>
+
+                  <button
+                    type="button"
+                    class="secondary"
+                    (click)="changeMarketLicenseStatus(license.id, 'SUSPENDED')"
+                    [disabled]="changingMarketLicenseStatus || license.status === 'SUSPENDED'">
+                    Suspend
+                  </button>
+
+                  <button
+                    type="button"
+                    class="secondary"
+                    (click)="loadMarketLicenseHistory(license.id)">
+                    History
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="8">No market licenses found.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+      @if (selectedMarketLicenseId() !== 0) {
+        <section class="sub-panel">
+          <div class="panel-head">
+            <div>
+              <h4>License history</h4>
+              <p class="muted">Status changes for selected market license.</p>
+            </div>
+          </div>
+
+          @if (loadingMarketLicenseHistory()) {
+            <p class="muted">Loading license history...</p>
+          } @else {
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>License</th>
+                    <th>Product</th>
+                    <th>Region</th>
+                    <th>Old status</th>
+                    <th>New status</th>
+                    <th>Changed at</th>
+                    <th>Changed by</th>
+                    <th>Note</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  @for (history of marketLicenseHistory(); track history.id) {
+                    <tr>
+                      <td>{{ history.licenseNumber }}</td>
+                      <td>{{ history.productName }} / {{ history.versionLabel }}</td>
+                      <td>{{ history.regionName }}</td>
+                      <td>{{ history.oldStatus || '-' }}</td>
+                      <td>{{ history.newStatus }}</td>
+                      <td>{{ history.changedAt }}</td>
+                      <td>{{ history.changedBy || '-' }}</td>
+                      <td>{{ history.note || '-' }}</td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="8">No history found for this license.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+      }
+    </section>
+  }
+
+  @if (activeTab() === 'lifecycle') {
+  <section class="panel-section">
+    <div class="panel-head">
+      <div>
+        <h3>Variant Lifecycle History</h3>
+        <p class="muted">Track lifecycle changes for all versions of a selected variant.</p>
+      </div>
+    </div>
+
+    <form class="inline-form">
+      <label>
+        <span>Variant</span>
+        <select
+          [ngModel]="lifecycleVariantId()"
+          (ngModelChange)="loadVariantLifecycleHistory($event)"
+          name="lifecycleVariantId">
+          <option [ngValue]="0">Select variant</option>
+          @for (variant of variants(); track variant.id) {
+            <option [ngValue]="variant.id">
+              {{ variant.productName }} / {{ variant.form }} {{ variant.dosage }}
+            </option>
+          }
+        </select>
+      </label>
+    </form>
+
+    @if (loadingVariantLifecycleHistory()) {
+      <p class="muted">Loading lifecycle history...</p>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Variant</th>
+              <th>Version</th>
+              <th>Old status</th>
+              <th>New status</th>
+              <th>Changed at</th>
+              <th>Changed by</th>
+              <th>Automatic</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            @for (history of variantLifecycleHistory(); track history.id) {
+              <tr>
+                <td>{{ history.productName }}</td>
+                <td>{{ history.variantForm }} {{ history.variantDosage }}</td>
+                <td>{{ history.versionLabel }}</td>
+                <td>{{ history.oldStatus || '-' }}</td>
+                <td>{{ history.newStatus }}</td>
+                <td>{{ history.changedAt }}</td>
+                <td>{{ history.changedBy || '-' }}</td>
+                <td>{{ history.automaticTransition ? 'Yes' : 'No' }}</td>
+                <td>{{ history.reason || '-' }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="9">No lifecycle history found.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+}
+
+@if (activeTab() === 'analytics') {
+  <section class="panel-section">
+    <div class="panel-head">
+      <div>
+        <h3>Portfolio Analytics</h3>
+        <p class="muted">Overview of lifecycle states, hierarchy distribution and expiring licenses.</p>
+      </div>
+
+      <div style="display:flex; gap:12px;">
+        <button
+          type="button"
+          class="secondary"
+          (click)="loadAnalytics()">
+          Refresh
+        </button>
+
+        <button
+          type="button"
+          class="primary"
+          (click)="downloadAnalyticsReport()">
+          Download PDF
+        </button>
+      </div>
+    </div>
+
+    @if (loadingAnalytics()) {
+      <p class="muted">Loading analytics...</p>
+    } @else {
+      <section class="sub-panel">
+        <h4>Variant versions by status</h4>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Count</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (item of versionStatusCounts(); track item.status) {
+                <tr>
+                  <td>{{ item.status }}</td>
+                  <td>{{ item.count }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="2">No status analytics found.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="sub-panel">
+        <h4>Market licenses by status</h4>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Count</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (item of marketLicenseStatusCounts(); track item.status) {
+                <tr>
+                  <td>{{ item.status }}</td>
+                  <td>{{ item.count }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="2">No market license analytics found.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="sub-panel">
+        <h4>Active products by therapeutic area</h4>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Therapeutic area</th>
+                <th>Product count</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (item of productsByTherapeuticArea(); track item.therapeuticAreaId) {
+                <tr>
+                  <td>{{ item.therapeuticAreaName }}</td>
+                  <td>{{ item.productCount }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="2">No therapeutic area analytics found.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="sub-panel">
+        <h4>Market products by region</h4>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Region</th>
+                <th>Region code</th>
+                <th>Market product count</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (item of marketProductsByRegion(); track item.regionId) {
+                <tr>
+                  <td>{{ item.regionName }}</td>
+                  <td>{{ item.regionCode }}</td>
+                  <td>{{ item.marketProductCount }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="3">No market products by region found.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="sub-panel">
+        <div class="panel-head">
+          <div>
+            <h4>Licenses expiring until</h4>
+            <p class="muted">Regulatory licenses that expire before selected date.</p>
+          </div>
+
+          <input
+            type="date"
+            [ngModel]="expiringUntilDate()"
+            (ngModelChange)="expiringUntilDate.set($event); loadAnalytics()"
+            name="expiringUntilDate" />
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>License</th>
+                <th>Market product</th>
+                <th>Region</th>
+                <th>Version</th>
+                <th>Status</th>
+                <th>Valid until</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (license of expiringLicenses(); track license.id) {
+                <tr>
+                  <td>{{ license.licenseNumber }}</td>
+                  <td>{{ license.localName }}</td>
+                  <td>{{ license.regionName }} ({{ license.regionCode }})</td>
+                  <td>{{ license.productName }} / {{ license.versionLabel }}</td>
+                  <td>{{ license.status }}</td>
+                  <td>{{ license.validUntil || '-' }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="6">No expiring licenses found.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+  </section>
+}
+
 </section>

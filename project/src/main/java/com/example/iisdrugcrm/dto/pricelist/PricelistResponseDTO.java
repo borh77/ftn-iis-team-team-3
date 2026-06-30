@@ -2,10 +2,13 @@ package com.example.iisdrugcrm.dto.pricelist;
 
 import com.example.iisdrugcrm.domain.PricelistStatus;
 import com.example.iisdrugcrm.domain.pricelist.Pricelist;
+import com.example.iisdrugcrm.domain.pricelist.PricelistCreationStep;
 import com.example.iisdrugcrm.domain.pricelist.PricelistItem;
 import com.example.iisdrugcrm.domain.pricelist.QuantityThreshold;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 
@@ -21,10 +24,19 @@ public class PricelistResponseDTO {
     private Integer versionNumber;
     private Long parentPricelistId;
     private Long rootPricelistId;
+    private PricelistCreationStep creationStep;
+    private boolean creationCompleted;
+    private OffsetDateTime lastEditedAt;
+    private Long teamId;
+    private String teamName;
     private boolean canCreateNewVersion;
     private boolean owner;
     private boolean canCollaborate;
+    private boolean canEditDraft;
+    private boolean canSubmitForReview;
     private boolean canManageOffers;
+    private boolean canActivate;
+    private boolean canReject;
     private OffsetDateTime periodStart;
     private OffsetDateTime periodEnd;
     private List<PricelistItemResponseDTO> items;
@@ -121,6 +133,46 @@ public class PricelistResponseDTO {
         this.rootPricelistId = rootPricelistId;
     }
 
+    public PricelistCreationStep getCreationStep() {
+        return creationStep;
+    }
+
+    public void setCreationStep(PricelistCreationStep creationStep) {
+        this.creationStep = creationStep;
+    }
+
+    public boolean isCreationCompleted() {
+        return creationCompleted;
+    }
+
+    public void setCreationCompleted(boolean creationCompleted) {
+        this.creationCompleted = creationCompleted;
+    }
+
+    public OffsetDateTime getLastEditedAt() {
+        return lastEditedAt;
+    }
+
+    public void setLastEditedAt(OffsetDateTime lastEditedAt) {
+        this.lastEditedAt = lastEditedAt;
+    }
+
+    public Long getTeamId() {
+        return teamId;
+    }
+
+    public void setTeamId(Long teamId) {
+        this.teamId = teamId;
+    }
+
+    public String getTeamName() {
+        return teamName;
+    }
+
+    public void setTeamName(String teamName) {
+        this.teamName = teamName;
+    }
+
     public boolean isCanCreateNewVersion() {
         return canCreateNewVersion;
     }
@@ -153,6 +205,38 @@ public class PricelistResponseDTO {
         this.canManageOffers = canManageOffers;
     }
 
+    public boolean isCanActivate() {
+        return canActivate;
+    }
+
+    public void setCanActivate(boolean canActivate) {
+        this.canActivate = canActivate;
+    }
+
+    public boolean isCanEditDraft() {
+        return canEditDraft;
+    }
+
+    public void setCanEditDraft(boolean canEditDraft) {
+        this.canEditDraft = canEditDraft;
+    }
+
+    public boolean isCanSubmitForReview() {
+        return canSubmitForReview;
+    }
+
+    public void setCanSubmitForReview(boolean canSubmitForReview) {
+        this.canSubmitForReview = canSubmitForReview;
+    }
+
+    public boolean isCanReject() {
+        return canReject;
+    }
+
+    public void setCanReject(boolean canReject) {
+        this.canReject = canReject;
+    }
+
     public void setPeriodEnd(OffsetDateTime periodEnd) {
         this.periodEnd = periodEnd;
     }
@@ -169,7 +253,7 @@ public class PricelistResponseDTO {
         return fromEntity(pricelist, Map.of());
     }
 
-    public static PricelistResponseDTO fromEntity(Pricelist pricelist, Map<Long, CatalogVariantDTO> activeVariantsById) {
+    public static PricelistResponseDTO fromEntity(Pricelist pricelist, Map<Long, CatalogVariantDTO> catalogVariantsById) {
         PricelistResponseDTO dto = new PricelistResponseDTO();
         dto.setId(pricelist.getId());
         dto.setRegionId(pricelist.getRegion().getId());
@@ -181,23 +265,83 @@ public class PricelistResponseDTO {
         dto.setVersionNumber(pricelist.getVersionNumber());
         dto.setParentPricelistId(pricelist.getParentPricelistId());
         dto.setRootPricelistId(pricelist.getRootPricelistId());
-        dto.setCanCreateNewVersion(pricelist.getStatus() == PricelistStatus.IN_REVIEW || pricelist.getStatus() == PricelistStatus.ACTIVE);
+        dto.setCreationStep(pricelist.getCreationStep());
+        dto.setCreationCompleted(pricelist.isCreationCompleted());
+        dto.setLastEditedAt(pricelist.getLastEditedAt());
+        if (pricelist.getTeam() != null) {
+            dto.setTeamId(pricelist.getTeam().getId());
+            dto.setTeamName(pricelist.getTeam().getName());
+        }
+        dto.setCanCreateNewVersion(pricelist.getStatus() == PricelistStatus.ACTIVE);
         dto.setPeriodStart(pricelist.getPeriodStart());
         dto.setPeriodEnd(pricelist.getPeriodEnd());
-        dto.setItems(pricelist.getItems().stream().map(item -> PricelistItemResponseDTO.fromEntity(item, activeVariantsById)).toList());
+        dto.setItems(pricelist.getItems().stream().map(item -> PricelistItemResponseDTO.fromEntity(item, catalogVariantsById)).toList());
         return dto;
     }
 
-    public static PricelistResponseDTO fromEntity(Pricelist pricelist, Long currentUserId, boolean canCollaborate, Map<Long, CatalogVariantDTO> activeVariantsById) {
-        PricelistResponseDTO dto = fromEntity(pricelist, activeVariantsById);
+    public static PricelistResponseDTO fromEntity(Pricelist pricelist, Long currentUserId, boolean canCollaborate, Map<Long, CatalogVariantDTO> catalogVariantsById) {
+        PricelistResponseDTO dto = fromEntity(pricelist, catalogVariantsById);
         boolean owner = currentUserId != null
                 && pricelist.getCreatedBy() != null
                 && pricelist.getCreatedBy().equals(currentUserId);
         dto.setOwner(owner);
         dto.setCanCollaborate(canCollaborate);
-        dto.setCanManageOffers(canCollaborate);
-        dto.setCanCreateNewVersion(canCollaborate && (pricelist.getStatus() == PricelistStatus.IN_REVIEW || pricelist.getStatus() == PricelistStatus.ACTIVE));
+        dto.setCanEditDraft(canCollaborate && pricelist.getStatus() == PricelistStatus.DRAFT);
+        dto.setCanSubmitForReview(owner && isReadyForReview(pricelist, catalogVariantsById));
+        dto.setCanManageOffers(canCollaborate && pricelist.getStatus() == PricelistStatus.ACTIVE);
+        dto.setCanCreateNewVersion(canCollaborate && pricelist.getStatus() == PricelistStatus.ACTIVE);
         return dto;
+    }
+
+    private static boolean isReadyForReview(Pricelist pricelist, Map<Long, CatalogVariantDTO> catalogVariantsById) {
+        if (pricelist.getStatus() != PricelistStatus.DRAFT) {
+            return false;
+        }
+        if (pricelist.getCreationStep() != PricelistCreationStep.REVIEW
+                && pricelist.getCreationStep() != PricelistCreationStep.COMPLETED) {
+            return false;
+        }
+        if (pricelist.getRegion() == null) {
+            return false;
+        }
+        if (pricelist.getCustomerSegment() == null
+                || pricelist.getCustomerSegment().isBlank()
+                || "UNDEFINED".equals(pricelist.getCustomerSegment())) {
+            return false;
+        }
+        if (pricelist.getCurrency() == null || pricelist.getCurrency().isBlank()) {
+            return false;
+        }
+        if (pricelist.getPeriodStart() == null
+                || pricelist.getPeriodEnd() == null
+                || !pricelist.getPeriodStart().isBefore(pricelist.getPeriodEnd())
+                || isStartDateInPast(pricelist.getPeriodStart())) {
+            return false;
+        }
+        if (pricelist.getItems() == null || pricelist.getItems().isEmpty()) {
+            return false;
+        }
+        for (PricelistItem item : pricelist.getItems()) {
+            CatalogVariantDTO catalogVariant = catalogVariantsById == null ? null : catalogVariantsById.get(item.getVariantId());
+            if (item.getVariantId() == null || catalogVariant == null || !catalogVariant.isActive()) {
+                return false;
+            }
+            if (item.getThresholds() == null || item.getThresholds().isEmpty()) {
+                return false;
+            }
+        }
+        try {
+            pricelist.validateThresholds();
+            return true;
+        } catch (RuntimeException exception) {
+            return false;
+        }
+    }
+
+    private static boolean isStartDateInPast(OffsetDateTime periodStart) {
+        ZoneId businessZone = ZoneId.systemDefault();
+        LocalDate startDate = periodStart.atZoneSameInstant(businessZone).toLocalDate();
+        return startDate.isBefore(LocalDate.now(businessZone));
     }
 
     public static class PricelistItemResponseDTO {
@@ -207,6 +351,9 @@ public class PricelistResponseDTO {
         private boolean activeVariant;
         private boolean replacementRequired;
         private boolean catalogAvailable;
+        private Long replacementVariantId;
+        private String replacementVariantName;
+        private boolean replacementAvailable;
         private List<QuantityThresholdResponseDTO> thresholds;
 
         public Long getId() {
@@ -257,6 +404,30 @@ public class PricelistResponseDTO {
             this.catalogAvailable = catalogAvailable;
         }
 
+        public Long getReplacementVariantId() {
+            return replacementVariantId;
+        }
+
+        public void setReplacementVariantId(Long replacementVariantId) {
+            this.replacementVariantId = replacementVariantId;
+        }
+
+        public String getReplacementVariantName() {
+            return replacementVariantName;
+        }
+
+        public void setReplacementVariantName(String replacementVariantName) {
+            this.replacementVariantName = replacementVariantName;
+        }
+
+        public boolean isReplacementAvailable() {
+            return replacementAvailable;
+        }
+
+        public void setReplacementAvailable(boolean replacementAvailable) {
+            this.replacementAvailable = replacementAvailable;
+        }
+
         public List<QuantityThresholdResponseDTO> getThresholds() {
             return thresholds;
         }
@@ -269,15 +440,22 @@ public class PricelistResponseDTO {
             return fromEntity(item, Map.of());
         }
 
-        public static PricelistItemResponseDTO fromEntity(PricelistItem item, Map<Long, CatalogVariantDTO> activeVariantsById) {
+        public static PricelistItemResponseDTO fromEntity(PricelistItem item, Map<Long, CatalogVariantDTO> catalogVariantsById) {
             PricelistItemResponseDTO dto = new PricelistItemResponseDTO();
             dto.setId(item.getId());
             dto.setVariantId(item.getVariantId());
             dto.setVariantName(item.getVariantName());
-            boolean active = activeVariantsById.containsKey(item.getVariantId());
+            CatalogVariantDTO catalogVariant = catalogVariantsById.get(item.getVariantId());
+            boolean catalogAvailable = catalogVariant != null;
+            boolean active = catalogAvailable && catalogVariant.isActive();
             dto.setActiveVariant(active);
-            dto.setCatalogAvailable(active);
+            dto.setCatalogAvailable(catalogAvailable);
             dto.setReplacementRequired(!active);
+            if (catalogVariant != null) {
+                dto.setReplacementVariantId(catalogVariant.getReplacementVariantId());
+                dto.setReplacementVariantName(catalogVariant.getReplacementVariantName());
+                dto.setReplacementAvailable(catalogVariant.getReplacementVariantId() != null);
+            }
             dto.setThresholds(item.getThresholds().stream().map(QuantityThresholdResponseDTO::fromEntity).toList());
             return dto;
         }

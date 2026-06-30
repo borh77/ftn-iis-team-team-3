@@ -1,4 +1,8 @@
 <main class="page">
+  <div *ngIf="errorMessage" class="error-box" role="alert">
+    {{ errorMessage }}
+  </div>
+
   <div *ngIf="loading" class="loading">Loading contract details...</div>
 
   <ng-container *ngIf="!loading && contract">

@@ -13,30 +13,49 @@
   } @else if (items.length === 0) {
     <p class="muted">No regions created yet.</p>
   } @else {
+    <div class="list-toolbar">
+      <label>
+        <span>Search regions</span>
+        <input
+          type="search"
+          [(ngModel)]="searchQuery"
+          placeholder="Name, code, or ID"
+          aria-label="Search regions"
+        />
+      </label>
+      @if (searchQuery) {
+        <button type="button" class="ghost" (click)="searchQuery = ''">Clear</button>
+      }
+    </div>
+
+    @if (filteredRegions().length === 0) {
+      <p class="muted">No regions match the current search.</p>
+    } @else {
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
             <th>ID</th>
-            <th>Naziv</th>
-            <th>Kod</th>
-            <th>Akcije</th>
+            <th>Name</th>
+            <th>Code</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          @for (region of items; track region.id) {
+          @for (region of filteredRegions(); track region.id) {
             <tr>
               <td>{{ region.id }}</td>
               <td>{{ region.name }}</td>
               <td>{{ region.code }}</td>
               <td class="actions">
-                <button type="button" (click)="editRequested.emit(region)">Izmeni</button>
-                <button type="button" class="danger" (click)="deleteRequested.emit(region)">Obriši</button>
+                <button type="button" (click)="editRequested.emit(region)">Edit</button>
+                <button type="button" class="danger" (click)="deleteRequested.emit(region)">Delete</button>
               </td>
             </tr>
           }
         </tbody>
       </table>
     </div>
+    }
   }
 </section>

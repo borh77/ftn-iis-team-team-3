@@ -21,3 +21,15 @@ export interface CreateSpecialOfferPayload {
   startDate: string;
   endDate: string;
 }
+
+export interface PromotionSuggestion {
+  variantId?: number | null;
+  brandId?: number | null;
+  targetName: string;
+  customerSegment: string;
+  suggestedDiscountType: DiscountType;
+  suggestedDiscountValue: number;
+  reason: string;
+  expectedEffect?: string | null;
+  source?: string | null;
+}

@@ -10,15 +10,17 @@ import { EditReportComponent } from './features/adverse-effects/pages/edit-repor
 import { LoginComponent } from './pages/login/login.component';
 import { AdminUsersPageComponent } from './pages/admin-users/admin-users-page.component';
 import { AdminLogsComponent } from './pages/admin-logs/admin-logs.component';
+import { AdminReportsComponent } from './pages/admin-reports/admin-reports.component';
 import { TeamManagementComponent } from './pages/team-management/team-management.component';
 import { AdminRegionsPageComponent } from './pages/admin-regions/admin-regions-page.component';
 import { RoleLandingComponent } from './pages/role-landing/role-landing.component';
 import { ForcePasswordChangeComponent } from './pages/force-password-change/force-password-change.component';
 import { ProfileComponent } from './pages/profile/profile.component';
 import { PortfolioPageComponent } from './pages/portfolio/portfolio-page.component';
-import { PricelistCreateComponent } from './pages/pricelist-create/pricelist-create.component';
+import { PricelistCreateWizardComponent } from './pages/pricelist-create-wizard/pricelist-create-wizard.component';
 import { SalesDashboardComponent } from './pages/sales-dashboard/sales-dashboard.component';
 import { BuyerCatalogComponent } from './pages/buyer-catalog/buyer-catalog.component';
+import { OrderUploadComponent } from './pages/order-upload/order-upload.component';
 import { LeadsListComponent } from './features/sales/pages/leads-list/leads-list.component';
 import { CustomersListComponent } from './features/sales/pages/customers-list/customers-list.component';
 import { ProcessesListComponent } from './features/sales/pages/processes-list/processes-list.component';
@@ -61,6 +63,13 @@ export const routes: Routes = [
 		title: 'IIS Drug CRM | Activity Logs',
 	},
 	{
+		path: 'admin/reports',
+		component: AdminReportsComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_ADMIN'] },
+		title: 'IIS Drug CRM | Performance Reports',
+	},
+	{
 		path: 'profile',
 		component: ProfileComponent,
 		canActivate: [authGuard, passwordChangeGuard],
@@ -93,17 +102,31 @@ export const routes: Routes = [
 	},
 	{
 		path: 'content/new',
-		component: PricelistCreateComponent,
+		component: PricelistCreateWizardComponent,
 		canActivate: [authGuard, passwordChangeGuard],
 		data: { roles: ['ROLE_PRICELIST_CREATOR'] },
 		title: 'IIS Drug CRM | New Pricelist',
 	},
 	{
-		path: 'pricelists/:id/edit',
-		component: PricelistCreateComponent,
+		path: 'pricelists/create',
+		component: PricelistCreateWizardComponent,
 		canActivate: [authGuard, passwordChangeGuard],
 		data: { roles: ['ROLE_PRICELIST_CREATOR'] },
-		title: 'IIS Drug CRM | Edit Pricelist',
+		title: 'IIS Drug CRM | New Pricelist',
+	},
+	{
+		path: 'pricelists/create/:id',
+		component: PricelistCreateWizardComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_PRICELIST_CREATOR'] },
+		title: 'IIS Drug CRM | Continue Pricelist',
+	},
+	{
+		path: 'pricelists/:id/edit',
+		component: PricelistCreateWizardComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_PRICELIST_CREATOR'] },
+		title: 'IIS Drug CRM | Edit Pricelist Draft',
 	},
 	{
 		path: 'published-pricelists',
@@ -118,6 +141,13 @@ export const routes: Routes = [
 		canActivate: [authGuard, passwordChangeGuard],
 		data: { roles: ['ROLE_BUYER'] },
 		title: 'IIS Drug CRM | Medicine Catalog',
+	},
+	{
+		path: 'buyer/order-validation',
+		component: OrderUploadComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_BUYER'] },
+		title: 'IIS Drug CRM | Order Validation',
 	},
 	{
 		path: 'portfolio',
@@ -209,13 +239,13 @@ export const routes: Routes = [
 		},
 		title: 'IIS Drug CRM | Communications',
 	},
-	// Podsistem neželjenih efekata lekova
+	// Adverse drug effects subsystem
 	{
 		path: 'adverse-effects/create-doctor-report',
 		component: CreateDoctorReportComponent,
 		canActivate: [authGuard, passwordChangeGuard],
 		data: { roles: ['ROLE_LEKAR'] },
-		title: 'IIS Drug CRM | New Report — Doctor',
+		title: 'IIS Drug CRM | New Report - Doctor',
 	},
 	{
 		path: 'adverse-effects/my-reports',

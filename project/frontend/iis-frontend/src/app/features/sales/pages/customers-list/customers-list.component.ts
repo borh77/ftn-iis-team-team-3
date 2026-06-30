@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs';
 
 import { RegionService } from '../../../../core/region.service';
 import { Region } from '../../../../core/region.model';
@@ -8,6 +9,8 @@ import { SalesApiService } from '../../api/sales-api.service';
 import { Customer, CustomerRequest } from '../../models/customer.model';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { Router } from '@angular/router';
+import { extractBackendErrorMessage } from '../../../../core/http-error-message';
+import { ERROR_MESSAGE_MS, TransientMessageService } from '../../../../core/transient-message.service';
 
 @Component({
   selector: 'app-customers-list',
@@ -16,17 +19,19 @@ import { Router } from '@angular/router';
   templateUrl: './customers-list.component.html',
   styleUrls: ['./customers-list.component.css'],
 })
-export class CustomersListComponent implements OnInit {
+export class CustomersListComponent implements OnInit, OnDestroy {
   private readonly salesApiService = inject(SalesApiService);
   private readonly authService = inject(AuthService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
   private readonly regionService = inject(RegionService);
+  private readonly transientMessages = inject(TransientMessageService);
 
   customers: Customer[] = [];
   regions: Region[] = [];
   loading = true;
   saving = false;
+  errorMessage = '';
   showCreateForm = false;
   canManageCustomers = false;
   customerSearchTerm = '';
@@ -60,16 +65,15 @@ export class CustomersListComponent implements OnInit {
 
   loadCustomers(): void {
     this.loading = true;
+    this.clearError();
 
-    this.salesApiService.getCustomers().subscribe({
+    this.salesApiService.getCustomers().pipe(finalize(() => (this.loading = false))).subscribe({
       next: (response) => {
         this.customers = response ?? [];
-        this.loading = false;
         this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('Failed to load customers:', error);
-        this.loading = false;
+        this.showError(extractBackendErrorMessage(error, 'Failed to load customers.'));
         this.cdr.detectChanges();
       },
     });
@@ -93,8 +97,9 @@ export class CustomersListComponent implements OnInit {
 
   createCustomer(): void {
     this.saving = true;
+    this.clearError();
 
-    this.salesApiService.createCustomer(this.newCustomer).subscribe({
+    this.salesApiService.createCustomer(this.newCustomer).pipe(finalize(() => (this.saving = false))).subscribe({
       next: () => {
         this.newCustomer = {
           name: '',
@@ -105,12 +110,10 @@ export class CustomersListComponent implements OnInit {
           regionId: null,
         };
         this.showCreateForm = false;
-        this.saving = false;
         this.loadCustomers();
       },
       error: (error) => {
-        console.error('Failed to create customer:', error);
-        this.saving = false;
+        this.showError(extractBackendErrorMessage(error, 'Failed to create customer.'));
         this.cdr.detectChanges();
       },
     });
@@ -170,5 +173,17 @@ export class CustomersListComponent implements OnInit {
   clearCustomerFilters(): void {
     this.customerSearchTerm = '';
     this.customerStatusFilter = '';
+  }
+  
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
+  }
+
+  private showError(message: string): void {
+    this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private clearError(): void {
+    this.transientMessages.clearField(this, 'errorMessage', () => this.cdr.detectChanges());
   }
 }

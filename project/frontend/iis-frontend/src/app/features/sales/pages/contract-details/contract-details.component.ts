@@ -1,9 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { finalize } from 'rxjs';
 
 import { SalesApiService } from '../../api/sales-api.service';
 import { Contract } from '../../models/contract.model';
+import { extractBackendErrorMessage } from '../../../../core/http-error-message';
+import { ERROR_MESSAGE_MS, TransientMessageService } from '../../../../core/transient-message.service';
 
 @Component({
   selector: 'app-contract-details',
@@ -12,31 +15,38 @@ import { Contract } from '../../models/contract.model';
   templateUrl: './contract-details.component.html',
   styleUrl: './contract-details.component.css',
 })
-export class ContractDetailsComponent implements OnInit {
+export class ContractDetailsComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly salesApiService = inject(SalesApiService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly transientMessages = inject(TransientMessageService);
 
   contract?: Contract;
   loading = true;
   signing = false;
+  errorMessage = '';
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
 
-    this.salesApiService.getContractById(id).subscribe({
+    this.salesApiService.getContractById(id).pipe(
+      finalize(() => {
+        this.loading = false;
+        this.cdr.detectChanges();
+      }),
+    ).subscribe({
       next: (response) => {
         this.contract = response;
-        this.loading = false;
-        this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('Failed to load contract:', error);
-        this.loading = false;
-        this.cdr.detectChanges();
+        this.showError(extractBackendErrorMessage(error, 'Failed to load contract.'));
       },
     });
+  }
+
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
   }
 
   goBack(): void {
@@ -55,18 +65,28 @@ export class ContractDetailsComponent implements OnInit {
     }
 
     this.signing = true;
+    this.clearError();
 
-    this.salesApiService.signContract(this.contract.id).subscribe({
+    this.salesApiService.signContract(this.contract.id).pipe(
+      finalize(() => {
+        this.signing = false;
+        this.cdr.detectChanges();
+      }),
+    ).subscribe({
       next: (response) => {
         this.contract = response;
-        this.signing = false;
-        this.cdr.detectChanges();
       },
       error: (error) => {
-        console.error('Failed to sign contract:', error);
-        this.signing = false;
-        this.cdr.detectChanges();
+        this.showError(extractBackendErrorMessage(error, 'Failed to sign contract.'));
       },
     });
+  }
+
+  private showError(message: string): void {
+    this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private clearError(): void {
+    this.transientMessages.clearField(this, 'errorMessage', () => this.cdr.detectChanges());
   }
 }
