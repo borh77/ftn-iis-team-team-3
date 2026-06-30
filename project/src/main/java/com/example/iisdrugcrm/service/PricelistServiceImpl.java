@@ -263,7 +263,14 @@ public class PricelistServiceImpl implements PricelistService {
         if ((pricelist.getStatus() == PricelistStatus.DRAFT && dto.getTargetStatus() == PricelistStatus.IN_REVIEW)
                 || (pricelist.getStatus() == PricelistStatus.IN_REVIEW && dto.getTargetStatus() == PricelistStatus.ACTIVE)) {
             PricelistDateRules.validateStartDateNotPast(pricelist.getPeriodStart());
-            validateAllVariantsActive(pricelist);
+            if (pricelist.getStatus() == PricelistStatus.IN_REVIEW && dto.getTargetStatus() == PricelistStatus.ACTIVE) {
+                validateAllVariantsActive(
+                        pricelist,
+                        "Pricelist cannot be activated because it contains inactive catalog variants. Return it to draft and replace them first."
+                );
+            } else {
+                validateAllVariantsActive(pricelist, "Pricelist contains inactive catalog variants. Replace them before continuing.");
+            }
         }
         if (pricelist.getStatus() == PricelistStatus.IN_REVIEW && dto.getTargetStatus() == PricelistStatus.ACTIVE) {
             lockExistingPricelists(pricelist.getRegion().getId(), pricelist.getCustomerSegment());
@@ -545,14 +552,14 @@ public class PricelistServiceImpl implements PricelistService {
         );
     }
 
-    private void validateAllVariantsActive(Pricelist pricelist) {
+    private void validateAllVariantsActive(Pricelist pricelist, String message) {
         List<Long> variantIds = pricelist.getItems().stream()
                 .map(PricelistItem::getVariantId)
                 .distinct()
                 .toList();
-        Map<Long, CatalogVariantDTO> activeVariants = catalogService.findActiveVariantsByIds(variantIds);
-        if (variantIds.stream().anyMatch(variantId -> !activeVariants.containsKey(variantId))) {
-            throw new IllegalArgumentException("Pricelist contains inactive catalog variants. Replace them before continuing.");
+        Map<Long, CatalogVariantDTO> catalogVariants = catalogService.findVariantsByIdsIncludingInactive(variantIds);
+        if (variantIds.stream().anyMatch(variantId -> !catalogVariants.containsKey(variantId) || !catalogVariants.get(variantId).isActive())) {
+            throw new PricelistSubmissionValidationException(message);
         }
     }
 
@@ -561,12 +568,22 @@ public class PricelistServiceImpl implements PricelistService {
     }
 
     private PricelistResponseDTO toResponse(Pricelist pricelist, Long currentUserId, boolean canCollaborate) {
-        PricelistResponseDTO response = PricelistResponseDTO.fromEntity(pricelist, currentUserId, canCollaborate, catalogVariantsFor(pricelist));
+        Map<Long, CatalogVariantDTO> catalogVariants = catalogVariantsFor(pricelist);
+        PricelistResponseDTO response = PricelistResponseDTO.fromEntity(pricelist, currentUserId, canCollaborate, catalogVariants);
         boolean canReview = pricelist.getStatus() == PricelistStatus.IN_REVIEW
                 && accessService.canActivateAsReviewer(pricelist, currentUserId);
-        response.setCanActivate(canReview);
+        response.setCanActivate(canReview && !hasInactiveVariants(pricelist, catalogVariants));
         response.setCanReject(canReview);
         return response;
+    }
+
+    private boolean hasInactiveVariants(Pricelist pricelist, Map<Long, CatalogVariantDTO> catalogVariants) {
+        return pricelist.getItems().stream()
+                .map(PricelistItem::getVariantId)
+                .anyMatch(variantId -> {
+                    CatalogVariantDTO variant = catalogVariants.get(variantId);
+                    return variant == null || !variant.isActive();
+                });
     }
 
     private Map<Long, CatalogVariantDTO> catalogVariantsFor(Pricelist pricelist) {

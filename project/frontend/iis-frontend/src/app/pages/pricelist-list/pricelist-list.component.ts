@@ -233,7 +233,8 @@ export class PricelistListComponent implements OnInit, OnDestroy {
 
   canActivate(pricelist: Pricelist): boolean {
     return pricelist.status === 'IN_REVIEW'
-      && pricelist.canActivate === true;
+      && pricelist.canActivate === true
+      && !this.requiresReplacement(pricelist);
   }
 
   canReturnToDraft(pricelist: Pricelist): boolean {
@@ -260,11 +261,25 @@ export class PricelistListComponent implements OnInit, OnDestroy {
   }
 
   canReplaceVariants(pricelist: Pricelist): boolean {
-    return pricelist.canEditDraft ?? (pricelist.status === 'DRAFT' && this.canCollaborate(pricelist));
+    return pricelist.status === 'DRAFT'
+      && (pricelist.canEditDraft ?? this.canCollaborate(pricelist));
   }
 
   requiresReplacement(pricelist: Pricelist): boolean {
     return pricelist.items.some((item) => item.replacementRequired);
+  }
+
+  inactiveVariantLifecycleMessage(pricelist: Pricelist): string {
+    if (pricelist.status === 'IN_REVIEW') {
+      return 'This pricelist contains inactive catalog variants and cannot be activated. Return it to draft so the owner can replace inactive medicines.';
+    }
+    if (pricelist.status === 'ACTIVE') {
+      return 'This active pricelist contains inactive catalog variants. Create a new version to replace inactive medicines.';
+    }
+    if (pricelist.status === 'ARCHIVED') {
+      return 'This archived pricelist contains inactive catalog variants and is read-only.';
+    }
+    return 'This pricelist contains inactive catalog variants.';
   }
 
   isOwner(pricelist: Pricelist): boolean {
@@ -552,7 +567,7 @@ export class PricelistListComponent implements OnInit, OnDestroy {
         return 'Only the owner can change this pricelist status.';
       }
       if (backend.includes('inactive catalog variants')) {
-        return 'Pricelist contains inactive catalog variants. Replace them before continuing.';
+        return extractBackendErrorMessage(error, 'Pricelist contains inactive catalog variants. Replace them before continuing.');
       }
       if (error.status === 400) {
         return 'This status change is not allowed.';

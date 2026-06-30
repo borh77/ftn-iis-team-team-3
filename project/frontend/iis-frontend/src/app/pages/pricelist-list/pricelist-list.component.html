@@ -137,7 +137,7 @@
           <div class="pricelist-items">
             <h4>Items</h4>
             @if (requiresReplacement(p)) {
-              <p class="error-box">This pricelist contains inactive catalog variants.</p>
+              <p class="error-box">{{ inactiveVariantLifecycleMessage(p) }}</p>
             }
             @if (p.items && p.items.length) {
               @for (item of p.items; track item.variantId) {
@@ -170,7 +170,13 @@
                         <p class="inline-error">No replacement is defined for this inactive variant.</p>
                       }
                     } @else {
-                      <p class="muted">Create a new draft version before replacing inactive variants.</p>
+                      @if (p.status === 'IN_REVIEW') {
+                        <p class="muted">Return this pricelist to draft before replacing inactive variants.</p>
+                      } @else if (p.status === 'ACTIVE') {
+                        <p class="muted">Create a new version before replacing inactive variants.</p>
+                      } @else if (p.status === 'ARCHIVED') {
+                        <p class="muted">Archived pricelists are read-only.</p>
+                      }
                     }
                   }
                 </div>

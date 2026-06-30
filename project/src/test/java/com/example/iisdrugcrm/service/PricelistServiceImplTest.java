@@ -37,8 +37,10 @@ import org.springframework.security.access.AccessDeniedException;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -378,7 +380,7 @@ class PricelistServiceImplTest {
 
     @Test
     void inReviewToActiveSucceedsWhenNoConflict() {
-        Pricelist pricelist = pricelist(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
         noActivationConflict();
 
@@ -386,6 +388,22 @@ class PricelistServiceImplTest {
 
         assertEquals(PricelistStatus.ACTIVE, pricelist.getStatus());
         verify(pricelistRepository).save(pricelist);
+    }
+
+    @Test
+    void inReviewWithInactiveVariantReturnsRejectButNotActivateForReviewer() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        when(accessService.canCollaborate(pricelist, 7L)).thenReturn(true);
+        when(accessService.canActivateAsReviewer(pricelist, 7L)).thenReturn(true);
+        when(catalogService.findVariantsByIdsIncludingInactive(List.of(10L)))
+                .thenReturn(Map.of(10L, new CatalogVariantDTO(10L, "Variant A", false, 11L, "Variant B")));
+
+        PricelistResponseDTO response = service.getById(100L, 7L);
+
+        assertFalse(response.isCanActivate());
+        assertTrue(response.isCanReject());
+        assertTrue(response.getItems().get(0).isReplacementRequired());
     }
 
     @Test
@@ -903,9 +921,10 @@ class PricelistServiceImplTest {
     void draftToInReviewFailsIfVariantIsInactive() {
         Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
-        when(catalogService.findActiveVariantsByIds(List.of(10L))).thenReturn(Map.of());
+        when(catalogService.findVariantsByIdsIncludingInactive(List.of(10L)))
+                .thenReturn(Map.of(10L, new CatalogVariantDTO(10L, "Variant A", false, 11L, "Variant B")));
 
-        assertThrows(IllegalArgumentException.class, () -> service.changeStatus(100L, statusDto(PricelistStatus.IN_REVIEW, null)));
+        assertThrows(PricelistSubmissionValidationException.class, () -> service.changeStatus(100L, statusDto(PricelistStatus.IN_REVIEW, null)));
     }
 
     @Test
@@ -926,9 +945,20 @@ class PricelistServiceImplTest {
     void inReviewToActiveFailsIfVariantIsInactive() {
         Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
-        when(catalogService.findActiveVariantsByIds(List.of(10L))).thenReturn(Map.of());
+        when(catalogService.findVariantsByIdsIncludingInactive(List.of(10L)))
+                .thenReturn(Map.of(10L, new CatalogVariantDTO(10L, "Variant A", false, 11L, "Variant B")));
 
-        assertThrows(IllegalArgumentException.class, () -> service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null), 7L));
+        PricelistSubmissionValidationException exception = assertThrows(
+                PricelistSubmissionValidationException.class,
+                () -> service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null), 7L)
+        );
+
+        assertEquals(
+                "Pricelist cannot be activated because it contains inactive catalog variants. Return it to draft and replace them first.",
+                exception.getMessage()
+        );
+        assertEquals(PricelistStatus.IN_REVIEW, pricelist.getStatus());
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
     }
 
     @Test
