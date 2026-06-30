@@ -9,7 +9,7 @@
     </div>
     <div class="total-card">
       <span>Total price</span>
-      <strong>{{ result.totalPrice | number:'1.2-2' }}</strong>
+      <strong>{{ displayTotalPrice | number:'1.2-2' }}</strong>
     </div>
   </div>
 
@@ -125,8 +125,7 @@
         <div class="accepted-box">
           <strong>Accepted replacements</strong>
           <span>
-            {{ acceptedReplacements.length }} replacement{{ acceptedReplacements.length === 1 ? '' : 's' }} accepted in this view.
-            The replacement is accepted in this view. Final procurement submission will be available in a separate step.
+            {{ acceptedReplacements.length }} replacement{{ acceptedReplacements.length === 1 ? '' : 's' }} accepted for final procurement submission.
           </span>
         </div>
       }
@@ -179,11 +178,12 @@
     </div>
   }
 
-  @if (result.valid || canShowConfirmStep) {
-    <div class="confirm-row">
-      <button type="button" class="primary" (click)="confirm()" [disabled]="confirming">
-        {{ confirming ? 'Confirming...' : 'Confirm procurement' }}
-      </button>
-    </div>
-  }
+  <div class="confirm-row">
+    @if (confirmDisabledReason) {
+      <span class="confirm-help">{{ confirmDisabledReason }}</span>
+    }
+    <button type="button" class="primary" (click)="confirm()" [disabled]="!canConfirm" [title]="confirmDisabledReason">
+      {{ confirmed ? 'Confirmed' : (confirming ? 'Confirming...' : 'Confirm procurement') }}
+    </button>
+  </div>
 </section>

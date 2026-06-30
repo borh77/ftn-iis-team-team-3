@@ -1,0 +1,112 @@
+<section class="page-hero">
+  <div class="page-hero__head">
+    <div>
+      <p class="kicker">Procurement</p>
+      <h2>My Procurements</h2>
+      <p class="lede">Review procurement orders submitted from validated CSV documents.</p>
+    </div>
+    <div class="hero-actions">
+      <a class="secondary" routerLink="/buyer/order-validation">Validate document</a>
+      <button type="button" class="primary" (click)="load()" [disabled]="loading">
+        {{ loading ? 'Refreshing...' : 'Refresh' }}
+      </button>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  @if (errorMessage) {
+    <div class="error-box" role="alert">{{ errorMessage }}</div>
+  }
+
+  @if (loading) {
+    <p class="muted">Loading procurements...</p>
+  } @else if (!orders.length) {
+    <p class="muted">No procurement orders yet.</p>
+  } @else {
+    <div class="order-list">
+      @for (order of orders; track order.id) {
+        <article class="order-card">
+          <div class="order-card__head">
+            <div>
+              <p class="kicker">Order #{{ order.id }}</p>
+              <h3>{{ order.regionName || 'Region' }} - {{ order.customerSegment }}</h3>
+              <p class="muted">
+                {{ order.confirmedAt | date:'dd.MM.yyyy HH:mm' }}
+                @if (order.sourceFileName) {
+                  - {{ order.sourceFileName }}
+                }
+              </p>
+            </div>
+            <div class="order-total">
+              <span>{{ order.status }}</span>
+              <strong>{{ order.totalPrice | number:'1.2-2' }} {{ order.currency || '' }}</strong>
+            </div>
+          </div>
+
+          <dl class="order-meta">
+            <div>
+              <dt>Pricelist</dt>
+              <dd>#{{ order.pricelistId || '-' }}</dd>
+            </div>
+            <div>
+              <dt>Items</dt>
+              <dd>{{ order.items.length }}</dd>
+            </div>
+            <div>
+              <dt>Buyer</dt>
+              <dd>{{ order.buyerName || order.buyerUsername }}</dd>
+            </div>
+          </dl>
+
+          <button type="button" class="ghost" (click)="toggleOrder(order)">
+            {{ isExpanded(order) ? 'Hide items' : 'Show items' }}
+          </button>
+
+          @if (isExpanded(order)) {
+            <div class="table-wrap">
+              <table class="items-table">
+                <thead>
+                  <tr>
+                    <th>Variant</th>
+                    <th>Quantity</th>
+                    <th>Unit price</th>
+                    <th>Discount</th>
+                    <th>Final unit price</th>
+                    <th>Line total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of order.items; track item.id) {
+                    <tr>
+                      <td>
+                        <strong>{{ item.variantName }}</strong>
+                        <span class="muted">ID: {{ item.variantId }}</span>
+                        @if (item.replacementAccepted) {
+                          <span class="replacement-note">Replacement accepted</span>
+                          <span class="replacement-note">Old: {{ item.originalVariantName || '-' }} / ID {{ item.originalVariantId || '-' }}</span>
+                          <span class="replacement-note">New: {{ item.variantName }} / ID {{ item.variantId }}</span>
+                        }
+                      </td>
+                      <td>{{ item.requestedQuantity }}</td>
+                      <td>{{ item.unitPrice | number:'1.2-2' }}</td>
+                      <td>
+                        @if (item.discountType && item.discountValue !== null && item.discountValue !== undefined) {
+                          {{ item.discountType === 'PERCENTAGE' ? item.discountValue + '%' : (item.discountValue | number:'1.2-2') }}
+                        } @else {
+                          <span class="muted">None</span>
+                        }
+                      </td>
+                      <td>{{ item.finalUnitPrice | number:'1.2-2' }}</td>
+                      <td><strong>{{ item.lineTotal | number:'1.2-2' }}</strong></td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </article>
+      }
+    </div>
+  }
+</section>

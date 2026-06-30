@@ -54,8 +54,13 @@
     <div class="error-box" role="alert">{{ errorMessage }}</div>
   }
 
-  @if (successMessage) {
-    <div class="success-box" role="status">{{ successMessage }}</div>
+  @if (confirmSuccessMessage) {
+    <div class="success-box" role="status">
+      <span>{{ confirmSuccessMessage }}</span>
+      <button type="button" class="secondary" (click)="viewMyProcurements()">
+        View procurements
+      </button>
+    </div>
   }
 
   <div class="action-row">
@@ -71,8 +76,11 @@
   @if (!loading && result) {
     <app-validation-result
       [result]="result"
-      [confirming]="confirming"
-      (confirmProcurement)="confirmProcurement($event)"
+      [confirming]="confirmLoading"
+      [confirmed]="confirmedOrder !== null"
+      [acceptedReplacementKeys]="acceptedReplacementKeys"
+      (replacementAccepted)="acceptReplacement($event)"
+      (confirmProcurement)="confirmProcurement()"
     />
   }
 </section>

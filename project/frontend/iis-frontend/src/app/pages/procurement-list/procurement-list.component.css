@@ -1,0 +1,139 @@
+.order-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.order-card {
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+
+.order-card__head,
+.hero-actions,
+.order-meta {
+  display: flex;
+  gap: 1rem;
+}
+
+.order-card__head {
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.order-card__head h3 {
+  margin: 0;
+}
+
+.order-total {
+  text-align: right;
+}
+
+.order-total span,
+.muted {
+  display: block;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+
+.order-total strong {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--color-text);
+  font-size: 1.2rem;
+}
+
+.order-meta {
+  flex-wrap: wrap;
+  margin: 1rem 0;
+}
+
+.order-meta div {
+  min-width: 140px;
+}
+
+.order-meta dt {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.order-meta dd {
+  margin: 0.2rem 0 0;
+  font-weight: 700;
+}
+
+.table-wrap {
+  margin-top: 1rem;
+  overflow-x: auto;
+}
+
+.items-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.items-table th,
+.items-table td {
+  padding: 0.8rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.items-table th {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.replacement-note {
+  display: block;
+  margin-top: 0.25rem;
+  color: #166534;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.primary,
+.secondary,
+.ghost {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primary {
+  color: #fff;
+  background: var(--color-primary);
+}
+
+.secondary {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.ghost {
+  color: var(--color-muted);
+  background: transparent;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 720px) {
+  .order-card__head,
+  .hero-actions {
+    flex-direction: column;
+  }
+
+  .order-total {
+    text-align: left;
+  }
+}

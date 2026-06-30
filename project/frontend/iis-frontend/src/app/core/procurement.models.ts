@@ -49,7 +49,7 @@ export interface ConfirmProcurementItem {
   requestedQuantity: number;
   originalVariantId?: number | null;
   originalVariantName?: string | null;
-  replacementAccepted: boolean;
+  replacementAccepted?: boolean;
 }
 
 export interface ConfirmProcurementRequest {

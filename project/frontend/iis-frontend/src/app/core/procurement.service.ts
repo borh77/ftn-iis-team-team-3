@@ -16,7 +16,15 @@ export class ProcurementService {
     return this.http.post<ValidationResult>(`${this.apiBaseUrl}/api/procurement/validation`, formData);
   }
 
-  confirmOrder(request: ConfirmProcurementRequest): Observable<ProcurementOrder> {
+  confirmProcurement(request: ConfirmProcurementRequest): Observable<ProcurementOrder> {
     return this.http.post<ProcurementOrder>(`${this.apiBaseUrl}/api/procurement/orders`, request);
+  }
+
+  listMyProcurements(): Observable<ProcurementOrder[]> {
+    return this.http.get<ProcurementOrder[]>(`${this.apiBaseUrl}/api/procurement/orders`);
+  }
+
+  getMyProcurement(id: number): Observable<ProcurementOrder> {
+    return this.http.get<ProcurementOrder>(`${this.apiBaseUrl}/api/procurement/orders/${id}`);
   }
 }
