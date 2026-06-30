@@ -463,6 +463,75 @@ class PricelistServiceImplTest {
     }
 
     @Test
+    void anotherPricelistCreatorCanActivatePrivateInReviewPricelist() {
+        Pricelist pricelist = pricelist(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        noActivationConflict();
+
+        service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null), 7L, false, true);
+
+        assertEquals(PricelistStatus.ACTIVE, pricelist.getStatus());
+        verify(accessService).validateActivationReviewer(pricelist, 7L, false, true);
+        verify(pricelistRepository).save(pricelist);
+    }
+
+    @Test
+    void privateInReviewPricelistCannotBeActivatedByOwnerThroughRoleAwareEndpoint() {
+        Pricelist pricelist = pricelist(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        doThrow(new AccessDeniedException(PricelistAccessService.SELF_ACTIVATION_MESSAGE))
+                .when(accessService).validateActivationReviewer(pricelist, 99L, false, true);
+
+        AccessDeniedException exception = assertThrows(AccessDeniedException.class,
+                () -> service.changeStatus(100L, statusDto(PricelistStatus.ACTIVE, null), 99L, false, true));
+
+        assertEquals(PricelistAccessService.SELF_ACTIVATION_MESSAGE, exception.getMessage());
+        assertEquals(PricelistStatus.IN_REVIEW, pricelist.getStatus());
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
+    }
+
+    @Test
+    void privateInReviewPricelistAppearsInReviewQueueForAnotherCreator() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
+        when(pricelistRepository.findAllByStatusOrderByIdDesc(PricelistStatus.IN_REVIEW)).thenReturn(List.of(pricelist));
+        when(accessService.canActivateAsReviewer(pricelist, 7L, false, true)).thenReturn(true);
+        when(accessService.canCollaborate(pricelist, 7L)).thenReturn(false);
+
+        List<PricelistResponseDTO> result = service.listReviewQueueForUser(7L, false, true);
+
+        assertEquals(1, result.size());
+        assertFalse(result.get(0).isOwner());
+        assertFalse(result.get(0).isCanCollaborate());
+        assertTrue(result.get(0).isCanActivate());
+        assertTrue(result.get(0).isCanReject());
+    }
+
+    @Test
+    void privateInReviewPricelistAppearsInReviewQueueForAdmin() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
+        when(pricelistRepository.findAllByStatusOrderByIdDesc(PricelistStatus.IN_REVIEW)).thenReturn(List.of(pricelist));
+        when(accessService.canActivateAsReviewer(pricelist, 1L, true, false)).thenReturn(true);
+        when(accessService.canCollaborate(pricelist, 1L)).thenReturn(false);
+
+        List<PricelistResponseDTO> result = service.listReviewQueueForUser(1L, true, false);
+
+        assertEquals(1, result.size());
+        assertTrue(result.get(0).isCanActivate());
+        assertTrue(result.get(0).isCanReject());
+    }
+
+    @Test
+    void privateInReviewPricelistDoesNotAppearInOwnersReviewQueue() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
+        when(pricelistRepository.findAllByStatusOrderByIdDesc(PricelistStatus.IN_REVIEW)).thenReturn(List.of(pricelist));
+        when(accessService.canActivateAsReviewer(pricelist, 99L, false, true)).thenReturn(false);
+
+        List<PricelistResponseDTO> result = service.listReviewQueueForUser(99L, false, true);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
     void inReviewToDraftSucceedsWhenReasonIsPresent() {
         Pricelist pricelist = pricelist(100L, PricelistStatus.IN_REVIEW, serbia, "Lanci apoteka");
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));

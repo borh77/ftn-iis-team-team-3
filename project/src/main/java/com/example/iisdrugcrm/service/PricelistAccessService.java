@@ -46,6 +46,10 @@ public class PricelistAccessService {
     }
 
     public boolean canActivateAsReviewer(Pricelist pricelist, Long userId, boolean admin) {
+        return canActivateAsReviewer(pricelist, userId, admin, false);
+    }
+
+    public boolean canActivateAsReviewer(Pricelist pricelist, Long userId, boolean admin, boolean reviewerRole) {
         if (isOwner(pricelist, userId) || userId == null) {
             return false;
         }
@@ -53,7 +57,7 @@ public class PricelistAccessService {
             return true;
         }
         if (pricelist.getTeam() == null) {
-            return false;
+            return reviewerRole;
         }
         return pricelist.getTeam().getLeaderId().equals(userId) || pricelist.getTeam().getMemberIds().contains(userId);
     }
@@ -63,10 +67,14 @@ public class PricelistAccessService {
     }
 
     public void validateActivationReviewer(Pricelist pricelist, Long userId, boolean admin) {
+        validateActivationReviewer(pricelist, userId, admin, false);
+    }
+
+    public void validateActivationReviewer(Pricelist pricelist, Long userId, boolean admin, boolean reviewerRole) {
         if (isOwner(pricelist, userId)) {
             throw new AccessDeniedException(SELF_ACTIVATION_MESSAGE);
         }
-        if (!canActivateAsReviewer(pricelist, userId, admin)) {
+        if (!canActivateAsReviewer(pricelist, userId, admin, reviewerRole)) {
             throw new AccessDeniedException(REVIEWER_REQUIRED_MESSAGE);
         }
     }

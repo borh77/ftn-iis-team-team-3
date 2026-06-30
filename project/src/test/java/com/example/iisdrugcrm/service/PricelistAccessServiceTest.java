@@ -63,6 +63,14 @@ class PricelistAccessServiceTest {
     }
 
     @Test
+    void privatePricelistCanBeActivatedByAnotherPricelistCreator() {
+        PricelistAccessService service = new PricelistAccessService(teamRepository);
+        Pricelist pricelist = pricelist(99L, null);
+
+        assertTrue(service.canActivateAsReviewer(pricelist, 7L, false, true));
+    }
+
+    @Test
     void adminCanActivatePrivatePricelistWhenNotOwner() {
         PricelistAccessService service = new PricelistAccessService(teamRepository);
         Pricelist pricelist = pricelist(99L, null);

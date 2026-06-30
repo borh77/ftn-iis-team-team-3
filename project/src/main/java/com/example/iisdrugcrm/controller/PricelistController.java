@@ -60,6 +60,17 @@ public class PricelistController {
         return ResponseEntity.ok(pricelistService.listTeamCenovniciForUser(currentUserId));
     }
 
+    @GetMapping("/review-queue")
+    @PreAuthorize("hasAnyRole('PRICELIST_CREATOR', 'ADMIN')")
+    public ResponseEntity<List<PricelistResponseDTO>> reviewQueue(Authentication authentication) {
+        Long currentUserId = userService.getUserIdByUsername(authentication.getName());
+        return ResponseEntity.ok(pricelistService.listReviewQueueForUser(
+                currentUserId,
+                isAdmin(authentication),
+                isPricelistCreator(authentication)
+        ));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('PRICELIST_CREATOR')")
     public ResponseEntity<PricelistResponseDTO> getById(@PathVariable Long id, Authentication authentication) {
@@ -78,7 +89,13 @@ public class PricelistController {
     @PreAuthorize("hasAnyRole('PRICELIST_CREATOR', 'ADMIN')")
     public ResponseEntity<PricelistResponseDTO> changeStatus(@PathVariable Long id, @Valid @RequestBody ChangePricelistStatusDTO dto, Authentication authentication) {
         Long currentUserId = userService.getUserIdByUsername(authentication.getName());
-        return ResponseEntity.ok(pricelistService.changeStatus(id, dto, currentUserId, isAdmin(authentication)));
+        return ResponseEntity.ok(pricelistService.changeStatus(
+                id,
+                dto,
+                currentUserId,
+                isAdmin(authentication),
+                isPricelistCreator(authentication)
+        ));
     }
 
     @PostMapping("/{id}/versions")
@@ -121,5 +138,12 @@ public class PricelistController {
                 && authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch("ROLE_ADMIN"::equals);
+    }
+
+    private boolean isPricelistCreator(Authentication authentication) {
+        return authentication != null
+                && authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_PRICELIST_CREATOR"::equals);
     }
 }

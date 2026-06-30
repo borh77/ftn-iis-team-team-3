@@ -14,7 +14,7 @@ import { PricelistTeam } from '../../core/team.models';
           <input type="radio" formControlName="accessMode" value="PRIVATE" />
           <span>
             <strong>Private pricelist</strong>
-            <small>Only you can continue and manage this draft.</small>
+            <small>Only you can edit this draft before submission. After submission, any other authorized pricelist creator or administrator can approve or return it. You cannot approve your own pricelist.</small>
           </span>
         </label>
 
@@ -22,10 +22,12 @@ import { PricelistTeam } from '../../core/team.models';
           <input type="radio" formControlName="accessMode" value="TEAM" />
           <span>
             <strong>Team pricelist</strong>
-            <small>Select one of your available teams for collaboration.</small>
+            <small>Selected team members can collaborate on this draft. After submission, another team member or authorized reviewer can approve or return it.</small>
           </span>
         </label>
       </div>
+
+      <p class="muted">Review rule: the user who submits the pricelist cannot activate it. Approval must be completed by another authorized user.</p>
 
       @if (form.controls['accessMode'].value === 'TEAM') {
         <label class="wide-field">
