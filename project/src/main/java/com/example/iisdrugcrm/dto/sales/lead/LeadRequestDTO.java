@@ -24,12 +24,16 @@ public class LeadRequestDTO {
     @Min(0)
     private Integer score;
 
+    private Long regionId;
+
     public String getName() { return name; }
     public String getEmail() { return email; }
     public String getAddress() { return address; }
     public String getSource() { return source; }
     public Integer getScore() { return score; }
-
+    public Long getRegionId() { return regionId; }
+    
+    public void setRegionId(Long regionId) { this.regionId = regionId; }
     public void setName(String name) { this.name = name; }
     public void setEmail(String email) { this.email = email; }
     public void setAddress(String address) { this.address = address; }

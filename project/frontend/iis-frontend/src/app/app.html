@@ -92,30 +92,44 @@
           ) {
             <section class="nav-section" aria-labelledby="sales-nav-title">
               <p id="sales-nav-title">Sales CRM</p>
+
               <a routerLink="/sales" routerLinkActive="active">
                 <lucide-icon [img]="icons.BriefcaseBusiness" size="18"></lucide-icon>
                 <span>Dashboard</span>
               </a>
+
               <a routerLink="/sales/leads" routerLinkActive="active">
                 <lucide-icon [img]="icons.ClipboardList" size="18"></lucide-icon>
                 <span>Leads</span>
               </a>
+
               <a routerLink="/sales/customers" routerLinkActive="active">
                 <lucide-icon [img]="icons.Building2" size="18"></lucide-icon>
                 <span>Customers</span>
               </a>
+
               <a routerLink="/sales/processes" routerLinkActive="active">
                 <lucide-icon [img]="icons.TrendingUp" size="18"></lucide-icon>
                 <span>Pipeline</span>
               </a>
+
+              @if (session.roles.includes('ROLE_SALES_MANAGER')) {
+                <a routerLink="/sales/workflows" routerLinkActive="active">
+                  <lucide-icon [img]="icons.Activity" size="18"></lucide-icon>
+                  <span>Workflow</span>
+                </a>
+              }
+
               <a routerLink="/sales/offers" routerLinkActive="active">
                 <lucide-icon [img]="icons.FileText" size="18"></lucide-icon>
                 <span>Offers</span>
               </a>
+
               <a routerLink="/sales/contracts" routerLinkActive="active">
                 <lucide-icon [img]="icons.FolderKanban" size="18"></lucide-icon>
                 <span>Contracts</span>
               </a>
+
               <a routerLink="/sales/communications" routerLinkActive="active">
                 <lucide-icon [img]="icons.MessageSquare" size="18"></lucide-icon>
                 <span>Communications</span>

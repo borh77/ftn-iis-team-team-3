@@ -2,6 +2,7 @@ package com.example.iisdrugcrm.domain.sales;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import com.example.iisdrugcrm.domain.Region;
 
 @Entity
 @Table(name = "customers")
@@ -36,15 +37,20 @@ public class Customer {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "region_id")
+    private Region region;
+
     protected Customer() {
     }
 
-    public Customer(String name, String email, String phone, String website, String address) {
+    public Customer(String name, String email, String phone, String website, String address, Region region) {
         this.name = name;
         this.email = email;
         this.phone = phone;
         this.website = website;
         this.address = address;
+        this.region = region;
         this.status = CustomerStatus.ACTIVE;
     }
 
@@ -60,12 +66,13 @@ public class Customer {
         updatedAt = LocalDateTime.now();
     }
 
-    public void update(String name, String email, String phone, String website, String address) {
+    public void update(String name, String email, String phone, String website, String address, Region region) {
         this.name = name;
         this.email = email;
         this.phone = phone;
         this.website = website;
         this.address = address;
+        this.region = region;
     }
 
     public Long getId() { return id; }
@@ -77,4 +84,5 @@ public class Customer {
     public CustomerStatus getStatus() { return status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Region getRegion() { return region; }
 }

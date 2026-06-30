@@ -2,7 +2,7 @@
   <section class="sales-hero">
     <p class="eyebrow">Sales workspace</p>
     <h1>Sales Process Management</h1>
-    <p>Manage leads, customers, sales processes and customer communication.</p>
+    <p>Manage leads, customers, sales processes, offers, contracts, and analytics.</p>
   </section>
 
   <section class="sales-grid">
@@ -29,5 +29,97 @@
         Open Pipeline
       </button>
     </article>
+  </section>
+
+  <section class="analytics-section">
+    <div class="section-title">
+      <div>
+        <p class="eyebrow">Analytics</p>
+        <h2>Sales Dashboard</h2>
+      </div>
+
+      <div class="dashboard-actions">
+        <button type="button" class="secondary-button" (click)="downloadReport()">
+          Export PDF
+        </button>
+
+        <button type="button" class="secondary-button" (click)="loadSummary()">
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="loading" class="loading">
+      Loading sales analytics...
+    </div>
+
+    <ng-container *ngIf="!loading && summary">
+      <section class="metrics-grid">
+        <article class="metric-card">
+          <span>Total Leads</span>
+          <strong>{{ summary.totalLeads }}</strong>
+          <small>{{ summary.convertedLeads }} converted</small>
+        </article>
+
+        <article class="metric-card">
+          <span>Lead Conversion</span>
+          <strong>{{ calculateRate(summary.convertedLeads, summary.totalLeads) }}%</strong>
+          <small>{{ summary.qualifiedLeads }} qualified</small>
+        </article>
+
+        <article class="metric-card">
+          <span>Active Processes</span>
+          <strong>{{ summary.activeProcesses }}</strong>
+          <small>{{ summary.totalProcesses }} total</small>
+        </article>
+
+        <article class="metric-card">
+          <span>Won Deals</span>
+          <strong>{{ summary.wonProcesses }}</strong>
+          <small>{{ summary.lostProcesses }} lost</small>
+        </article>
+
+        <article class="metric-card">
+          <span>Total Offer Value</span>
+          <strong>{{ summary.totalOfferValue }}</strong>
+          <small>{{ summary.acceptedOffers }} accepted offers</small>
+        </article>
+
+        <article class="metric-card">
+          <span>Total Contract Value</span>
+          <strong>{{ summary.totalContractValue }}</strong>
+          <small>{{ summary.signedContracts }} signed contracts</small>
+        </article>
+      </section>
+
+      <section class="breakdown-grid">
+        <article class="breakdown-card">
+          <h3>Processes by Stage</h3>
+
+          <div *ngFor="let item of mapEntries(summary.processesByStage)" class="breakdown-row">
+            <span>{{ item.key }}</span>
+            <strong>{{ item.value }}</strong>
+          </div>
+        </article>
+
+        <article class="breakdown-card">
+          <h3>Offers by Status</h3>
+
+          <div *ngFor="let item of mapEntries(summary.offersByStatus)" class="breakdown-row">
+            <span>{{ item.key }}</span>
+            <strong>{{ item.value }}</strong>
+          </div>
+        </article>
+
+        <article class="breakdown-card">
+          <h3>Contracts by Status</h3>
+
+          <div *ngFor="let item of mapEntries(summary.contractsByStatus)" class="breakdown-row">
+            <span>{{ item.key }}</span>
+            <strong>{{ item.value }}</strong>
+          </div>
+        </article>
+      </section>
+    </ng-container>
   </section>
 </main>

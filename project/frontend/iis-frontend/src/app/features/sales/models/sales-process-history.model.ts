@@ -6,4 +6,6 @@ export interface SalesProcessHistory {
   previousStage: SalesStage;
   newStage: SalesStage;
   changedAt: string;
+  changedById?: number;
+  changedByUsername?: string;
 }

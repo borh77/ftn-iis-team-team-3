@@ -31,45 +31,91 @@
       </thead>
 
       <tbody>
-        <tr *ngFor="let contract of contracts">
-          <td>{{ contract.contractNumber }}</td>
-          <td>{{ contract.customerName }}</td>
-          <td>{{ contract.salesProcessTitle }}</td>
+        <ng-container *ngFor="let contract of contracts">
+          <tr>
+            <td>{{ contract.contractNumber }}</td>
+            <td>{{ contract.customerName }}</td>
+            <td>{{ contract.salesProcessTitle }}</td>
 
-          <td>
-            <span class="status">
-              {{ contract.status }}
-            </span>
-          </td>
+            <td>
+              <span class="status">
+                {{ contract.status }}
+              </span>
+            </td>
 
-          <td>{{ contract.startDate }}</td>
-          <td>{{ contract.endDate }}</td>
-          <td>{{ contract.totalValue }}</td>
+            <td>{{ contract.startDate }}</td>
+            <td>{{ contract.endDate }}</td>
+            <td>{{ contract.totalValue }}</td>
 
-          <td class="actions-cell">
-            <button
+            <td class="actions-cell">
+              <button
                 type="button"
                 class="secondary-button"
                 (click)="viewDetails(contract)">
                 View Details
-            </button>
+              </button>
 
-            <button
+              <button
                 *ngIf="contract.status === 'PENDING'"
                 type="button"
-                class="primary-button"
-                (click)="signContract(contract)"
-                [disabled]="signingContractId === contract.id">
-                {{ signingContractId === contract.id ? 'Signing...' : 'Sign' }}
-            </button>
+                class="icon-button"
+                title="Edit"
+                (click)="startEditContract(contract)">
+                ✎
+              </button>
 
-            <span
+              <span
                 *ngIf="contract.status === 'SIGNED'"
                 class="signed-text">
                 Signed
-            </span>
-          </td>
-        </tr>
+              </span>
+            </td>
+          </tr>
+
+          <tr *ngIf="editingContractId === contract.id">
+            <td colspan="8">
+              <form (ngSubmit)="updateContract(contract)" class="contract-form">
+                <label>
+                  Start Date
+                  <input
+                    type="date"
+                    name="edit-start-date-{{ contract.id }}"
+                    [(ngModel)]="editContract.startDate"
+                    required
+                  />
+                </label>
+
+                <label>
+                  End Date
+                  <input
+                    type="date"
+                    name="edit-end-date-{{ contract.id }}"
+                    [(ngModel)]="editContract.endDate"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Terms
+                  <input
+                    name="edit-terms-{{ contract.id }}"
+                    [(ngModel)]="editContract.terms"
+                  />
+                </label>
+
+                <div class="form-actions">
+                  <button type="button" class="secondary-button" (click)="cancelEditContract()">
+                    Cancel
+                  </button>
+
+                  <button type="submit" class="primary-button" [disabled]="saving">
+                    {{ saving ? 'Saving...' : 'Save Changes' }}
+                  </button>
+                </div>
+              </form>
+            </td>
+          </tr>
+        </ng-container>
       </tbody>
     </table>
 

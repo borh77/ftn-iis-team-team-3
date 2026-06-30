@@ -5,12 +5,58 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../../../core/api.token';
 import { Lead, LeadRequest } from '../models/lead.model';
 import { Customer, CustomerRequest } from '../models/customer.model';
-import { SalesProcess, SalesProcessRequest, UpdateSalesStageRequest } from '../models/sales-process.model';
+import { SalesProcess, SalesProcessRequest, UpdateSalesStageRequest, SalesStage } from '../models/sales-process.model';
 import { CustomerCommunication, CustomerCommunicationRequest } from '../models/customer-communication.model';
 import { CustomerNeed, CreateCustomerNeedRequest } from '../models/customer-need.model';
-import { Offer, CreateOfferRequest } from '../models/offer.model';
-import { Contract, CreateContractRequest } from '../models/contract.model';
+import { Offer, CreateOfferRequest, UpdateOfferRequest } from '../models/offer.model';
+import { Contract, CreateContractRequest, UpdateContractRequest } from '../models/contract.model';
 import { SalesProcessHistory } from '../models/sales-process-history.model';
+import { CreateSalesStageRequest, CreateSalesStageTransitionRequest, CreateSalesWorkflowRequest, SalesStageDefinition, SalesStageTransition, SalesWorkflow, } from '../models/sales-workflow.model';
+
+export interface SalesAnalyticsSummary {
+  totalLeads: number;
+  qualifiedLeads: number;
+  convertedLeads: number;
+  totalCustomers: number;
+  totalProcesses: number;
+  activeProcesses: number;
+  wonProcesses: number;
+  lostProcesses: number;
+  totalOffers: number;
+  acceptedOffers: number;
+  totalOfferValue: number;
+  totalContracts: number;
+  signedContracts: number;
+  totalContractValue: number;
+  processesByStage: Record<string, number>;
+  offersByStatus: Record<string, number>;
+  contractsByStatus: Record<string, number>;
+}
+
+export interface SalesMarketProduct {
+  id: number;
+  productId: number;
+  variantId: number;
+  productName: string;
+  variantForm: string;
+  variantDosage: string;
+  regionId: number;
+  regionName: string;
+  regionCode?: string;
+  localName: string;
+  packagingDescription?: string;
+  barcode?: string;
+  status: string;
+}
+
+export interface SalesPriceResponse {
+  regionId: number;
+  variantId: number;
+  quantity: number;
+  unitPrice: number;
+  currency: string;
+  pricelistId: number;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -29,6 +75,13 @@ export class SalesApiService {
     return this.http.post<Lead>(
         `${this.apiBaseUrl}/api/sales/leads`,
         request,
+    );
+  }
+
+  updateLead(id: number, request: LeadRequest): Observable<Lead> {
+    return this.http.put<Lead>(
+      `${this.apiBaseUrl}/api/sales/leads/${id}`,
+      request,
     );
   }
 
@@ -56,6 +109,13 @@ export class SalesApiService {
     return this.http.post<Customer>(
         `${this.apiBaseUrl}/api/sales/customers`,
         request,
+    );
+  }
+
+  updateCustomer(id: number, request: CustomerRequest): Observable<Customer> {
+    return this.http.put<Customer>(
+      `${this.apiBaseUrl}/api/sales/customers/${id}`,
+      request,
     );
   }
 
@@ -127,6 +187,13 @@ export class SalesApiService {
     );
   }
 
+  updateOffer(id: number, request: UpdateOfferRequest): Observable<Offer> {
+    return this.http.put<Offer>(
+      `${this.apiBaseUrl}/api/offers/${id}`,
+      request,
+    );
+  }
+
   acceptOffer(id: number): Observable<Offer> {
     return this.http.patch<Offer>(
       `${this.apiBaseUrl}/api/offers/${id}/accept`,
@@ -143,6 +210,13 @@ export class SalesApiService {
   createContract(request: CreateContractRequest): Observable<Contract> {
     return this.http.post<Contract>(
       `${this.apiBaseUrl}/api/contracts`,
+      request,
+    );
+  }
+
+  updateContract(id: number, request: UpdateContractRequest): Observable<Contract> {
+    return this.http.put<Contract>(
+      `${this.apiBaseUrl}/api/contracts/${id}`,
       request,
     );
   }
@@ -169,6 +243,82 @@ export class SalesApiService {
   getContractById(id: number): Observable<Contract> {
     return this.http.get<Contract>(
       `${this.apiBaseUrl}/api/contracts/${id}`,
+    );
+  }
+
+  getAvailableStageTransitions(processId: number): Observable<SalesStage[]> {
+    return this.http.get<SalesStage[]>(
+      `${this.apiBaseUrl}/api/sales/processes/${processId}/available-transitions`,
+    );
+  }
+
+  getSalesWorkflows(): Observable<SalesWorkflow[]> {
+    return this.http.get<SalesWorkflow[]>(
+      `${this.apiBaseUrl}/api/sales/workflows`,
+    );
+  }
+
+  createSalesWorkflow(request: CreateSalesWorkflowRequest): Observable<SalesWorkflow> {
+    return this.http.post<SalesWorkflow>(
+      `${this.apiBaseUrl}/api/sales/workflows`,
+      request,
+    );
+  }
+
+  getSalesWorkflowStages(workflowId: number): Observable<SalesStageDefinition[]> {
+    return this.http.get<SalesStageDefinition[]>(
+      `${this.apiBaseUrl}/api/sales/workflows/${workflowId}/stages`,
+    );
+  }
+
+  addSalesWorkflowStage(
+    workflowId: number,
+    request: CreateSalesStageRequest,
+  ): Observable<SalesStageDefinition> {
+    return this.http.post<SalesStageDefinition>(
+      `${this.apiBaseUrl}/api/sales/workflows/${workflowId}/stages`,
+      request,
+    );
+  }
+
+  getSalesWorkflowTransitions(workflowId: number): Observable<SalesStageTransition[]> {
+    return this.http.get<SalesStageTransition[]>(
+      `${this.apiBaseUrl}/api/sales/workflows/${workflowId}/transitions`,
+    );
+  }
+
+  addSalesWorkflowTransition(
+    workflowId: number,
+    request: CreateSalesStageTransitionRequest,
+  ): Observable<SalesStageTransition> {
+    return this.http.post<SalesStageTransition>(
+      `${this.apiBaseUrl}/api/sales/workflows/${workflowId}/transitions`,
+      request,
+    );
+  }
+
+  getSalesAnalyticsSummary(): Observable<SalesAnalyticsSummary> {
+    return this.http.get<SalesAnalyticsSummary>(
+      `${this.apiBaseUrl}/api/sales/analytics/summary`,
+    );
+  }
+
+  downloadSalesAnalyticsReport(): Observable<Blob> {
+    return this.http.get(
+      `${this.apiBaseUrl}/api/sales/analytics/report`,
+      { responseType: 'blob' },
+    );
+  }
+
+  getMarketProductsByRegion(regionId: number): Observable<SalesMarketProduct[]> {
+    return this.http.get<SalesMarketProduct[]>(
+      `${this.apiBaseUrl}/api/market-products?regionId=${regionId}`,
+    );
+  }
+
+  getSalesPrice(regionId: number, variantId: number, quantity: number): Observable<SalesPriceResponse> {
+    return this.http.get<SalesPriceResponse>(
+      `${this.apiBaseUrl}/api/sales/pricing/price?regionId=${regionId}&variantId=${variantId}&quantity=${quantity}`,
     );
   }
 }

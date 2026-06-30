@@ -1,0 +1,349 @@
+<main class="page">
+  <section class="page-header">
+    <p class="eyebrow">Sales Administration</p>
+    <h1>Workflow Editor</h1>
+    <p>Define workflow stages and allowed transitions by region.</p>
+  </section>
+
+  <section class="layout">
+    <aside class="panel sidebar-panel">
+      <h2>Workflows</h2>
+
+      <p *ngIf="loading" class="empty">
+        Loading workflows...
+      </p>
+
+      <button
+        *ngFor="let workflow of workflows"
+        type="button"
+        class="workflow-item"
+        [class.active]="selectedWorkflow?.id === workflow.id"
+        (click)="selectWorkflow(workflow)">
+        <span>{{ workflow.name }}</span>
+        <small class="region-badge">{{ getWorkflowRegionLabel(workflow) }}</small>
+      </button>
+
+      <p *ngIf="!loading && workflows.length === 0" class="empty">
+        No workflows created yet. Create a workflow to define stages and transitions.
+      </p>
+
+      <div class="divider"></div>
+
+      <h3>Create workflow</h3>
+
+      <form class="form" (ngSubmit)="createWorkflow()">
+        <label>
+          Name
+          <input [(ngModel)]="newWorkflow.name" name="workflowName" required />
+        </label>
+
+        <label>
+          Region
+          <select [(ngModel)]="newWorkflow.regionId" name="workflowRegion">
+              <option [ngValue]="null">GLOBAL</option>
+              <option *ngFor="let region of regions" [ngValue]="region.id">
+              {{ region.name }} ({{ region.code }})
+              </option>
+          </select>
+        </label>
+
+        <button class="primary-button" type="submit">Create</button>
+      </form>
+    </aside>
+
+    <section class="content" *ngIf="selectedWorkflow; else noWorkflowSelected">
+      <article class="panel workflow-summary">
+        <div>
+          <p class="eyebrow">Selected workflow</p>
+          <h2>{{ selectedWorkflow.name }}</h2>
+          <p>Region: <span class="region-badge">{{ getWorkflowRegionLabel(selectedWorkflow) }}</span></p>
+        </div>
+
+        <div class="summary-stats">
+          <span>{{ stages.length }} stages</span>
+          <span>{{ transitions.length }} transitions</span>
+        </div>
+      </article>
+
+      <article class="panel">
+            <div class="section-title">
+                <h2>Workflow path</h2>
+                <p>Visual overview of configured stages.</p>
+            </div>
+
+            <div *ngIf="stages.length > 0" class="stage-timeline">
+                <div *ngFor="let stage of stages" class="stage-step">
+                <div class="stage-node">
+                    <span class="stage-order">{{ stage.stageOrder }}</span>
+                    <strong>{{ stage.name }}</strong>
+                </div>
+
+                <div class="stage-flags">
+                    <span *ngIf="stage.startStage" class="badge">START</span>
+                    <span *ngIf="stage.endStage" class="badge">END</span>
+                    <span *ngIf="stage.successfulEnd" class="badge">SUCCESS</span>
+                </div>
+                </div>
+            </div>
+
+            <p *ngIf="stages.length === 0" class="empty">
+              No stages defined for this workflow yet. Add a start stage first.
+            </p>
+        </article>
+
+      <article class="panel">
+        <div class="section-title">
+          <h2>Stages</h2>
+          <p>Inputs, outputs and lifecycle flags for each stage.</p>
+        </div>
+
+        <table *ngIf="stages.length > 0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Required input</th>
+              <th>Expected output</th>
+              <th>Flags</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let stage of stages">
+              <td>{{ stage.stageOrder }}</td>
+              <td>
+                <strong>{{ stage.name }}</strong>
+                <div class="muted">{{ stage.description }}</div>
+              </td>
+              <td>{{ stage.requiredInputs }}</td>
+              <td>{{ stage.expectedOutputs }}</td>
+              <td>
+                <span *ngIf="stage.startStage" class="badge">START</span>
+                <span *ngIf="stage.endStage" class="badge">END</span>
+                <span *ngIf="stage.successfulEnd" class="badge">SUCCESS</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p *ngIf="stages.length === 0" class="empty">
+          No stages defined. Use Add stage to create the workflow path.
+        </p>
+      </article>
+
+      <article class="panel">
+        <div class="section-title">
+          <h2>Transitions</h2>
+          <p>Allowed movement between sales stages.</p>
+        </div>
+
+        <table *ngIf="transitions.length > 0">
+          <thead>
+            <tr>
+              <th>From</th>
+              <th></th>
+              <th>To</th>
+              <th>Condition</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let transition of transitions">
+              <td><strong>{{ transition.fromStageName }}</strong></td>
+              <td class="arrow">→</td>
+              <td><strong>{{ transition.toStageName }}</strong></td>
+              <td>{{ transition.conditionType }}</td>
+              <td>{{ transition.conditionDescription }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p *ngIf="transitions.length === 0" class="empty">
+          No transitions defined. Add transitions after at least two stages exist.
+        </p>
+      </article>
+
+      <section class="forms-grid">
+        <article class="panel" [class.collapsed-panel]="!showStageForm">
+        <div class="form-heading">
+          <div>
+            <h2>Add stage</h2>
+            <p>Create a stage only for {{ selectedWorkflow.name }}.</p>
+          </div>
+
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="showStageForm = !showStageForm">
+            {{ showStageForm ? 'Hide' : 'Add stage' }}
+          </button>
+        </div>
+
+        <form *ngIf="showStageForm" class="form two-columns" (ngSubmit)="createStage()">
+            <label class="wide">
+            Stage type
+            <select
+                name="stageMode"
+                [(ngModel)]="stageMode"
+                (ngModelChange)="onStageModeChanged($event)">
+                <option value="PREDEFINED">Use predefined stage</option>
+                <option value="CUSTOM">Create custom stage</option>
+            </select>
+            </label>
+
+            <label *ngIf="stageMode === 'PREDEFINED'" class="wide">
+            Predefined stage
+            <select
+                name="predefinedStage"
+                [(ngModel)]="selectedPredefinedStage"
+                (ngModelChange)="onPredefinedStageChanged($event)"
+                required>
+                <option value="" disabled>Select stage</option>
+                <option *ngFor="let stage of predefinedStages" [value]="stage">
+                {{ stage }}
+                </option>
+            </select>
+            </label>
+
+            <p *ngIf="stageMode === 'PREDEFINED' && !selectedPredefinedStage" class="validation-text wide">
+              Stage name cannot be empty.
+            </p>
+
+            <label *ngIf="stageMode === 'CUSTOM'" class="wide">
+            Custom stage name
+            <input [(ngModel)]="newStage.name" name="stageName" required />
+            </label>
+
+            <p *ngIf="stageMode === 'CUSTOM' && !newStage.name.trim()" class="validation-text wide">
+              Stage name cannot be empty.
+            </p>
+
+            <label>
+            Order
+            <input type="number" min="1" [(ngModel)]="newStage.stageOrder" name="stageOrder" required />
+            </label>
+
+            <div class="order-helper">
+            <button type="button" class="secondary-button" (click)="useNextStageOrder()">
+                Use next order ({{ nextStageOrder }})
+            </button>
+            </div>
+
+            <label class="wide">
+            Description
+            <input [(ngModel)]="newStage.description" name="stageDescription" />
+            </label>
+
+            <label>
+            Required inputs
+            <input [(ngModel)]="newStage.requiredInputs" name="requiredInputs" />
+            </label>
+
+            <label>
+            Expected outputs
+            <input [(ngModel)]="newStage.expectedOutputs" name="expectedOutputs" />
+            </label>
+
+            <label class="checkbox">
+            <input type="checkbox" [(ngModel)]="newStage.startStage" name="startStage" />
+            Start stage
+            </label>
+
+            <label class="checkbox">
+            <input type="checkbox" [(ngModel)]="newStage.endStage" name="endStage" />
+            End stage
+            </label>
+
+            <label class="checkbox">
+            <input type="checkbox" [(ngModel)]="newStage.successfulEnd" name="successfulEnd" />
+            Successful end
+            </label>
+
+            <button
+            class="primary-button wide"
+            type="submit"
+            [disabled]="!isStageFormValid()">
+            Add stage
+            </button>
+        </form>
+        </article>
+
+        <article class="panel" [class.collapsed-panel]="!showTransitionForm">
+          <div class="form-heading">
+            <div>
+              <h2>Add transition</h2>
+              <p>Connect two stages inside {{ selectedWorkflow.name }}.</p>
+            </div>
+
+            <button
+              type="button"
+              class="secondary-button"
+              (click)="showTransitionForm = !showTransitionForm">
+              {{ showTransitionForm ? 'Hide' : 'Add transition' }}
+            </button>
+          </div>
+
+          <p *ngIf="stages.length < 2" class="empty">
+            Add at least two stages before creating transitions.
+          </p>
+
+          <form *ngIf="showTransitionForm" class="form" (ngSubmit)="createTransition()" [class.disabled-form]="stages.length < 2">
+            <label>
+              From stage
+              <select [(ngModel)]="newTransition.fromStageId" name="fromStage" [disabled]="stages.length < 2" required>
+                <option [ngValue]="0" disabled>Select stage</option>
+                <option *ngFor="let stage of stages" [ngValue]="stage.id">
+                  {{ stage.name }}
+                </option>
+              </select>
+            </label>
+
+            <label>
+              To stage
+              <select [(ngModel)]="newTransition.toStageId" name="toStage" [disabled]="stages.length < 2" required>
+                <option [ngValue]="0" disabled>Select stage</option>
+                <option *ngFor="let stage of stages" [ngValue]="stage.id">
+                  {{ stage.name }}
+                </option>
+              </select>
+            </label>
+
+            <p *ngIf="newTransition.fromStageId === newTransition.toStageId && newTransition.fromStageId !== 0" class="error-text">
+                From and To stage cannot be the same.
+            </p>
+
+            <label>
+              Condition type
+              <input [(ngModel)]="newTransition.conditionType" name="conditionType" [disabled]="stages.length < 2" />
+            </label>
+
+            <label>
+              Description
+              <input [(ngModel)]="newTransition.conditionDescription" name="conditionDescription" [disabled]="stages.length < 2" />
+            </label>
+
+            <button
+              class="primary-button"
+              type="submit"
+              [disabled]="transitionInvalid || stages.length < 2">
+              Add transition
+            </button>
+          </form>
+        </article>
+      </section>
+    </section>
+
+    <ng-template #noWorkflowSelected>
+      <section class="content">
+        <article class="panel empty-workflow-panel">
+          <h2>No workflow selected</h2>
+          <p *ngIf="loading">Loading workflows...</p>
+          <p *ngIf="!loading">
+            No workflows created yet. Create a workflow to define stages and transitions.
+          </p>
+        </article>
+      </section>
+    </ng-template>
+  </section>
+</main>

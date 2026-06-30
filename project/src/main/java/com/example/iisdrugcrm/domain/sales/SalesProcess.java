@@ -1,5 +1,7 @@
 package com.example.iisdrugcrm.domain.sales;
 
+import com.example.iisdrugcrm.domain.sales.workflow.SalesWorkflow;
+
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -33,19 +35,23 @@ public class SalesProcess {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private SalesStage stage;
+    @Column(nullable = false, length = 100)
+    private String stage;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "workflow_id")
+    private SalesWorkflow workflow;
 
     protected SalesProcess() {
     }
 
-    public SalesProcess(Customer customer, String title) {
+    public SalesProcess(Customer customer, String title, SalesWorkflow workflow, String startStage) {
         this.customer = customer;
         this.title = title;
+        this.workflow = workflow;
         this.status = SalesProcessStatus.ACTIVE;
         this.outcome = SalesProcessOutcome.OPEN;
-        this.stage = SalesStage.NEW;
+        this.stage = startStage;
     }
 
     @PrePersist
@@ -60,37 +66,19 @@ public class SalesProcess {
         updatedAt = LocalDateTime.now();
     }
 
-    public void changeStage(SalesStage newStage) {
-    if (!isTransitionAllowed(this.stage, newStage)) {
-        throw new IllegalArgumentException(
-                "Transition from " + this.stage + " to " + newStage + " is not allowed."
-        );
-    }
+    public void changeStage(String newStage, boolean endStage, boolean successfulEnd) {
+        this.stage = newStage;
 
-    this.stage = newStage;
-
-    if (newStage == SalesStage.WON) {
-        this.status = SalesProcessStatus.SUCCESSFUL;
-        this.outcome = SalesProcessOutcome.CLOSED_WON;
-    } else if (newStage == SalesStage.LOST) {
-        this.status = SalesProcessStatus.UNSUCCESSFUL;
-        this.outcome = SalesProcessOutcome.CLOSED_LOST;
-    } else {
-        this.status = SalesProcessStatus.ACTIVE;
-        this.outcome = SalesProcessOutcome.OPEN;
-    }
-    
-    }
-
-    private boolean isTransitionAllowed(SalesStage currentStage, SalesStage newStage) {
-        return switch (currentStage) {
-            case NEW -> newStage == SalesStage.CONTACTED;
-            case CONTACTED -> newStage == SalesStage.QUALIFIED;
-            case QUALIFIED -> newStage == SalesStage.PROPOSAL_SENT;
-            case PROPOSAL_SENT -> newStage == SalesStage.NEGOTIATION;
-            case NEGOTIATION -> newStage == SalesStage.WON || newStage == SalesStage.LOST;
-            case WON, LOST -> false;
-        };
+        if (endStage && successfulEnd) {
+            this.status = SalesProcessStatus.SUCCESSFUL;
+            this.outcome = SalesProcessOutcome.CLOSED_WON;
+        } else if (endStage) {
+            this.status = SalesProcessStatus.UNSUCCESSFUL;
+            this.outcome = SalesProcessOutcome.CLOSED_LOST;
+        } else {
+            this.status = SalesProcessStatus.ACTIVE;
+            this.outcome = SalesProcessOutcome.OPEN;
+        }
     }
 
     public Long getId() { return id; }
@@ -100,6 +88,6 @@ public class SalesProcess {
     public SalesProcessOutcome getOutcome() { return outcome; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public SalesStage getStage() { return stage; }
-
+    public String getStage() { return stage; }
+    public SalesWorkflow getWorkflow() { return workflow; }
 }

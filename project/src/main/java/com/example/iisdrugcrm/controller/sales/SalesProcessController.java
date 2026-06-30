@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -51,8 +52,17 @@ public class SalesProcessController {
     @PreAuthorize("hasRole('SALES_REPRESENTATIVE')")
     public ResponseEntity<SalesProcessResponseDTO> updateStage(
             @PathVariable Long id,
-            @Valid @RequestBody StageUpdateRequestDTO dto
+            @Valid @RequestBody StageUpdateRequestDTO dto,
+            Authentication authentication
     ) {
-        return ResponseEntity.ok(salesProcessService.updateStage(id, dto));
+        return ResponseEntity.ok(
+                salesProcessService.updateStage(id, dto, authentication.getName())
+        );
+    }
+
+    @GetMapping("/{id}/available-transitions")
+    @PreAuthorize("hasAnyRole('SALES_REPRESENTATIVE', 'SALES_MANAGER', 'ACCOUNT_MANAGER')")
+    public ResponseEntity<List<String>> getAvailableTransitions(@PathVariable Long id) {
+        return ResponseEntity.ok(salesProcessService.getAvailableTransitions(id));
     }
 }

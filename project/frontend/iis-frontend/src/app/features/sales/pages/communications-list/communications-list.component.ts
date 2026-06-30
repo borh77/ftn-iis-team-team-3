@@ -75,7 +75,12 @@ export class CommunicationsListComponent implements OnInit, OnDestroy {
 
     this.salesApiService
       .getCustomerCommunications(this.selectedCustomerId)
-      .pipe(finalize(() => (this.loading = false)))
+      .pipe(
+        finalize(() => {
+          this.loading = false;
+          this.cdr.detectChanges();
+        }),
+      )
       .subscribe({
         next: (response) => {
           this.communications = response ?? [];
@@ -101,7 +106,12 @@ export class CommunicationsListComponent implements OnInit, OnDestroy {
         this.selectedCustomerId,
         this.newCommunication,
       )
-      .pipe(finalize(() => (this.saving = false)))
+      .pipe(
+        finalize(() => {
+          this.saving = false;
+          this.cdr.detectChanges();
+        }),
+      )
       .subscribe({
         next: () => {
           this.newCommunication = {

@@ -10,6 +10,8 @@ import com.example.iisdrugcrm.repository.sales.SalesProcessRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.iisdrugcrm.repository.sales.SalesProcessHistoryRepository;
+import com.example.iisdrugcrm.domain.User;
+import com.example.iisdrugcrm.repository.UserRepository;
 
 import java.util.List;
 
@@ -21,19 +23,22 @@ public class OfferService {
     private final SalesProcessRepository salesProcessRepository;
     private final ProductRepository productRepository;
     private final SalesProcessHistoryRepository salesProcessHistoryRepository;
+    private final UserRepository userRepository;
 
     public OfferService(
             OfferRepository offerRepository,
             CustomerRepository customerRepository,
             SalesProcessRepository salesProcessRepository,
             ProductRepository productRepository,
-            SalesProcessHistoryRepository salesProcessHistoryRepository
+            SalesProcessHistoryRepository salesProcessHistoryRepository,
+            UserRepository userRepository
     ) {
         this.offerRepository = offerRepository;
         this.customerRepository = customerRepository;
         this.salesProcessRepository = salesProcessRepository;
         this.productRepository = productRepository;
         this.salesProcessHistoryRepository = salesProcessHistoryRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -98,7 +103,21 @@ public class OfferService {
     }
 
     @Transactional
-    public OfferResponseDTO acceptOffer(Long id) {
+    public OfferResponseDTO update(Long id, UpdateOfferRequestDTO dto) {
+        Offer offer = offerRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Offer not found."));
+
+        if (offer.getStatus() == OfferStatus.ACCEPTED || offer.getStatus() == OfferStatus.REJECTED) {
+            throw new IllegalArgumentException("Accepted or rejected offers cannot be edited.");
+        }
+
+        offer.update(dto.getValidUntil(), dto.getNotes());
+
+        return mapToDto(offer);
+    }
+
+    @Transactional
+    public OfferResponseDTO acceptOffer(Long id, String username) {
         Offer offer = offerRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Offer not found."));
 
@@ -107,15 +126,20 @@ public class OfferService {
         }
 
         SalesProcess salesProcess = offer.getSalesProcess();
-        SalesStage previousStage = salesProcess.getStage();
+        String previousStage = salesProcess.getStage();
 
         offer.markAsAccepted();
 
-        if (previousStage != SalesStage.WON) {
-            salesProcess.changeStage(SalesStage.WON);
+        String wonStage = "Closed Won";
+
+        if (!previousStage.equalsIgnoreCase(wonStage)) {
+            User changedBy = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new IllegalArgumentException("Authenticated user not found."));
+
+            salesProcess.changeStage(wonStage, true, true);
 
             salesProcessHistoryRepository.save(
-                new SalesProcessHistory(salesProcess, previousStage, SalesStage.WON)
+                    new SalesProcessHistory(salesProcess, previousStage, wonStage, changedBy)
             );
         }
 

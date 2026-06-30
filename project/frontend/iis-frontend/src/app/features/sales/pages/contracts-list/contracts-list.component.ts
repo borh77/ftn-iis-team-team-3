@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
@@ -11,7 +12,7 @@ import { ERROR_MESSAGE_MS, TransientMessageService } from '../../../../core/tran
 @Component({
   selector: 'app-contracts-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './contracts-list.component.html',
   styleUrls: ['./contracts-list.component.css'],
 })
@@ -23,35 +24,41 @@ export class ContractsListComponent implements OnInit, OnDestroy {
 
   contracts: Contract[] = [];
   loading = true;
-  signingContractId: number | null = null;
   errorMessage = '';
+
+  saving = false;
+  editingContractId: number | null = null;
+
+  editContract = {
+    startDate: '',
+    endDate: '',
+    terms: '',
+  };
 
   ngOnInit(): void {
     this.loadContracts();
+  }
+
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
   }
 
   loadContracts(): void {
     this.loading = true;
     this.clearError();
 
-    this.salesApiService.getContracts().pipe(finalize(() => (this.loading = false))).subscribe({
+    this.salesApiService.getContracts().pipe(
+      finalize(() => {
+        this.loading = false;
+        this.cdr.detectChanges();
+      }),
+    ).subscribe({
       next: (response) => {
         this.contracts = response ?? [];
-        this.cdr.detectChanges();
       },
       error: (error) => {
         this.showError(extractBackendErrorMessage(error, 'Failed to load contracts.'));
-        this.cdr.detectChanges();
       },
-    });
-  }
-
-  signContract(contract: Contract): void {
-    this.signingContractId = contract.id;
-    this.clearError();
-    this.salesApiService.signContract(contract.id).pipe(finalize(() => (this.signingContractId = null))).subscribe({
-      next: () => this.loadContracts(),
-      error: (error) => this.showError(extractBackendErrorMessage(error, 'Failed to sign contract.')),
     });
   }
 
@@ -59,8 +66,42 @@ export class ContractsListComponent implements OnInit, OnDestroy {
     this.router.navigate(['/sales/contracts', contract.id]);
   }
 
-  ngOnDestroy(): void {
-    this.transientMessages.clearAll(this);
+  startEditContract(contract: Contract): void {
+    this.editingContractId = contract.id;
+    this.editContract = {
+      startDate: contract.startDate,
+      endDate: contract.endDate,
+      terms: contract.terms ?? '',
+    };
+  }
+
+  cancelEditContract(): void {
+    this.editingContractId = null;
+    this.editContract = {
+      startDate: '',
+      endDate: '',
+      terms: '',
+    };
+  }
+
+  updateContract(contract: Contract): void {
+    this.saving = true;
+    this.clearError();
+
+    this.salesApiService.updateContract(contract.id, this.editContract).pipe(
+      finalize(() => {
+        this.saving = false;
+        this.cdr.detectChanges();
+      }),
+    ).subscribe({
+      next: () => {
+        this.cancelEditContract();
+        this.loadContracts();
+      },
+      error: (error) => {
+        this.showError(extractBackendErrorMessage(error, 'Failed to update contract.'));
+      },
+    });
   }
 
   private showError(message: string): void {

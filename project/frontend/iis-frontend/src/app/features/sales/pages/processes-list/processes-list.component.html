@@ -7,11 +7,11 @@
     </div>
 
     <button
-        *ngIf="canCreateProcess"
-        class="primary-button"
-        type="button"
-        (click)="showCreateForm = !showCreateForm">
-        + Add Process
+      *ngIf="canCreateProcess"
+      class="primary-button"
+      type="button"
+      (click)="showCreateForm = !showCreateForm">
+      Create Process
     </button>
   </section>
 
@@ -30,6 +30,16 @@
       </label>
 
       <label>
+        Workflow
+        <select name="workflowId" [(ngModel)]="newProcess.workflowId" required>
+          <option [ngValue]="0" disabled>Select workflow</option>
+          <option *ngFor="let workflow of workflows" [ngValue]="workflow.id">
+            {{ workflow.name }}
+          </option>
+        </select>
+      </label>
+
+      <label>
         Title
         <input name="title" [(ngModel)]="newProcess.title" required />
       </label>
@@ -39,8 +49,11 @@
           Cancel
         </button>
 
-        <button type="submit" class="primary-button" [disabled]="saving || newProcess.customerId === 0">
-          {{ saving ? 'Saving...' : 'Save Process' }}
+        <button
+          type="submit"
+          class="primary-button"
+          [disabled]="saving || newProcess.customerId === 0 || newProcess.workflowId === 0">
+          {{ saving ? 'Saving...' : 'Create' }}
         </button>
       </div>
     </form>
@@ -60,147 +73,37 @@
         <tr>
           <th>Title</th>
           <th>Customer</th>
+          <th>Workflow</th>
           <th>Stage</th>
           <th>Status</th>
           <th>Outcome</th>
-          <th *ngIf="canManageProcesses">Change Stage</th>
           <th>Actions</th>
         </tr>
       </thead>
 
       <tbody>
-        <ng-container *ngFor="let process of processes">
-          <tr>
-            <td>{{ process.title }}</td>
-            <td>{{ process.customerName }}</td>
-            <td><span class="status">{{ process.stage }}</span></td>
-            <td>{{ process.status }}</td>
-            <td>{{ process.outcome }}</td>
-
-            <td *ngIf="canManageProcesses">
-              <select
-                [ngModel]="process.stage"
-                (ngModelChange)="updateStage(process, $event)"
-                name="stage-{{ process.id }}">
-                <option *ngFor="let stage of stages" [ngValue]="stage">
-                  {{ stage }}
-                </option>
-              </select>
-            </td>
-
-            <td>
-              <div class="action-buttons">
-                <button type="button" class="secondary-button" (click)="viewDetails(process)">
-                  View Details
-                </button>
-
-                  <ng-container *ngIf="process.status === 'ACTIVE' && canCreateNeedsAndOffers; else closedProcess">                  <button type="button" class="secondary-button" (click)="openNeedForm(process)">
-                    Add Need
-                  </button>
-
-                  <button type="button" class="secondary-button" (click)="openOfferForm(process)">
-                    Create Offer
-                  </button>
-                </ng-container>
-
-                <ng-template #closedProcess>
-                  <span class="muted-text">Closed</span>
-                </ng-template>
-              </div>
-            </td>
-          </tr>
-
-          <tr *ngIf="showNeedFormForProcessId === process.id">
-            <td colspan="7">
-              <form (ngSubmit)="createNeed(process)" class="process-form">
-                <label>
-                  Customer Need
-                  <input
-                    name="need-description-{{ process.id }}"
-                    [(ngModel)]="newNeed.description"
-                    required
-                  />
-                </label>
-
-                <label>
-                  Priority
-                  <select name="need-priority-{{ process.id }}" [(ngModel)]="newNeed.priority">
-                    <option value="HIGH">HIGH</option>
-                    <option value="MEDIUM">MEDIUM</option>
-                    <option value="LOW">LOW</option>
-                  </select>
-                </label>
-
-                <button type="submit" class="primary-button" [disabled]="actionLoading">
-                  {{ actionLoading ? 'Saving...' : 'Save Need' }}
-                </button>
-              </form>
-            </td>
-          </tr>
-
-          <tr *ngIf="showOfferFormForProcessId === process.id">
-            <td colspan="7">
-              <form (ngSubmit)="createOffer()" class="process-form">
-                <label>
-                  Valid Until
-                  <input
-                    type="date"
-                    name="offer-valid-until-{{ process.id }}"
-                    [(ngModel)]="newOffer.validUntil"
-                    required
-                  />
-                </label>
-
-                <label>
-                  Product ID
-                  <input
-                    type="number"
-                    name="offer-product-{{ process.id }}"
-                    [(ngModel)]="newOffer.items[0].productId"
-                    required
-                  />
-                </label>
-
-                <label>
-                  Quantity
-                  <input
-                    type="number"
-                    name="offer-quantity-{{ process.id }}"
-                    [(ngModel)]="newOffer.items[0].quantity"
-                    required
-                  />
-                </label>
-
-                <label>
-                  Unit Price
-                  <input
-                    type="number"
-                    name="offer-price-{{ process.id }}"
-                    [(ngModel)]="newOffer.items[0].unitPrice"
-                    required
-                  />
-                </label>
-
-                <label>
-                  Notes
-                  <input
-                    name="offer-notes-{{ process.id }}"
-                    [(ngModel)]="newOffer.notes"
-                  />
-                </label>
-
-                <button type="submit" class="primary-button" [disabled]="actionLoading">
-                  {{ actionLoading ? 'Saving...' : 'Save Offer' }}
-                </button>
-              </form>
-            </td>
-          </tr>
-        </ng-container>
+        <tr *ngFor="let process of processes">
+          <td>{{ process.title }}</td>
+          <td>{{ process.customerName }}</td>
+          <td>
+            <span class="badge workflow-badge" [class.empty-badge]="!process.workflowName">
+              {{ process.workflowName || 'No workflow' }}
+            </span>
+          </td>
+          <td><span class="badge stage-badge">{{ process.stage }}</span></td>
+          <td><span class="badge status-badge">{{ process.status }}</span></td>
+          <td><span class="badge outcome-badge">{{ process.outcome || '-' }}</span></td>
+          <td>
+            <button type="button" class="secondary-button" (click)="viewDetails(process)">
+              View Details
+            </button>
+          </td>
+        </tr>
       </tbody>
     </table>
 
     <div *ngIf="!loading && processes.length === 0" class="loading">
-      No sales processes found.
+      No sales processes found. Start a process for an existing customer.
     </div>
   </section>
 </main>

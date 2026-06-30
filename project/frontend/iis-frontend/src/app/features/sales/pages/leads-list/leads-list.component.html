@@ -1,17 +1,17 @@
 <main class="page">
   <section class="page-header">
     <div>
-        <p class="eyebrow">Sales workspace</p>
-        <h1>Leads</h1>
-        <p>Manage incoming leads and convert them into customers.</p>
+      <p class="eyebrow">Sales workspace</p>
+      <h1>Leads</h1>
+      <p>Manage incoming leads and convert them into customers.</p>
     </div>
 
-   <button
-        *ngIf="canManageLeads"
-        class="primary-button"
-        type="button"
-        (click)="showCreateForm = !showCreateForm">
-        + Add Lead
+    <button
+      *ngIf="canManageLeads"
+      class="primary-button"
+      type="button"
+      (click)="showCreateForm = !showCreateForm">
+      Create Lead
     </button>
   </section>
 
@@ -35,6 +35,16 @@
       </label>
 
       <label>
+        Region
+        <select name="lead-region" [(ngModel)]="newLead.regionId">
+          <option [ngValue]="null">No region selected</option>
+          <option *ngFor="let region of regions" [ngValue]="region.id">
+            {{ region.name }}
+          </option>
+        </select>
+      </label>
+
+      <label>
         Source
         <input name="source" [(ngModel)]="newLead.source" required />
       </label>
@@ -46,11 +56,11 @@
 
       <div class="form-actions">
         <button type="button" class="secondary-button" (click)="showCreateForm = false">
-            Cancel
+          Cancel
         </button>
 
         <button type="submit" class="primary-button" [disabled]="saving">
-            {{ saving ? 'Saving...' : 'Save Lead' }}
+          {{ saving ? 'Saving...' : 'Create' }}
         </button>
       </div>
     </form>
@@ -65,50 +75,136 @@
       Loading leads...
     </div>
 
-    <table *ngIf="!loading">
-        <thead>
-            <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Address</th>
-            <th>Source</th>
-            <th>Score</th>
-            <th>Status</th>
-            <th *ngIf="canManageLeads">Actions</th>
-            </tr>
-        </thead>
+    <div *ngIf="!loading" class="filters-bar">
+      <input
+        type="text"
+        placeholder="Search leads..."
+        [(ngModel)]="leadSearchTerm"
+      />
 
-        <tbody>
-            <tr *ngFor="let lead of leads">
-                <td>{{ lead.name }}</td>
-                <td>{{ lead.email }}</td>
-                <td>{{ lead.address }}</td>
-                <td>{{ lead.source }}</td>
-                <td>{{ lead.score }}</td>
-                <td>
-                <span class="status">
-                    {{ lead.status }}
-                </span>
-                </td>
-                <td *ngIf="canManageLeads">
-                    <button
-                        *ngIf="lead.status === 'NEW'"
-                        class="secondary-button"
-                        type="button"
-                        (click)="qualifyLead(lead.id)">
-                        Qualify
-                    </button>
+      <select [(ngModel)]="leadStatusFilter">
+        <option value="">All statuses</option>
+        <option value="NEW">NEW</option>
+        <option value="QUALIFIED">QUALIFIED</option>
+        <option value="CONVERTED">CONVERTED</option>
+      </select>
 
-                    <button
-                        *ngIf="lead.status === 'QUALIFIED'"
-                        class="primary-button"
-                        type="button"
-                        (click)="convertLead(lead.id)">
-                        Convert
-                    </button>
-                </td>
-            </tr>
-        </tbody>
+      <button type="button" class="secondary-button" (click)="clearLeadFilters()">
+        Clear
+      </button>
+    </div>
+
+    <table *ngIf="!loading && filteredLeads.length > 0">      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Address</th>
+          <th>Region</th>
+          <th>Source</th>
+          <th>Score</th>
+          <th>Status</th>
+          <th *ngIf="canManageLeads" class="actions-column">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <ng-container *ngFor="let lead of filteredLeads">          <tr>
+            <td>{{ lead.name }}</td>
+            <td>{{ lead.email }}</td>
+            <td>{{ lead.address || '-' }}</td>
+            <td>{{ lead.regionName || '-' }}</td>
+            <td>{{ lead.source || '-' }}</td>
+            <td>{{ lead.score }}</td>
+            <td>
+              <span class="status">
+                {{ lead.status }}
+              </span>
+            </td>
+
+            <td *ngIf="canManageLeads" class="actions-cell">
+              <div class="action-buttons">
+                <button
+                  class="icon-button"
+                  type="button"
+                  title="Edit"
+                  (click)="startEditLead(lead)">
+                  ✎
+                </button>
+
+                <button
+                  *ngIf="lead.status === 'NEW'"
+                  class="secondary-button compact-button"
+                  type="button"
+                  (click)="qualifyLead(lead.id)">
+                  Qualify
+                </button>
+
+                <button
+                  *ngIf="lead.status === 'QUALIFIED'"
+                  class="primary-button compact-button"
+                  type="button"
+                  (click)="convertLead(lead.id)">
+                  Convert
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="editingLeadId === lead.id">
+            <td colspan="8">
+              <form (ngSubmit)="updateLead(lead.id)" class="lead-form edit-form">
+                <label>
+                  Name
+                  <input name="edit-name-{{ lead.id }}" [(ngModel)]="editLead.name" required />
+                </label>
+
+                <label>
+                  Email
+                  <input name="edit-email-{{ lead.id }}" type="email" [(ngModel)]="editLead.email" required />
+                </label>
+
+                <label>
+                  Address
+                  <input name="edit-address-{{ lead.id }}" [(ngModel)]="editLead.address" />
+                </label>
+
+                <label>
+                  Region
+                  <select name="edit-lead-region-{{ lead.id }}" [(ngModel)]="editLead.regionId">
+                    <option [ngValue]="null">No region selected</option>
+                    <option *ngFor="let region of regions" [ngValue]="region.id">
+                      {{ region.name }}
+                    </option>
+                  </select>
+                </label>
+
+                <label>
+                  Source
+                  <input name="edit-source-{{ lead.id }}" [(ngModel)]="editLead.source" />
+                </label>
+
+                <label>
+                  Score
+                  <input name="edit-score-{{ lead.id }}" type="number" [(ngModel)]="editLead.score" />
+                </label>
+
+                <div class="form-actions">
+                  <button type="button" class="secondary-button" (click)="cancelEditLead()">
+                    Cancel
+                  </button>
+                  <button type="submit" class="primary-button" [disabled]="saving">
+                    {{ saving ? 'Saving...' : 'Save Changes' }}
+                  </button>
+                </div>
+              </form>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
     </table>
+
+    <div *ngIf="!loading && filteredLeads.length === 0" class="loading">
+      No leads match selected filters.
+    </div>
   </section>
 </main>

@@ -24,21 +24,29 @@ export class ContractDetailsComponent implements OnInit, OnDestroy {
 
   contract?: Contract;
   loading = true;
+  signing = false;
   errorMessage = '';
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
 
-    this.salesApiService.getContractById(id).pipe(finalize(() => (this.loading = false))).subscribe({
+    this.salesApiService.getContractById(id).pipe(
+      finalize(() => {
+        this.loading = false;
+        this.cdr.detectChanges();
+      }),
+    ).subscribe({
       next: (response) => {
         this.contract = response;
-        this.cdr.detectChanges();
       },
       error: (error) => {
         this.showError(extractBackendErrorMessage(error, 'Failed to load contract.'));
-        this.cdr.detectChanges();
       },
     });
+  }
+
+  ngOnDestroy(): void {
+    this.transientMessages.clearAll(this);
   }
 
   goBack(): void {
@@ -51,11 +59,34 @@ export class ContractDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnDestroy(): void {
-    this.transientMessages.clearAll(this);
+  signContract(): void {
+    if (!this.contract || this.contract.status !== 'PENDING') {
+      return;
+    }
+
+    this.signing = true;
+    this.clearError();
+
+    this.salesApiService.signContract(this.contract.id).pipe(
+      finalize(() => {
+        this.signing = false;
+        this.cdr.detectChanges();
+      }),
+    ).subscribe({
+      next: (response) => {
+        this.contract = response;
+      },
+      error: (error) => {
+        this.showError(extractBackendErrorMessage(error, 'Failed to sign contract.'));
+      },
+    });
   }
 
   private showError(message: string): void {
     this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
+  private clearError(): void {
+    this.transientMessages.clearField(this, 'errorMessage', () => this.cdr.detectChanges());
   }
 }

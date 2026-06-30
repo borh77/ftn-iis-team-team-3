@@ -19,9 +19,15 @@
         <p>{{ customer.email }}</p>
       </div>
 
-      <span class="status">
-        {{ customer.status }}
-      </span>
+      <div class="header-actions">
+        <button type="button" class="secondary-button" (click)="startSalesProcess()">
+          Start Sales Process
+        </button>
+
+        <span class="status">
+          {{ customer.status }}
+        </span>
+      </div>
     </section>
 
     <section class="info-card customer-info-card">
@@ -92,7 +98,7 @@
               type="button"
               class="secondary-button"
               (click)="viewProcess(process)">
-              Open
+              View Details
             </button>
           </div>
         </div>

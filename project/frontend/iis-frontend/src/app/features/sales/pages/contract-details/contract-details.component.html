@@ -15,7 +15,18 @@
         <p>{{ contract.customerName }}</p>
       </div>
 
-      <span class="status">{{ contract.status }}</span>
+      <div class="header-actions">
+        <button
+          *ngIf="contract.status === 'PENDING'"
+          type="button"
+          class="primary-button"
+          [disabled]="signing"
+          (click)="signContract()">
+          {{ signing ? 'Signing...' : 'Sign Contract' }}
+        </button>
+
+        <span class="status">{{ contract.status }}</span>
+      </div>
     </section>
 
     <section class="summary-grid">

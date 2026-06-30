@@ -15,7 +15,7 @@
         <p>{{ process.customerName }}</p>
       </div>
 
-      <span class="status">{{ process.status }}</span>
+      <span class="badge status-badge">{{ process.status }}</span>
     </section>
 
     <section class="stage-card">
@@ -34,11 +34,37 @@
     <section class="grid">
       <article class="info-card">
         <h2>Process Information</h2>
-        <p><strong>Current stage:</strong> {{ process.stage }}</p>
-        <p><strong>Status:</strong> {{ process.status }}</p>
-        <p><strong>Outcome:</strong> {{ process.outcome }}</p>
-        <p><strong>Created:</strong> {{ process.createdAt }}</p>
-        <p><strong>Updated:</strong> {{ process.updatedAt }}</p>
+        <p><strong>Current stage:</strong> <span class="badge stage-badge">{{ process.stage }}</span></p>
+        <p>
+          <strong>Workflow:</strong>
+          <span class="badge workflow-badge" [class.empty-badge]="!process.workflowName">
+            {{ process.workflowName || 'No workflow' }}
+          </span>
+        </p>
+        <p><strong>Status:</strong> <span class="badge status-badge">{{ process.status }}</span></p>
+        <p><strong>Outcome:</strong> <span class="badge outcome-badge">{{ process.outcome || '-' }}</span></p>
+        <p><strong>Created:</strong> {{ formatDate(process.createdAt) }}</p>
+        <p><strong>Updated:</strong> {{ formatDate(process.updatedAt) }}</p>
+
+        <form class="process-action-form">
+          <label>
+            Change Stage
+            <select
+              name="process-stage"
+              [(ngModel)]="selectedStage"
+              (ngModelChange)="updateStage($event)"
+              [disabled]="isStageDropdownDisabled()">
+              <option [ngValue]="process.stage">{{ process.stage }}</option>
+              <option *ngFor="let stage of availableTransitions" [ngValue]="stage">
+                {{ stage }}
+              </option>
+            </select>
+          </label>
+
+          <p *ngIf="getStageDisabledMessage()" class="muted-text">
+            {{ getStageDisabledMessage() }}
+          </p>
+        </form>
       </article>
 
       <article class="info-card">
@@ -58,7 +84,11 @@
                     </div>
 
                     <div class="history-date">
-                        {{ item.changedAt }}
+                        {{ formatDate(item.changedAt) }}
+                    </div>
+
+                    <div *ngIf="item.changedByUsername" class="history-user">
+                      Changed by {{ item.changedByUsername }}
                     </div>
                 </div>
             </div>
@@ -70,7 +100,48 @@
       <article class="info-card">
         <h2>Customer Needs</h2>
 
-        <div *ngIf="needs.length === 0" class="muted-text">No needs recorded.</div>
+        <button
+          *ngIf="canCreateNeedsAndOffers && process.status === 'ACTIVE'"
+          type="button"
+          class="secondary-button"
+          (click)="showNeedForm = !showNeedForm">
+          Add Need
+        </button>
+
+        <form
+          *ngIf="showNeedForm && canCreateNeedsAndOffers && !isProcessClosed()"
+          (ngSubmit)="createNeed()"
+          class="process-action-form">
+          <label>
+            Customer Need
+            <input
+              name="need-description"
+              [(ngModel)]="newNeed.description"
+              required
+            />
+          </label>
+
+          <label>
+            Priority
+            <select name="need-priority" [(ngModel)]="newNeed.priority">
+              <option value="HIGH">HIGH</option>
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="LOW">LOW</option>
+            </select>
+          </label>
+
+          <div class="form-actions">
+            <button type="button" class="secondary-button" (click)="closeNeedForm()">
+              Cancel
+            </button>
+
+            <button type="submit" class="primary-button">
+              Add Need
+            </button>
+          </div>
+        </form>
+
+        <div *ngIf="needs.length === 0" class="empty-state">No customer needs recorded yet.</div>
 
         <div *ngFor="let need of needs" class="list-item">
           <strong>{{ need.priority }}</strong>
@@ -81,13 +152,99 @@
       <article class="info-card">
         <h2>Offers</h2>
 
-        <div *ngIf="offers.length === 0" class="muted-text">No offers created.</div>
+        <button
+          *ngIf="canCreateNeedsAndOffers && process.status === 'ACTIVE'"
+          type="button"
+          class="secondary-button"
+          (click)="openOfferForm()">
+          Create Offer
+        </button>
+
+        <form
+          *ngIf="showOfferForm && canCreateNeedsAndOffers && !isProcessClosed()"
+          (ngSubmit)="createOffer()"
+          class="process-action-form">
+          <label>
+            Valid Until
+            <input
+              type="date"
+              name="offer-valid-until"
+              [(ngModel)]="newOffer.validUntil"
+              required
+            />
+          </label>
+
+          <label>
+            Product
+            <select
+              name="offer-product"
+              [(ngModel)]="selectedOfferVariantId"
+              (ngModelChange)="onOfferVariantChanged($event)"
+              [disabled]="!customer?.regionId || offerMarketProducts.length === 0"
+              required>
+              <option [ngValue]="0" disabled>Select product</option>
+              <option *ngFor="let item of offerMarketProducts" [ngValue]="item.variantId">
+                {{ item.localName }} - {{ item.variantForm }} {{ item.variantDosage }}
+              </option>
+            </select>
+          </label>
+
+          <label>
+            Quantity
+            <input
+              type="number"
+              min="1"
+              name="offer-quantity"
+              [(ngModel)]="newOffer.items[0].quantity"
+              (ngModelChange)="onOfferQuantityChanged($event)"
+              required
+            />
+          </label>
+
+          <label>
+            Unit Price
+            <input
+              type="number"
+              name="offer-price"
+              [(ngModel)]="newOffer.items[0].unitPrice"
+              readonly
+              required
+            />
+          </label>
+
+          <p *ngIf="offerPriceMessage" class="muted-text">
+            {{ offerPriceMessage }}
+          </p>
+
+          <label>
+            Notes
+            <input
+              name="offer-notes"
+              [(ngModel)]="newOffer.notes"
+            />
+          </label>
+
+          <div class="form-actions">
+            <button type="button" class="secondary-button" (click)="closeOfferForm()">
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              class="primary-button"
+              [disabled]="!isOfferFormSubmittable()">
+              Create Offer
+            </button>
+          </div>
+        </form>
+
+        <div *ngIf="offers.length === 0" class="empty-state">No offers created yet.</div>
 
         <div *ngFor="let offer of offers" class="list-item">
           <strong>{{ offer.offerNumber }}</strong>
-          <p>Status: {{ offer.status }}</p>
+          <p>Status: <span class="badge status-badge">{{ offer.status }}</span></p>
           <p>Total: {{ offer.totalAmount }}</p>
-          <p>Valid until: {{ offer.validUntil }}</p>
+          <p>Valid until: {{ formatDate(offer.validUntil) }}</p>
         </div>
       </article>
     </section>
@@ -96,12 +253,12 @@
       <article class="info-card">
         <h2>Contracts</h2>
 
-        <div *ngIf="contracts.length === 0" class="muted-text">No contracts generated.</div>
+        <div *ngIf="contracts.length === 0" class="empty-state">No contracts generated yet.</div>
 
         <div *ngFor="let contract of contracts" class="list-item">
           <strong>{{ contract.contractNumber }}</strong>
-          <p>Status: {{ contract.status }}</p>
-          <p>Period: {{ contract.startDate }} - {{ contract.endDate }}</p>
+          <p>Status: <span class="badge status-badge">{{ contract.status }}</span></p>
+          <p>Period: {{ formatDate(contract.startDate) }} - {{ formatDate(contract.endDate) }}</p>
           <p>Total value: {{ contract.totalValue }}</p>
         </div>
       </article>
@@ -114,7 +271,7 @@
           type="button"
           class="secondary-button"
           (click)="showCommunicationForm = !showCommunicationForm">
-          + Add Communication
+          Add Communication
         </button>
 
         <form
@@ -163,12 +320,12 @@
         </form>
 
         <div *ngIf="communications.length === 0" class="muted-text">
-          No customer communications.
+          No customer communications yet.
         </div>
 
         <div *ngFor="let communication of communications" class="list-item">
           <strong>{{ communication.type }}</strong>
-          <p>{{ communication.communicationDate }}</p>
+          <p>{{ formatDate(communication.communicationDate) }}</p>
           <p>{{ communication.summary }}</p>
         </div>
       </article>

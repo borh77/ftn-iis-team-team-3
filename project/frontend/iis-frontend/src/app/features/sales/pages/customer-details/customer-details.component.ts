@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { finalize, forkJoin } from 'rxjs';
+import { catchError, finalize, forkJoin, of } from 'rxjs';
 
 import { SalesApiService } from '../../api/sales-api.service';
 import { Customer } from '../../models/customer.model';
@@ -42,12 +42,17 @@ export class CustomerDetailsComponent implements OnInit, OnDestroy {
 
     forkJoin({
       customers: this.salesApiService.getCustomers(),
-      processes: this.salesApiService.getSalesProcesses(),
-      communications: this.salesApiService.getCustomerCommunications(id),
-      needs: this.salesApiService.getCustomerNeeds(id),
-      offers: this.salesApiService.getOffers(),
-      contracts: this.salesApiService.getContracts(),
-    }).pipe(finalize(() => (this.loading = false))).subscribe({
+      processes: this.salesApiService.getSalesProcesses().pipe(catchError(() => of([]))),
+      communications: this.salesApiService.getCustomerCommunications(id).pipe(catchError(() => of([]))),
+      needs: this.salesApiService.getCustomerNeeds(id).pipe(catchError(() => of([]))),
+      offers: this.salesApiService.getOffers().pipe(catchError(() => of([]))),
+      contracts: this.salesApiService.getContracts().pipe(catchError(() => of([]))),
+    }).pipe(
+      finalize(() => {
+        this.loading = false;
+        this.cdr.detectChanges();
+      }),
+    ).subscribe({
       next: (data) => {
         this.customer = data.customers.find((customer) => customer.id === id);
 
@@ -72,6 +77,11 @@ export class CustomerDetailsComponent implements OnInit, OnDestroy {
 
   viewProcess(process: SalesProcess): void {
     this.router.navigate(['/sales/processes', process.id]);
+  }
+  startSalesProcess(): void {
+    this.router.navigate(['/sales/processes'], {
+      queryParams: { customerId: this.customer?.id },
+    });
   }
 
   ngOnDestroy(): void {

@@ -7,6 +7,7 @@ import com.example.iisdrugcrm.dto.sales.contract.ContractResponseDTO;
 import com.example.iisdrugcrm.dto.sales.contract.CreateContractRequestDTO;
 import com.example.iisdrugcrm.repository.sales.ContractRepository;
 import com.example.iisdrugcrm.repository.sales.OfferRepository;
+import com.example.iisdrugcrm.dto.sales.contract.UpdateContractRequestDTO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -79,6 +80,16 @@ public class ContractService {
                 .orElse(0L) + 1;
 
         return "CNT-" + String.format("%05d", nextId);
+    }
+
+    @Transactional
+    public ContractResponseDTO update(Long id, UpdateContractRequestDTO dto) {
+        Contract contract = contractRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Contract not found."));
+
+        contract.update(dto.getStartDate(), dto.getEndDate(), dto.getTerms());
+
+        return mapToDto(contract);
     }
 
     @Transactional

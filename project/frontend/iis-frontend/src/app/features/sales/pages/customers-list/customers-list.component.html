@@ -7,11 +7,11 @@
     </div>
 
     <button
-        *ngIf="canManageCustomers"
-        class="primary-button"
-        type="button"
-        (click)="showCreateForm = !showCreateForm">
-      + Add Customer
+      *ngIf="canManageCustomers"
+      class="primary-button"
+      type="button"
+      (click)="showCreateForm = !showCreateForm">
+      Create Customer
     </button>
   </section>
 
@@ -44,13 +44,23 @@
         <input name="address" [(ngModel)]="newCustomer.address" />
       </label>
 
+      <label>
+        Region
+        <select name="regionId" [(ngModel)]="newCustomer.regionId">
+          <option [ngValue]="null">No region selected</option>
+          <option *ngFor="let region of regions" [ngValue]="region.id">
+            {{ region.name }}
+          </option>
+        </select>
+      </label>
+
       <div class="form-actions">
         <button type="button" class="secondary-button" (click)="showCreateForm = false">
           Cancel
         </button>
 
         <button type="submit" class="primary-button" [disabled]="saving">
-          {{ saving ? 'Saving...' : 'Save Customer' }}
+          {{ saving ? 'Saving...' : 'Create' }}
         </button>
       </div>
     </form>
@@ -65,8 +75,26 @@
       Loading customers...
     </div>
 
-    <table *ngIf="!loading && customers.length > 0">
-      <thead>
+    <div *ngIf="!loading" class="filters-bar">
+      <input
+        type="text"
+        placeholder="Search customers..."
+        [(ngModel)]="customerSearchTerm"
+      />
+
+      <select [(ngModel)]="customerStatusFilter">
+        <option value="">All statuses</option>
+        <option value="ACTIVE">ACTIVE</option>
+        <option value="INACTIVE">INACTIVE</option>
+        <option value="ARCHIVED">ARCHIVED</option>
+      </select>
+
+      <button type="button" class="secondary-button" (click)="clearCustomerFilters()">
+        Clear
+      </button>
+    </div>
+
+    <table *ngIf="!loading && filteredCustomers.length > 0">      <thead>
         <tr>
           <th>Name</th>
           <th>Email</th>
@@ -74,37 +102,106 @@
           <th>Website</th>
           <th>Address</th>
           <th>Status</th>
-          <th>Actions</th>
+          <th>Region</th>
+          <th class="actions-column">Actions</th>
         </tr>
       </thead>
 
       <tbody>
-        <tr *ngFor="let customer of customers">
-          <td>{{ customer.name }}</td>
-          <td>{{ customer.email }}</td>
-          <td>{{ customer.phone || '-' }}</td>
-          <td>{{ customer.website || '-' }}</td>
-          <td>{{ customer.address || '-' }}</td>
-          <td>
-            <span class="status">
-              {{ customer.status }}
-            </span>
-          </td>
+        <ng-container *ngFor="let customer of filteredCustomers">          <tr>
+            <td>{{ customer.name }}</td>
+            <td>{{ customer.email }}</td>
+            <td>{{ customer.phone || '-' }}</td>
+            <td>{{ customer.website || '-' }}</td>
+            <td>{{ customer.address || '-' }}</td>
+            <td>
+              <span class="status">
+                {{ customer.status }}
+              </span>
+            </td>
+            <td>{{ customer.regionName || '-' }}</td>
 
-           <td>
-            <button
-              type="button"
-              class="secondary-button"
-              (click)="viewDetails(customer)">
-              View Details
-            </button>
-          </td>
-        </tr>
+            <td class="actions-cell">
+              <div class="action-buttons">
+                <button
+                  type="button"
+                  class="secondary-button compact-button"
+                  (click)="viewDetails(customer)">
+                  View Details
+                </button>
+
+                <button
+                  *ngIf="canManageCustomers"
+                  type="button"
+                  class="icon-button"
+                  title="Edit"
+                  (click)="startEditCustomer(customer)">
+                  ✎
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="editingCustomerId === customer.id">
+            <td colspan="8">
+              <form (ngSubmit)="updateCustomer(customer.id)" class="customer-form edit-form">
+                <label>
+                  Name
+                  <input name="edit-customer-name-{{ customer.id }}" [(ngModel)]="editCustomer.name" required />
+                </label>
+
+                <label>
+                  Email
+                  <input
+                    name="edit-customer-email-{{ customer.id }}"
+                    type="email"
+                    [(ngModel)]="editCustomer.email"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Phone
+                  <input name="edit-customer-phone-{{ customer.id }}" [(ngModel)]="editCustomer.phone" />
+                </label>
+
+                <label>
+                  Website
+                  <input name="edit-customer-website-{{ customer.id }}" [(ngModel)]="editCustomer.website" />
+                </label>
+
+                <label>
+                  Address
+                  <input name="edit-customer-address-{{ customer.id }}" [(ngModel)]="editCustomer.address" />
+                </label>
+
+                <label>
+                  Region
+                  <select name="edit-customer-region-{{ customer.id }}" [(ngModel)]="editCustomer.regionId">
+                    <option [ngValue]="null">No region selected</option>
+                    <option *ngFor="let region of regions" [ngValue]="region.id">
+                      {{ region.name }}
+                    </option>
+                  </select>
+                </label>
+
+                <div class="form-actions">
+                  <button type="button" class="secondary-button" (click)="cancelEditCustomer()">
+                    Cancel
+                  </button>
+                  <button type="submit" class="primary-button" [disabled]="saving">
+                    {{ saving ? 'Saving...' : 'Save Changes' }}
+                  </button>
+                </div>
+              </form>
+            </td>
+          </tr>
+        </ng-container>
       </tbody>
     </table>
 
-    <div *ngIf="!loading && customers.length === 0" class="loading">
-      No customers found.
+    <div *ngIf="!loading && filteredCustomers.length === 0" class="loading">
+      No customers match selected filters.
     </div>
   </section>
 </main>

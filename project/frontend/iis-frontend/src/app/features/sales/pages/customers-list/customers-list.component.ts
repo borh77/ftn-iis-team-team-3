@@ -3,6 +3,8 @@ import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angula
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 
+import { RegionService } from '../../../../core/region.service';
+import { Region } from '../../../../core/region.model';
 import { SalesApiService } from '../../api/sales-api.service';
 import { Customer, CustomerRequest } from '../../models/customer.model';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -22,14 +24,20 @@ export class CustomersListComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
+  private readonly regionService = inject(RegionService);
   private readonly transientMessages = inject(TransientMessageService);
 
   customers: Customer[] = [];
+  regions: Region[] = [];
   loading = true;
   saving = false;
   errorMessage = '';
   showCreateForm = false;
   canManageCustomers = false;
+  customerSearchTerm = '';
+  customerStatusFilter = '';
+
+  editingCustomerId: number | null = null;
 
   newCustomer: CustomerRequest = {
     name: '',
@@ -37,18 +45,34 @@ export class CustomersListComponent implements OnInit, OnDestroy {
     phone: '',
     website: '',
     address: '',
+    regionId: null,
+  };
+
+  editCustomer: CustomerRequest = {
+    name: '',
+    email: '',
+    phone: '',
+    website: '',
+    address: '',
+    regionId: null,
   };
 
   ngOnInit(): void {
     this.canManageCustomers = this.authService.hasRole('ROLE_SALES_REPRESENTATIVE');
     this.loadCustomers();
+    this.loadRegions();
   }
 
   loadCustomers(): void {
     this.loading = true;
     this.clearError();
 
-    this.salesApiService.getCustomers().pipe(finalize(() => (this.loading = false))).subscribe({
+    this.salesApiService.getCustomers().pipe(
+      finalize(() => {
+        this.loading = false;
+        this.cdr.detectChanges();
+      }),
+    ).subscribe({
       next: (response) => {
         this.customers = response ?? [];
         this.cdr.detectChanges();
@@ -56,6 +80,18 @@ export class CustomersListComponent implements OnInit, OnDestroy {
       error: (error) => {
         this.showError(extractBackendErrorMessage(error, 'Failed to load customers.'));
         this.cdr.detectChanges();
+      },
+    });
+  }
+
+  loadRegions(): void {
+    this.regionService.list().subscribe({
+      next: (response) => {
+        this.regions = response ?? [];
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Failed to load regions:', error);
       },
     });
   }
@@ -68,7 +104,12 @@ export class CustomersListComponent implements OnInit, OnDestroy {
     this.saving = true;
     this.clearError();
 
-    this.salesApiService.createCustomer(this.newCustomer).pipe(finalize(() => (this.saving = false))).subscribe({
+    this.salesApiService.createCustomer(this.newCustomer).pipe(
+      finalize(() => {
+        this.saving = false;
+        this.cdr.detectChanges();
+      }),
+    ).subscribe({
       next: () => {
         this.newCustomer = {
           name: '',
@@ -76,6 +117,7 @@ export class CustomersListComponent implements OnInit, OnDestroy {
           phone: '',
           website: '',
           address: '',
+          regionId: null,
         };
         this.showCreateForm = false;
         this.loadCustomers();
@@ -87,6 +129,62 @@ export class CustomersListComponent implements OnInit, OnDestroy {
     });
   }
 
+  startEditCustomer(customer: Customer): void {
+    this.editingCustomerId = customer.id;
+    this.editCustomer = {
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone ?? '',
+      website: customer.website ?? '',
+      address: customer.address ?? '',
+      regionId: customer.regionId,
+    };
+  }
+
+  cancelEditCustomer(): void {
+    this.editingCustomerId = null;
+  }
+
+  updateCustomer(id: number): void {
+    this.saving = true;
+    this.salesApiService.updateCustomer(id, this.editCustomer).subscribe({
+      next: () => {
+        this.editingCustomerId = null;
+        this.saving = false;
+        this.loadCustomers();
+      },
+      error: (error) => {
+        console.error('Failed to update customer:', error);
+        this.saving = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  get filteredCustomers(): Customer[] {
+    const search = this.customerSearchTerm.trim().toLowerCase();
+
+    return this.customers.filter((customer) => {
+      const matchesSearch =
+        !search ||
+        customer.name.toLowerCase().includes(search) ||
+        customer.email.toLowerCase().includes(search) ||
+        (customer.phone ?? '').toLowerCase().includes(search) ||
+        (customer.website ?? '').toLowerCase().includes(search) ||
+        (customer.address ?? '').toLowerCase().includes(search);
+
+      const matchesStatus =
+        !this.customerStatusFilter || customer.status === this.customerStatusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  }
+
+  clearCustomerFilters(): void {
+    this.customerSearchTerm = '';
+    this.customerStatusFilter = '';
+  }
+  
   ngOnDestroy(): void {
     this.transientMessages.clearAll(this);
   }

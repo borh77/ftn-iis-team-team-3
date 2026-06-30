@@ -2,6 +2,7 @@ package com.example.iisdrugcrm.domain.sales;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import com.example.iisdrugcrm.domain.User;
 
 @Entity
 @Table(name = "sales_process_history")
@@ -15,24 +16,27 @@ public class SalesProcessHistory {
     @JoinColumn(name = "sales_process_id", nullable = false)
     private SalesProcess salesProcess;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private SalesStage previousStage;
+    @Column(nullable = false, length = 100)
+    private String previousStage;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private SalesStage newStage;
+    @Column(nullable = false, length = 100)
+    private String newStage;
 
     @Column(nullable = false)
     private LocalDateTime changedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "changed_by_id")
+    private User changedBy;
+
     protected SalesProcessHistory() {
     }
 
-    public SalesProcessHistory(SalesProcess salesProcess, SalesStage previousStage, SalesStage newStage) {
+    public SalesProcessHistory(SalesProcess salesProcess, String previousStage, String newStage, User changedBy) {
         this.salesProcess = salesProcess;
         this.previousStage = previousStage;
         this.newStage = newStage;
+        this.changedBy = changedBy;
         this.changedAt = LocalDateTime.now();
     }
 
@@ -44,15 +48,19 @@ public class SalesProcessHistory {
         return salesProcess;
     }
 
-    public SalesStage getPreviousStage() {
-        return previousStage;
+    public String getPreviousStage() { 
+        return previousStage; 
     }
 
-    public SalesStage getNewStage() {
-        return newStage;
+    public String getNewStage() { 
+        return newStage; 
     }
 
     public LocalDateTime getChangedAt() {
         return changedAt;
+    }
+
+    public User getChangedBy() {
+        return changedBy;
     }
 }

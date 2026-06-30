@@ -19,6 +19,7 @@ public class MarketProductResponseDTO {
     private String packagingDescription;
     private String barcode;
     private String status;
+    private Long productId;
 
     public static MarketProductResponseDTO fromEntity(MarketProduct marketProduct) {
         MarketProductResponseDTO dto = new MarketProductResponseDTO();
@@ -38,6 +39,7 @@ public class MarketProductResponseDTO {
         dto.setPackagingDescription(marketProduct.getPackagingDescription());
         dto.setBarcode(marketProduct.getBarcode());
         dto.setStatus(marketProduct.getStatus().name());
+        dto.setProductId(marketProduct.getVariant().getProduct().getId());
 
         return dto;
     }
@@ -136,5 +138,13 @@ public class MarketProductResponseDTO {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public Long getProductId() {
+        return productId;
+    }
+
+    public void setProductId(Long productId) {
+        this.productId = productId;
     }
 }
