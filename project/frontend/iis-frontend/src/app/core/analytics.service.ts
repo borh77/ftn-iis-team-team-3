@@ -29,6 +29,54 @@ export interface PerformanceReportFilters {
   end: string;
 }
 
+export interface PricelistDashboardFilters {
+  teamId?: number | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+}
+
+export interface PricelistDashboardBreakdownItem {
+  id: number | null;
+  label: string;
+  count: number;
+}
+
+export interface RecentPricelistSummary {
+  id: number;
+  regionName?: string | null;
+  customerSegment?: string | null;
+  status: string;
+  teamName?: string | null;
+  itemCount: number;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  lastEditedAt?: string | null;
+  creationCompleted: boolean;
+}
+
+export interface PricelistDashboardSummary {
+  totalPricelists: number;
+  draftCount: number;
+  inReviewCount: number;
+  activeCount: number;
+  archivedCount: number;
+  waitingForReviewCount: number;
+  incompleteDraftCount: number;
+  stuckDraftCount: number;
+  stuckInReviewCount: number;
+  activeOffersCount: number;
+  activatedPricelistsCount: number;
+  averageProcessingTimeHours: number;
+  averageReviewTimeHours: number;
+  statusCounts: Record<string, number>;
+  pricelistsByRegion: PricelistDashboardBreakdownItem[];
+  pricelistsBySegment: PricelistDashboardBreakdownItem[];
+  pricelistsByTeam: PricelistDashboardBreakdownItem[];
+  activityCountByActionType: PricelistDashboardBreakdownItem[];
+  recentPricelists: RecentPricelistSummary[];
+  recentActivity: PricelistActivityLog[];
+}
+
 export interface MonthlyPerformancePoint {
   month: string;
   averageTotalProcessingTimeHours: number;
@@ -94,11 +142,34 @@ export class AnalyticsService {
     });
   }
 
+  getPricelistDashboard(filters: PricelistDashboardFilters): Observable<PricelistDashboardSummary> {
+    return this.http.get<PricelistDashboardSummary>(
+      `${this.apiBaseUrl}/api/admin/analytics/pricelist-dashboard`,
+      { params: this.pricelistDashboardParams(filters) },
+    );
+  }
+
   private performanceReportParams(filters: PerformanceReportFilters): HttpParams {
     let params = new HttpParams().set('start', filters.start).set('end', filters.end);
 
     if (filters.teamId !== null && filters.teamId !== undefined) {
       params = params.set('teamId', filters.teamId.toString());
+    }
+
+    return params;
+  }
+
+  private pricelistDashboardParams(filters: PricelistDashboardFilters): HttpParams {
+    let params = new HttpParams();
+
+    if (filters.teamId !== null && filters.teamId !== undefined) {
+      params = params.set('teamId', filters.teamId.toString());
+    }
+    if (filters.dateFrom) {
+      params = params.set('dateFrom', filters.dateFrom);
+    }
+    if (filters.dateTo) {
+      params = params.set('dateTo', filters.dateTo);
     }
 
     return params;

@@ -1,8 +1,8 @@
 <section class="page-shell">
   <header class="page-hero">
     <p class="kicker">Administrator</p>
-    <h2>Performance Reports</h2>
-    <p>Generate productivity reports for all pricelist teams or one selected team.</p>
+    <h2>Analytics Dashboard</h2>
+    <p>Global overview of pricing lifecycle, approval timing, and team productivity.</p>
   </header>
 
   <section class="panel">
@@ -31,7 +31,9 @@
       </label>
 
       <div class="actions">
-        <button type="submit" [disabled]="loading || pdfDownloading">Generate report</button>
+        <button type="submit" [disabled]="loading || pdfDownloading">
+          {{ loading ? 'Refreshing...' : 'Apply filters' }}
+        </button>
         <button type="button" class="secondary" [disabled]="loading || pdfDownloading" (click)="downloadPdf()">
           {{ pdfDownloading ? 'Downloading...' : 'Download PDF' }}
         </button>
@@ -58,16 +60,16 @@
 
   @if (loading) {
     <section class="panel">
-      <p class="muted">Generating report...</p>
+      <p class="muted">Loading dashboard...</p>
     </section>
   } @else if (errorMessage) {
     <section class="panel">
       <p class="error">{{ errorMessage }}</p>
     </section>
-  } @else if (!report) {
+  } @else if (!dashboard || !report) {
     <section class="panel empty-state">
-      <h3>No report generated yet</h3>
-      <p>Select a period and generate a report to review team performance metrics.</p>
+      <h3>No dashboard generated yet</h3>
+      <p>Select a period and apply filters to review pricing and team performance metrics.</p>
     </section>
   } @else {
     @if (report.teamFilterLimitation) {
@@ -78,24 +80,28 @@
 
     <section class="kpi-grid">
       <article class="kpi-card">
-        <span>Average processing time</span>
-        <strong>{{ formatHours(report.averageTotalProcessingTimeHours) }}</strong>
+        <span>Total pricelists</span>
+        <strong>{{ dashboard.totalPricelists }}</strong>
+      </article>
+      <article class="kpi-card success">
+        <span>Active price lists</span>
+        <strong>{{ dashboard.activeCount }}</strong>
       </article>
       <article class="kpi-card">
-        <span>Average review time</span>
-        <strong>{{ formatHours(report.averageReviewTimeHours) }}</strong>
+        <span>Avg. approval time</span>
+        <strong>{{ formatDays(dashboard.averageReviewTimeHours) }}</strong>
       </article>
       <article class="kpi-card">
-        <span>Activated pricelists</span>
-        <strong>{{ report.activatedPricelistsCount }}</strong>
+        <span>Active offers</span>
+        <strong>{{ dashboard.activeOffersCount }}</strong>
       </article>
       <article class="kpi-card warning">
-        <span>Stuck in DRAFT</span>
-        <strong>{{ report.stuckDraftCount }}</strong>
+        <span>Incomplete drafts</span>
+        <strong>{{ dashboard.incompleteDraftCount }}</strong>
       </article>
       <article class="kpi-card warning">
-        <span>Stuck in IN_REVIEW</span>
-        <strong>{{ report.stuckInReviewCount }}</strong>
+        <span>Waiting for review</span>
+        <strong>{{ dashboard.waitingForReviewCount }}</strong>
       </article>
     </section>
 
@@ -105,6 +111,156 @@
         <p>No pricelists reached ACTIVE during the selected period.</p>
       </section>
     }
+
+    <section class="dashboard-grid">
+      <article class="panel chart-panel">
+        <header class="panel-head">
+          <div>
+            <p class="kicker">Lifecycle</p>
+            <h3>Price List Conversion Funnel</h3>
+          </div>
+        </header>
+
+        <div class="funnel">
+          @for (row of conversionFunnel(dashboard); track row.label) {
+            <div class="funnel-row">
+              <div>
+                <strong>{{ row.label }}</strong>
+                <span>{{ row.count }}</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar" [style.width]="breakdownWidth(row, conversionFunnel(dashboard))"></div>
+              </div>
+            </div>
+          }
+        </div>
+      </article>
+
+      <article class="panel chart-panel">
+        <header class="panel-head">
+          <div>
+            <p class="kicker">Productivity</p>
+            <h3>Team Productivity</h3>
+          </div>
+        </header>
+
+        @if (dashboard.pricelistsByTeam.length === 0) {
+          <p class="muted">No team data for the selected filters.</p>
+        } @else {
+          <div class="breakdown-list">
+            @for (team of dashboard.pricelistsByTeam; track team.label) {
+              <div class="breakdown-row">
+                <div>
+                  <strong>{{ team.label }}</strong>
+                  <span>{{ team.count }} pricelists</span>
+                </div>
+                <div class="bar-track">
+                  <div class="bar team" [style.width]="breakdownWidth(team, dashboard.pricelistsByTeam)"></div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </article>
+    </section>
+
+    <section class="dashboard-grid">
+      <article class="panel chart-panel">
+        <header class="panel-head">
+          <div>
+            <p class="kicker">Region</p>
+            <h3>Pricelists by region</h3>
+          </div>
+        </header>
+        @if (dashboard.pricelistsByRegion.length === 0) {
+          <p class="muted">No region data for the selected filters.</p>
+        } @else {
+          <div class="breakdown-list compact">
+            @for (region of dashboard.pricelistsByRegion; track region.label) {
+              <div class="breakdown-row">
+                <div>
+                  <strong>{{ region.label }}</strong>
+                  <span>{{ region.count }}</span>
+                </div>
+                <div class="bar-track">
+                  <div class="bar region" [style.width]="breakdownWidth(region, dashboard.pricelistsByRegion)"></div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </article>
+
+      <article class="panel chart-panel">
+        <header class="panel-head">
+          <div>
+            <p class="kicker">Segment</p>
+            <h3>Customer segment mix</h3>
+          </div>
+        </header>
+        @if (dashboard.pricelistsBySegment.length === 0) {
+          <p class="muted">No segment data for the selected filters.</p>
+        } @else {
+          <div class="breakdown-list compact">
+            @for (segment of dashboard.pricelistsBySegment; track segment.label) {
+              <div class="breakdown-row">
+                <div>
+                  <strong>{{ segment.label }}</strong>
+                  <span>{{ segment.count }}</span>
+                </div>
+                <div class="bar-track">
+                  <div class="bar segment" [style.width]="breakdownWidth(segment, dashboard.pricelistsBySegment)"></div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </article>
+    </section>
+
+    <section class="panel">
+      <header class="panel-head">
+        <div>
+          <p class="kicker">Pricing</p>
+          <h3>Recent price lists</h3>
+        </div>
+      </header>
+
+      @if (dashboard.recentPricelists.length === 0) {
+        <p class="muted">No pricelists match the selected filters.</p>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Region</th>
+                <th>Segment</th>
+                <th>Status</th>
+                <th>Team</th>
+                <th>Items</th>
+                <th>Last edited</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (pricelist of dashboard.recentPricelists; track pricelist.id) {
+                <tr>
+                  <td>#{{ pricelist.id }}</td>
+                  <td>{{ pricelist.regionName || '-' }}</td>
+                  <td>{{ pricelist.customerSegment || '-' }}</td>
+                  <td>
+                    <span class="status-pill">{{ formatStatus(pricelist.status) }}</span>
+                  </td>
+                  <td>{{ pricelist.teamName || 'Private' }}</td>
+                  <td>{{ pricelist.itemCount }}</td>
+                  <td>{{ formatDate(pricelist.lastEditedAt) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
 
     <section class="panel">
       <header class="panel-head">
