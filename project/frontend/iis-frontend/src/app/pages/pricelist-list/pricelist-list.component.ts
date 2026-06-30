@@ -322,43 +322,54 @@ export class PricelistListComponent implements OnInit, OnDestroy {
 
   generatePromotionSuggestions(pricelist: Pricelist, force = true): void {
     const segment = this.ensureSuggestionSegment(pricelist).trim();
+    const pricelistId = pricelist.id;
     if (!segment) {
-      this.suggestionErrorByPricelist[pricelist.id] = 'Customer segment is required.';
+      this.suggestionErrorByPricelist[pricelistId] = 'Customer segment is required.';
+      this.promotionSuggestionsByPricelist[pricelistId] = [];
+      delete this.loadedSuggestionKeyByPricelist[pricelistId];
+      delete this.loadingSuggestionKeyByPricelist[pricelistId];
+      this.cdr.detectChanges();
       return;
     }
 
-    const key = this.suggestionKey(pricelist.id, segment);
-    if (!force && this.loadedSuggestionKeyByPricelist[pricelist.id] === key) {
+    const key = this.suggestionKey(pricelistId, segment);
+    if (!force && this.loadedSuggestionKeyByPricelist[pricelistId] === key) {
       return;
     }
-    if (this.loadingSuggestionKeyByPricelist[pricelist.id] === key) {
+    if (this.loadingSuggestionKeyByPricelist[pricelistId] === key) {
       return;
     }
 
-    this.loadingSuggestionKeyByPricelist[pricelist.id] = key;
-    this.suggestionErrorByPricelist[pricelist.id] = '';
+    this.loadingSuggestionKeyByPricelist[pricelistId] = key;
+    this.suggestionErrorByPricelist[pricelistId] = '';
+    if (force) {
+      delete this.loadedSuggestionKeyByPricelist[pricelistId];
+      this.promotionSuggestionsByPricelist[pricelistId] = [];
+    }
+    this.cdr.detectChanges();
     this.offerService.getPromotionSuggestions(segment).pipe(finalize(() => {
-      if (this.loadingSuggestionKeyByPricelist[pricelist.id] === key) {
-        delete this.loadingSuggestionKeyByPricelist[pricelist.id];
+      if (this.loadingSuggestionKeyByPricelist[pricelistId] === key) {
+        delete this.loadingSuggestionKeyByPricelist[pricelistId];
       }
+      this.cdr.detectChanges();
     })).subscribe({
       next: (suggestions) => {
-        if (this.suggestionKey(pricelist.id, this.ensureSuggestionSegment(pricelist)) !== key) {
+        if (this.currentSuggestionKey(pricelist) !== key) {
           return;
         }
-        this.promotionSuggestionsByPricelist[pricelist.id] = suggestions
+        this.promotionSuggestionsByPricelist[pricelistId] = suggestions
           .filter((suggestion) => this.canApplySuggestionToPricelist(pricelist, suggestion))
           .slice(0, 5);
-        this.loadedSuggestionKeyByPricelist[pricelist.id] = key;
+        this.loadedSuggestionKeyByPricelist[pricelistId] = key;
         this.cdr.detectChanges();
       },
       error: (error) => {
-        if (this.suggestionKey(pricelist.id, this.ensureSuggestionSegment(pricelist)) !== key) {
+        if (this.currentSuggestionKey(pricelist) !== key) {
           return;
         }
-        this.promotionSuggestionsByPricelist[pricelist.id] = [];
-        delete this.loadedSuggestionKeyByPricelist[pricelist.id];
-        this.suggestionErrorByPricelist[pricelist.id] = extractBackendErrorMessage(error, 'Promotion suggestions could not be loaded.');
+        this.promotionSuggestionsByPricelist[pricelistId] = [];
+        delete this.loadedSuggestionKeyByPricelist[pricelistId];
+        this.suggestionErrorByPricelist[pricelistId] = extractBackendErrorMessage(error, 'Promotion suggestions could not be loaded.');
         this.cdr.detectChanges();
       },
     });
@@ -378,11 +389,24 @@ export class PricelistListComponent implements OnInit, OnDestroy {
   }
 
   isLoadingSuggestions(pricelist: Pricelist): boolean {
-    return !!this.loadingSuggestionKeyByPricelist[pricelist.id];
+    return this.loadingSuggestionKeyByPricelist[pricelist.id] === this.currentSuggestionKey(pricelist);
   }
 
   hasLoadedSuggestions(pricelist: Pricelist): boolean {
-    return !!this.loadedSuggestionKeyByPricelist[pricelist.id];
+    return this.loadedSuggestionKeyByPricelist[pricelist.id] === this.currentSuggestionKey(pricelist);
+  }
+
+  suggestionButtonText(pricelist: Pricelist): string {
+    if (this.isLoadingSuggestions(pricelist)) {
+      return 'Loading...';
+    }
+    if (this.hasLoadedSuggestions(pricelist)) {
+      return 'Refresh suggestions';
+    }
+    if (this.suggestionErrorByPricelist[pricelist.id]) {
+      return 'Retry suggestions';
+    }
+    return 'Generate suggestions';
   }
 
   segmentOptions(): string[] {
@@ -723,6 +747,10 @@ export class PricelistListComponent implements OnInit, OnDestroy {
 
   private suggestionKey(pricelistId: number, segment: string): string {
     return `${pricelistId}:${segment.trim().toLocaleLowerCase()}`;
+  }
+
+  private currentSuggestionKey(pricelist: Pricelist): string {
+    return this.suggestionKey(pricelist.id, this.ensureSuggestionSegment(pricelist).trim());
   }
 
   private canApplySuggestionToPricelist(pricelist: Pricelist, suggestion: PromotionSuggestion): boolean {

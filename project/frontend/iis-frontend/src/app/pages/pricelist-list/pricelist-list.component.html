@@ -269,7 +269,7 @@
                   </label>
 
                   <button type="button" class="secondary" (click)="generatePromotionSuggestions(p)" [disabled]="isLoadingSuggestions(p)">
-                    {{ isLoadingSuggestions(p) ? 'Loading...' : (hasLoadedSuggestions(p) ? 'Refresh suggestions' : 'Generate suggestions') }}
+                    {{ suggestionButtonText(p) }}
                   </button>
                 </div>
 
