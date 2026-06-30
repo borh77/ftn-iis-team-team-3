@@ -159,20 +159,16 @@
                   </ul>
                   @if (item.replacementRequired) {
                     @if (canReplaceVariants(p)) {
-                      <div class="offer-form">
-                        <label>
-                          <span>Replacement variant</span>
-                          <select [(ngModel)]="replacementVariantIds[item.id!]" [ngModelOptions]="{standalone: true}">
-                            <option [ngValue]="null">Select active variant</option>
-                            @for (variant of activeVariants; track variant.id) {
-                              <option [ngValue]="variant.id">{{ variant.name }}</option>
-                            }
-                          </select>
-                        </label>
-                        <button type="button" class="secondary" (click)="replaceVariant(p, item)" [disabled]="isReplacing(item)">
-                          {{ isReplacing(item) ? 'Replacing...' : 'Replace variant' }}
-                        </button>
-                      </div>
+                      @if (item.replacementAvailable && item.replacementVariantId) {
+                        <div class="replacement-panel">
+                          <p class="muted">Suggested replacement: <strong>{{ item.replacementVariantName || ('Variant ' + item.replacementVariantId) }}</strong></p>
+                          <button type="button" class="secondary" (click)="replaceVariant(p, item)" [disabled]="isReplacing(item)">
+                            {{ isReplacing(item) ? 'Replacing...' : 'Replace variant' }}
+                          </button>
+                        </div>
+                      } @else {
+                        <p class="inline-error">No replacement is defined for this inactive variant.</p>
+                      }
                     } @else {
                       <p class="muted">Create a new draft version before replacing inactive variants.</p>
                     }

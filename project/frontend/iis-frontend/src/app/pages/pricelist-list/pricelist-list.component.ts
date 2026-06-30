@@ -10,8 +10,6 @@ import { Pricelist, PricelistCreationStep, PricelistItem, PricelistWizardState }
 import { PricelistWizardService } from '../../core/pricelist-wizard.service';
 import { SpecialOfferService } from '../../core/special-offer.service';
 import { DiscountType, PromotionSuggestion, SpecialOffer } from '../../core/special-offer.models';
-import { CatalogService } from '../../core/catalog.service';
-import { CatalogVariant } from '../../core/catalog.model';
 import { ERROR_MESSAGE_MS, SUCCESS_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 
 type PricelistStatusFilter = Pricelist['status'] | 'ALL';
@@ -27,7 +25,6 @@ export class PricelistListComponent implements OnInit, OnDestroy {
   private readonly service = inject(PricelistService);
   private readonly wizardService = inject(PricelistWizardService);
   private readonly offerService = inject(SpecialOfferService);
-  private readonly catalogService = inject(CatalogService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly router = inject(Router);
   private readonly transientMessages = inject(TransientMessageService);
@@ -54,8 +51,6 @@ export class PricelistListComponent implements OnInit, OnDestroy {
   loadedSuggestionKeyByPricelist: Record<number, string> = {};
   suggestionErrorByPricelist: Record<number, string> = {};
   replacingItemId: number | null = null;
-  replacementVariantIds: Record<number, number | null> = {};
-  activeVariants: CatalogVariant[] = [];
   selectedStatus: PricelistStatusFilter = 'ALL';
 
   readonly statusOptions: Array<{ value: PricelistStatusFilter; label: string }> = [
@@ -71,7 +66,6 @@ export class PricelistListComponent implements OnInit, OnDestroy {
     if (navigationSuccess) {
       this.showSuccess(navigationSuccess);
     }
-    this.loadActiveVariants();
     this.loadDrafts();
     this.load();
   }
@@ -189,14 +183,13 @@ export class PricelistListComponent implements OnInit, OnDestroy {
     if (!item.id) {
       return;
     }
-    const replacementVariantId = this.replacementVariantIds[item.id];
-    if (!replacementVariantId) {
-      this.showError('Variant could not be replaced.');
+    if (!item.replacementAvailable || !item.replacementVariantId) {
+      this.showError('No replacement is defined for this inactive variant.');
       return;
     }
     this.replacingItemId = item.id;
     this.clearResultMessages();
-    this.service.replaceVariant(pricelist.id, item.id, Number(replacementVariantId)).pipe(
+    this.service.replaceVariant(pricelist.id, item.id).pipe(
       finalize(() => (this.replacingItemId = null))
     ).subscribe({
       next: () => {
@@ -615,25 +608,19 @@ export class PricelistListComponent implements OnInit, OnDestroy {
     });
   }
 
-  private loadActiveVariants(): void {
-    this.catalogService.listVariants().subscribe({
-      next: (variants) => {
-        this.activeVariants = variants;
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.activeVariants = [];
-      },
-    });
-  }
-
   private replaceVariantErrorMessage(error: unknown): string {
     const backend = error instanceof HttpErrorResponse ? String(error.error?.error ?? '') : '';
     if (backend.includes('Only draft')) {
       return 'Only draft pricelists can replace withdrawn variants.';
     }
+    if (backend.includes('No replacement is defined')) {
+      return 'No replacement is defined for this inactive variant.';
+    }
+    if (backend.includes('catalog-defined replacement')) {
+      return 'Selected variant is not the catalog-defined replacement.';
+    }
     if (backend.includes('not active')) {
-      return 'Selected replacement variant is not active.';
+      return 'Catalog-defined replacement variant is not active.';
     }
     if (backend.includes('already exists')) {
       return 'Selected replacement variant already exists in this pricelist.';

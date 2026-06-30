@@ -253,7 +253,7 @@ public class PricelistResponseDTO {
         return fromEntity(pricelist, Map.of());
     }
 
-    public static PricelistResponseDTO fromEntity(Pricelist pricelist, Map<Long, CatalogVariantDTO> activeVariantsById) {
+    public static PricelistResponseDTO fromEntity(Pricelist pricelist, Map<Long, CatalogVariantDTO> catalogVariantsById) {
         PricelistResponseDTO dto = new PricelistResponseDTO();
         dto.setId(pricelist.getId());
         dto.setRegionId(pricelist.getRegion().getId());
@@ -275,25 +275,25 @@ public class PricelistResponseDTO {
         dto.setCanCreateNewVersion(pricelist.getStatus() == PricelistStatus.ACTIVE);
         dto.setPeriodStart(pricelist.getPeriodStart());
         dto.setPeriodEnd(pricelist.getPeriodEnd());
-        dto.setItems(pricelist.getItems().stream().map(item -> PricelistItemResponseDTO.fromEntity(item, activeVariantsById)).toList());
+        dto.setItems(pricelist.getItems().stream().map(item -> PricelistItemResponseDTO.fromEntity(item, catalogVariantsById)).toList());
         return dto;
     }
 
-    public static PricelistResponseDTO fromEntity(Pricelist pricelist, Long currentUserId, boolean canCollaborate, Map<Long, CatalogVariantDTO> activeVariantsById) {
-        PricelistResponseDTO dto = fromEntity(pricelist, activeVariantsById);
+    public static PricelistResponseDTO fromEntity(Pricelist pricelist, Long currentUserId, boolean canCollaborate, Map<Long, CatalogVariantDTO> catalogVariantsById) {
+        PricelistResponseDTO dto = fromEntity(pricelist, catalogVariantsById);
         boolean owner = currentUserId != null
                 && pricelist.getCreatedBy() != null
                 && pricelist.getCreatedBy().equals(currentUserId);
         dto.setOwner(owner);
         dto.setCanCollaborate(canCollaborate);
         dto.setCanEditDraft(canCollaborate && pricelist.getStatus() == PricelistStatus.DRAFT);
-        dto.setCanSubmitForReview(owner && isReadyForReview(pricelist, activeVariantsById));
+        dto.setCanSubmitForReview(owner && isReadyForReview(pricelist, catalogVariantsById));
         dto.setCanManageOffers(canCollaborate && pricelist.getStatus() == PricelistStatus.ACTIVE);
         dto.setCanCreateNewVersion(canCollaborate && pricelist.getStatus() == PricelistStatus.ACTIVE);
         return dto;
     }
 
-    private static boolean isReadyForReview(Pricelist pricelist, Map<Long, CatalogVariantDTO> activeVariantsById) {
+    private static boolean isReadyForReview(Pricelist pricelist, Map<Long, CatalogVariantDTO> catalogVariantsById) {
         if (pricelist.getStatus() != PricelistStatus.DRAFT) {
             return false;
         }
@@ -322,7 +322,8 @@ public class PricelistResponseDTO {
             return false;
         }
         for (PricelistItem item : pricelist.getItems()) {
-            if (item.getVariantId() == null || activeVariantsById == null || !activeVariantsById.containsKey(item.getVariantId())) {
+            CatalogVariantDTO catalogVariant = catalogVariantsById == null ? null : catalogVariantsById.get(item.getVariantId());
+            if (item.getVariantId() == null || catalogVariant == null || !catalogVariant.isActive()) {
                 return false;
             }
             if (item.getThresholds() == null || item.getThresholds().isEmpty()) {
@@ -350,6 +351,9 @@ public class PricelistResponseDTO {
         private boolean activeVariant;
         private boolean replacementRequired;
         private boolean catalogAvailable;
+        private Long replacementVariantId;
+        private String replacementVariantName;
+        private boolean replacementAvailable;
         private List<QuantityThresholdResponseDTO> thresholds;
 
         public Long getId() {
@@ -400,6 +404,30 @@ public class PricelistResponseDTO {
             this.catalogAvailable = catalogAvailable;
         }
 
+        public Long getReplacementVariantId() {
+            return replacementVariantId;
+        }
+
+        public void setReplacementVariantId(Long replacementVariantId) {
+            this.replacementVariantId = replacementVariantId;
+        }
+
+        public String getReplacementVariantName() {
+            return replacementVariantName;
+        }
+
+        public void setReplacementVariantName(String replacementVariantName) {
+            this.replacementVariantName = replacementVariantName;
+        }
+
+        public boolean isReplacementAvailable() {
+            return replacementAvailable;
+        }
+
+        public void setReplacementAvailable(boolean replacementAvailable) {
+            this.replacementAvailable = replacementAvailable;
+        }
+
         public List<QuantityThresholdResponseDTO> getThresholds() {
             return thresholds;
         }
@@ -412,15 +440,22 @@ public class PricelistResponseDTO {
             return fromEntity(item, Map.of());
         }
 
-        public static PricelistItemResponseDTO fromEntity(PricelistItem item, Map<Long, CatalogVariantDTO> activeVariantsById) {
+        public static PricelistItemResponseDTO fromEntity(PricelistItem item, Map<Long, CatalogVariantDTO> catalogVariantsById) {
             PricelistItemResponseDTO dto = new PricelistItemResponseDTO();
             dto.setId(item.getId());
             dto.setVariantId(item.getVariantId());
             dto.setVariantName(item.getVariantName());
-            boolean active = activeVariantsById.containsKey(item.getVariantId());
+            CatalogVariantDTO catalogVariant = catalogVariantsById.get(item.getVariantId());
+            boolean catalogAvailable = catalogVariant != null;
+            boolean active = catalogAvailable && catalogVariant.isActive();
             dto.setActiveVariant(active);
-            dto.setCatalogAvailable(active);
+            dto.setCatalogAvailable(catalogAvailable);
             dto.setReplacementRequired(!active);
+            if (catalogVariant != null) {
+                dto.setReplacementVariantId(catalogVariant.getReplacementVariantId());
+                dto.setReplacementVariantName(catalogVariant.getReplacementVariantName());
+                dto.setReplacementAvailable(catalogVariant.getReplacementVariantId() != null);
+            }
             dto.setThresholds(item.getThresholds().stream().map(QuantityThresholdResponseDTO::fromEntity).toList());
             return dto;
         }

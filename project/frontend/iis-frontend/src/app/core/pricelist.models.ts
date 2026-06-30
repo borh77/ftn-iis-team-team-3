@@ -11,6 +11,9 @@ export interface PricelistItem {
   activeVariant: boolean;
   replacementRequired: boolean;
   catalogAvailable: boolean;
+  replacementVariantId?: number | null;
+  replacementVariantName?: string | null;
+  replacementAvailable?: boolean;
   thresholds: QuantityThreshold[];
 }
 

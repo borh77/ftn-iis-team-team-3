@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/pricelists")
+@RequestMapping({"/api/pricelists", "/api/cenovnici"})
 public class PricelistController {
 
     private final PricelistService pricelistService;
@@ -98,6 +98,22 @@ public class PricelistController {
     ) {
         Long currentUserId = userService.getUserIdByUsername(authentication.getName());
         return ResponseEntity.ok(pricelistService.replaceItemVariant(pricelistId, itemId, dto.getReplacementVariantId(), currentUserId));
+    }
+
+    @PostMapping("/{pricelistId}/zameni-stavku")
+    @PreAuthorize("hasRole('PRICELIST_CREATOR')")
+    public ResponseEntity<PricelistResponseDTO> replaceItemWithCatalogReplacement(
+            @PathVariable Long pricelistId,
+            @Valid @RequestBody ReplacePricelistItemVariantDTO dto,
+            Authentication authentication
+    ) {
+        Long currentUserId = userService.getUserIdByUsername(authentication.getName());
+        return ResponseEntity.ok(pricelistService.replaceItemVariant(
+                pricelistId,
+                dto.getPricelistItemId(),
+                dto.getReplacementVariantId(),
+                currentUserId
+        ));
     }
 
     private boolean isAdmin(Authentication authentication) {

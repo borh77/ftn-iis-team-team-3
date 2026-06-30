@@ -41,9 +41,9 @@ export class PricelistService {
     return this.http.post<Pricelist>(`${this.apiBaseUrl}/api/pricelists/${id}/versions`, {});
   }
 
-  replaceVariant(pricelistId: number, itemId: number, replacementVariantId: number): Observable<Pricelist> {
-    return this.http.put<Pricelist>(`${this.apiBaseUrl}/api/pricelists/${pricelistId}/items/${itemId}/replace-variant`, {
-      replacementVariantId,
+  replaceVariant(pricelistId: number, itemId: number): Observable<Pricelist> {
+    return this.http.post<Pricelist>(`${this.apiBaseUrl}/api/cenovnici/${pricelistId}/zameni-stavku`, {
+      pricelistItemId: itemId,
     });
   }
 }

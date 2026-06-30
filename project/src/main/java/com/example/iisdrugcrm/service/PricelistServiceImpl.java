@@ -11,6 +11,7 @@ import com.example.iisdrugcrm.dto.pricelist.CatalogVariantDTO;
 import com.example.iisdrugcrm.dto.pricelist.ChangePricelistStatusDTO;
 import com.example.iisdrugcrm.dto.pricelist.CreatePricelistDTO;
 import com.example.iisdrugcrm.dto.pricelist.PricelistResponseDTO;
+import com.example.iisdrugcrm.exception.InvalidCatalogReplacementException;
 import com.example.iisdrugcrm.exception.PricelistConflictException;
 import com.example.iisdrugcrm.exception.PricelistLockedException;
 import com.example.iisdrugcrm.exception.PricelistNotFoundException;
@@ -301,6 +302,9 @@ public class PricelistServiceImpl implements PricelistService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PricelistResponseDTO replaceItemVariant(Long pricelistId, Long itemId, Long replacementVariantId, Long currentUserId) {
+        if (itemId == null) {
+            throw new IllegalArgumentException("Pricelist item is required.");
+        }
         Pricelist pricelist = pricelistRepository.findById(pricelistId)
                 .orElseThrow(() -> new PricelistNotFoundException("Pricelist not found"));
         accessService.validateOwnerOrTeamMember(pricelist, currentUserId);
@@ -313,16 +317,32 @@ public class PricelistServiceImpl implements PricelistService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Pricelist item not found."));
 
+        CatalogVariantDTO oldVariant = catalogService.findVariantsByIdsIncludingInactive(List.of(item.getVariantId()))
+                .get(item.getVariantId());
+        if (oldVariant == null) {
+            throw new IllegalArgumentException("Inactive catalog variant could not be found.");
+        }
+        if (oldVariant.isActive()) {
+            throw new IllegalArgumentException("Pricelist item variant is already active.");
+        }
+        if (oldVariant.getReplacementVariantId() == null) {
+            throw new InvalidCatalogReplacementException("No replacement is defined for this inactive variant.");
+        }
+        Long catalogReplacementVariantId = oldVariant.getReplacementVariantId();
+        if (replacementVariantId != null && !catalogReplacementVariantId.equals(replacementVariantId)) {
+            throw new InvalidCatalogReplacementException("Selected variant is not the catalog-defined replacement.");
+        }
+
         boolean duplicate = pricelist.getItems().stream()
-                .anyMatch(candidate -> !itemId.equals(candidate.getId()) && replacementVariantId.equals(candidate.getVariantId()));
+                .anyMatch(candidate -> !itemId.equals(candidate.getId()) && catalogReplacementVariantId.equals(candidate.getVariantId()));
         if (duplicate) {
             throw new IllegalArgumentException("Selected replacement variant already exists in this pricelist.");
         }
 
-        Map<Long, CatalogVariantDTO> activeVariants = catalogService.findActiveVariantsByIds(List.of(replacementVariantId));
-        CatalogVariantDTO replacement = activeVariants.get(replacementVariantId);
+        CatalogVariantDTO replacement = catalogService.findVariantsByIdsIncludingInactive(List.of(catalogReplacementVariantId))
+                .get(catalogReplacementVariantId);
         if (replacement == null || !replacement.isActive()) {
-            throw new IllegalArgumentException("Selected replacement variant is not active.");
+            throw new IllegalArgumentException("Catalog-defined replacement variant is not active.");
         }
 
         item.setVariantId(replacement.getId());
@@ -537,11 +557,11 @@ public class PricelistServiceImpl implements PricelistService {
     }
 
     private PricelistResponseDTO toResponse(Pricelist pricelist) {
-        return PricelistResponseDTO.fromEntity(pricelist, activeVariantsFor(pricelist));
+        return PricelistResponseDTO.fromEntity(pricelist, catalogVariantsFor(pricelist));
     }
 
     private PricelistResponseDTO toResponse(Pricelist pricelist, Long currentUserId, boolean canCollaborate) {
-        PricelistResponseDTO response = PricelistResponseDTO.fromEntity(pricelist, currentUserId, canCollaborate, activeVariantsFor(pricelist));
+        PricelistResponseDTO response = PricelistResponseDTO.fromEntity(pricelist, currentUserId, canCollaborate, catalogVariantsFor(pricelist));
         boolean canReview = pricelist.getStatus() == PricelistStatus.IN_REVIEW
                 && accessService.canActivateAsReviewer(pricelist, currentUserId);
         response.setCanActivate(canReview);
@@ -549,12 +569,12 @@ public class PricelistServiceImpl implements PricelistService {
         return response;
     }
 
-    private Map<Long, CatalogVariantDTO> activeVariantsFor(Pricelist pricelist) {
+    private Map<Long, CatalogVariantDTO> catalogVariantsFor(Pricelist pricelist) {
         List<Long> variantIds = pricelist.getItems().stream()
                 .map(PricelistItem::getVariantId)
                 .distinct()
                 .toList();
-        return catalogService.findActiveVariantsByIds(variantIds);
+        return catalogService.findVariantsByIdsIncludingInactive(variantIds);
     }
 
     private void validateNoBlockingOverlapExcludingCurrent(Pricelist pricelist) {

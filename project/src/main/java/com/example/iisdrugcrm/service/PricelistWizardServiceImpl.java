@@ -369,15 +369,15 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
     }
 
     private PricelistResponseDTO toResponse(Pricelist pricelist, Long currentUserId) {
-        return PricelistResponseDTO.fromEntity(pricelist, currentUserId, accessService.canCollaborate(pricelist, currentUserId), activeVariantsFor(pricelist));
+        return PricelistResponseDTO.fromEntity(pricelist, currentUserId, accessService.canCollaborate(pricelist, currentUserId), catalogVariantsFor(pricelist));
     }
 
-    private Map<Long, CatalogVariantDTO> activeVariantsFor(Pricelist pricelist) {
+    private Map<Long, CatalogVariantDTO> catalogVariantsFor(Pricelist pricelist) {
         List<Long> variantIds = pricelist.getItems().stream()
                 .map(PricelistItem::getVariantId)
                 .distinct()
                 .toList();
-        return catalogService.findActiveVariantsByIds(variantIds);
+        return catalogService.findVariantsByIdsIncludingInactive(variantIds);
     }
 
     private void publishAction(Pricelist pricelist, Long userId, PricelistActionType actionType, String description) {

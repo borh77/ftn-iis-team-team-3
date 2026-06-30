@@ -7,6 +7,8 @@ import com.example.iisdrugcrm.domain.pricelist.*;
 import com.example.iisdrugcrm.dto.pricelist.CatalogVariantDTO;
 import com.example.iisdrugcrm.dto.pricelist.ChangePricelistStatusDTO;
 import com.example.iisdrugcrm.dto.pricelist.CreatePricelistDTO;
+import com.example.iisdrugcrm.dto.pricelist.PricelistResponseDTO;
+import com.example.iisdrugcrm.exception.InvalidCatalogReplacementException;
 import com.example.iisdrugcrm.exception.InvalidPricelistThresholdException;
 import com.example.iisdrugcrm.exception.InvalidPricelistStatusTransitionException;
 import com.example.iisdrugcrm.exception.PricelistConflictException;
@@ -19,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -74,6 +77,19 @@ class PricelistServiceImplTest {
         lenient().when(regionRepository.findById(1L)).thenReturn(Optional.of(serbia));
         lenient().when(catalogService.findActiveVariantsByIds(anyCollection()))
                 .thenReturn(Map.of(10L, new CatalogVariantDTO(10L, "Variant A", true)));
+        lenient().when(catalogService.findVariantsByIdsIncludingInactive(anyCollection()))
+                .thenAnswer(invocation -> {
+                    @SuppressWarnings("unchecked")
+                    Collection<Long> requestedIds = invocation.getArgument(0);
+                    List<Long> ids = List.copyOf(requestedIds);
+                    Map<Long, CatalogVariantDTO> variants = Map.of(
+                            10L, new CatalogVariantDTO(10L, "Variant A", true),
+                            11L, new CatalogVariantDTO(11L, "Variant B", true)
+                    );
+                    return ids.stream()
+                            .filter(variants::containsKey)
+                            .collect(java.util.stream.Collectors.toMap(id -> id, variants::get));
+                });
         lenient().when(pricelistRepository.save(any(Pricelist.class))).thenAnswer(invocation -> {
             Pricelist pricelist = invocation.getArgument(0);
             if (pricelist.getId() == null) {
@@ -781,14 +797,18 @@ class PricelistServiceImplTest {
         Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
         PricelistItem item = pricelist.getItems().get(0);
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
-        when(catalogService.findActiveVariantsByIds(List.of(11L)))
+        when(catalogService.findVariantsByIdsIncludingInactive(List.of(10L)))
+                .thenReturn(Map.of(10L, new CatalogVariantDTO(10L, "Variant A", false, 11L, "Variant B")));
+        when(catalogService.findVariantsByIdsIncludingInactive(List.of(11L)))
                 .thenReturn(Map.of(11L, new CatalogVariantDTO(11L, "Variant B", true)));
 
-        service.replaceItemVariant(100L, 500L, 11L, 99L);
+        service.replaceItemVariant(100L, 500L, null, 99L);
 
         assertEquals(11L, item.getVariantId());
         assertEquals("Variant B", item.getVariantName());
         assertEquals(new BigDecimal("100.00"), item.getThresholds().get(0).getPrice());
+        assertEquals(new BigDecimal("95.00"), item.getThresholds().get(1).getPrice());
+        assertEquals(2, item.getThresholds().size());
         verify(pricelistRepository).save(pricelist);
     }
 
@@ -796,10 +816,12 @@ class PricelistServiceImplTest {
     void replaceItemPublishesActivityEvent() {
         Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
-        when(catalogService.findActiveVariantsByIds(List.of(11L)))
+        when(catalogService.findVariantsByIdsIncludingInactive(List.of(10L)))
+                .thenReturn(Map.of(10L, new CatalogVariantDTO(10L, "Variant A", false, 11L, "Variant B")));
+        when(catalogService.findVariantsByIdsIncludingInactive(List.of(11L)))
                 .thenReturn(Map.of(11L, new CatalogVariantDTO(11L, "Variant B", true)));
 
-        service.replaceItemVariant(100L, 500L, 11L, 99L);
+        service.replaceItemVariant(100L, 500L, null, 99L);
 
         PricelistActionEvent event = capturedEvent();
         assertEquals(100L, event.pricelistId());
@@ -820,9 +842,61 @@ class PricelistServiceImplTest {
     void replacementVariantMustBeActive() {
         Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
-        when(catalogService.findActiveVariantsByIds(List.of(11L))).thenReturn(Map.of());
+        when(catalogService.findVariantsByIdsIncludingInactive(List.of(10L)))
+                .thenReturn(Map.of(10L, new CatalogVariantDTO(10L, "Variant A", false, 11L, "Variant B")));
+        when(catalogService.findVariantsByIdsIncludingInactive(List.of(11L)))
+                .thenReturn(Map.of(11L, new CatalogVariantDTO(11L, "Variant B", false)));
 
-        assertThrows(IllegalArgumentException.class, () -> service.replaceItemVariant(100L, 500L, 11L, 99L));
+        assertThrows(IllegalArgumentException.class, () -> service.replaceItemVariant(100L, 500L, null, 99L));
+    }
+
+    @Test
+    void submittedReplacementVariantMustMatchCatalogDefinedReplacement() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        when(catalogService.findVariantsByIdsIncludingInactive(List.of(10L)))
+                .thenReturn(Map.of(10L, new CatalogVariantDTO(10L, "Variant A", false, 11L, "Variant B")));
+
+        InvalidCatalogReplacementException exception = assertThrows(
+                InvalidCatalogReplacementException.class,
+                () -> service.replaceItemVariant(100L, 500L, 12L, 99L)
+        );
+
+        assertEquals("Selected variant is not the catalog-defined replacement.", exception.getMessage());
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
+    }
+
+    @Test
+    void replacementFailsWhenInactiveVariantHasNoCatalogReplacement() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(pricelist));
+        when(catalogService.findVariantsByIdsIncludingInactive(List.of(10L)))
+                .thenReturn(Map.of(10L, new CatalogVariantDTO(10L, "Variant A", false, null, null)));
+
+        InvalidCatalogReplacementException exception = assertThrows(
+                InvalidCatalogReplacementException.class,
+                () -> service.replaceItemVariant(100L, 500L, null, 99L)
+        );
+
+        assertEquals("No replacement is defined for this inactive variant.", exception.getMessage());
+        verify(pricelistRepository, never()).save(any(Pricelist.class));
+    }
+
+    @Test
+    void draftResponseIncludesCatalogDefinedReplacementMetadata() {
+        Pricelist pricelist = pricelistWithItem(100L, PricelistStatus.DRAFT, serbia, "Lanci apoteka");
+        when(pricelistRepository.findAllByCreatedByInOrderByIdDesc(Set.of(99L))).thenReturn(List.of(pricelist));
+        when(catalogService.findVariantsByIdsIncludingInactive(List.of(10L)))
+                .thenReturn(Map.of(10L, new CatalogVariantDTO(10L, "Variant A", false, 11L, "Variant B")));
+
+        List<PricelistResponseDTO> result = service.listTeamCenovniciForUser(99L);
+
+        PricelistResponseDTO.PricelistItemResponseDTO item = result.get(0).getItems().get(0);
+        assertEquals(false, item.isActiveVariant());
+        assertEquals(true, item.isReplacementRequired());
+        assertEquals(11L, item.getReplacementVariantId());
+        assertEquals("Variant B", item.getReplacementVariantName());
+        assertEquals(true, item.isReplacementAvailable());
     }
 
     @Test

@@ -1,11 +1,17 @@
 package com.example.iisdrugcrm.dto.pricelist;
 
-import jakarta.validation.constraints.NotNull;
-
 public class ReplacePricelistItemVariantDTO {
 
-    @NotNull
+    private Long pricelistItemId;
     private Long replacementVariantId;
+
+    public Long getPricelistItemId() {
+        return pricelistItemId;
+    }
+
+    public void setPricelistItemId(Long pricelistItemId) {
+        this.pricelistItemId = pricelistItemId;
+    }
 
     public Long getReplacementVariantId() {
         return replacementVariantId;

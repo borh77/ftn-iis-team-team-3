@@ -92,6 +92,8 @@ class PricelistWizardServiceImplTest {
         lenient().when(accessService.canCollaborate(any(Pricelist.class), eq(99L))).thenReturn(true);
         lenient().when(catalogService.findActiveVariantsByIds(anyCollection()))
                 .thenReturn(Map.of(10L, new CatalogVariantDTO(10L, "Variant A", true)));
+        lenient().when(catalogService.findVariantsByIdsIncludingInactive(anyCollection()))
+                .thenReturn(Map.of(10L, new CatalogVariantDTO(10L, "Variant A", true)));
     }
 
     @Test
