@@ -2,6 +2,20 @@
   display: block;
 }
 
+.filters {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.actions {
+  align-self: end;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.actions button {
+  flex: 0 1 auto;
+}
+
 .notice {
   color: #92400e;
   background: #fffbeb;
@@ -87,5 +101,11 @@
 
   .trend-value {
     text-align: left;
+  }
+}
+
+@media (min-width: 761px) {
+  .actions button {
+    width: auto;
   }
 }

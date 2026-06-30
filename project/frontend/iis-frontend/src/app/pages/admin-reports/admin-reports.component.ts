@@ -7,9 +7,11 @@ import {
   PerformanceReportFilters,
   TeamPerformanceReport,
 } from '../../core/analytics.service';
+import {
+  AdminFilterOptionsService,
+  AdminLookupOption,
+} from '../../core/admin-filter-options.service';
 import { ERROR_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
-
-type TeamMode = 'all' | 'specific';
 
 @Component({
   selector: 'app-admin-reports',
@@ -20,34 +22,30 @@ type TeamMode = 'all' | 'specific';
 })
 export class AdminReportsComponent implements OnInit, OnDestroy {
   private readonly analyticsService = inject(AnalyticsService);
+  private readonly filterOptionsService = inject(AdminFilterOptionsService);
   private readonly fb = inject(FormBuilder);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly transientMessages = inject(TransientMessageService);
 
-  // TODO: Replace the specific-team numeric field with a real team dropdown once an admin teams lookup endpoint exists.
   readonly form = this.fb.nonNullable.group({
-    teamMode: ['all' as TeamMode, Validators.required],
     teamId: [''],
     start: ['', Validators.required],
     end: ['', Validators.required],
   });
 
   loading = false;
+  lookupLoading = false;
   pdfDownloading = false;
   errorMessage = '';
+  lookupErrorMessage = '';
   pdfErrorMessage = '';
   submitted = false;
   report: TeamPerformanceReport | null = null;
+  teamOptions: AdminLookupOption[] = [];
 
   ngOnInit(): void {
-    const now = new Date();
-    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0));
-    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 0));
-
-    this.form.patchValue({
-      start: this.toDateTimeLocal(start),
-      end: this.toDateTimeLocal(end),
-    });
+    this.resetDateRange();
+    this.loadFilterOptions();
   }
 
   ngOnDestroy(): void {
@@ -59,7 +57,7 @@ export class AdminReportsComponent implements OnInit, OnDestroy {
     this.clearError();
     this.clearPdfError();
 
-    if (this.form.invalid || !this.hasValidTeamFilter()) {
+    if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
@@ -84,7 +82,7 @@ export class AdminReportsComponent implements OnInit, OnDestroy {
     this.submitted = true;
     this.clearPdfError();
 
-    if (this.form.invalid || !this.hasValidTeamFilter()) {
+    if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
@@ -104,12 +102,19 @@ export class AdminReportsComponent implements OnInit, OnDestroy {
     });
   }
 
-  isSpecificTeam(): boolean {
-    return this.form.controls.teamMode.value === 'specific';
-  }
-
   showEmptyState(): boolean {
     return !this.loading && this.submitted && !this.errorMessage && !!this.report && this.report.activatedPricelistsCount === 0;
+  }
+
+  resetFilters(): void {
+    this.submitted = false;
+    this.report = null;
+    this.clearError();
+    this.clearPdfError();
+    this.form.patchValue({
+      teamId: '',
+    });
+    this.resetDateRange();
   }
 
   formatHours(value: number | null | undefined): string {
@@ -126,19 +131,11 @@ export class AdminReportsComponent implements OnInit, OnDestroy {
     return `${Math.max((point.averageTotalProcessingTimeHours / max) * 100, 6)}%`;
   }
 
-  private hasValidTeamFilter(): boolean {
-    if (!this.isSpecificTeam()) {
-      return true;
-    }
-
-    return this.parseTeamId() !== null;
-  }
-
   private buildFilters(): PerformanceReportFilters {
     const value = this.form.getRawValue();
 
     return {
-      teamId: this.isSpecificTeam() ? this.parseTeamId() : null,
+      teamId: this.parseTeamId(),
       start: new Date(value.start).toISOString(),
       end: new Date(value.end).toISOString(),
     };
@@ -152,6 +149,36 @@ export class AdminReportsComponent implements OnInit, OnDestroy {
 
     const parsed = Number(rawValue);
     return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  private loadFilterOptions(): void {
+    this.lookupLoading = true;
+    this.lookupErrorMessage = '';
+
+    this.filterOptionsService.getFilterOptions().subscribe({
+      next: (options) => {
+        this.lookupLoading = false;
+        this.teamOptions = options.teams ?? [];
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.lookupLoading = false;
+        this.lookupErrorMessage = 'Unable to load team filter options.';
+        this.teamOptions = [];
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  private resetDateRange(): void {
+    const now = new Date();
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0));
+    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 0));
+
+    this.form.patchValue({
+      start: this.toDateTimeLocal(start),
+      end: this.toDateTimeLocal(end),
+    });
   }
 
   private toDateTimeLocal(date: Date): string {

@@ -13,14 +13,15 @@ public interface PricelistActivityLogRepository extends JpaRepository<PricelistA
 
     @Query(value = """
             WITH active_transitions AS (
-                SELECT pricelist_id, MIN(timestamp) AS active_at
-                FROM pricelist_activity_logs
-                WHERE action_type = 'STATUS_CHANGE'
-                  AND status_to = 'ACTIVE'
-                  AND timestamp >= :start
-                  AND timestamp <= :end
-                  AND (:teamId IS NULL OR team_id = :teamId)
-                GROUP BY pricelist_id
+                SELECT log.pricelist_id, MIN(log.timestamp) AS active_at
+                FROM pricelist_activity_logs log
+                JOIN pricelists p ON p.id = log.pricelist_id
+                WHERE log.action_type = 'STATUS_CHANGE'
+                  AND log.status_to = 'ACTIVE'
+                  AND log.timestamp >= :start
+                  AND log.timestamp <= :end
+                  AND (:teamId IS NULL OR p.team_id = :teamId OR (p.team_id IS NULL AND log.team_id = :teamId))
+                GROUP BY log.pricelist_id
             ),
             create_events AS (
                 SELECT pricelist_id, MIN(timestamp) AS created_at
@@ -51,14 +52,15 @@ public interface PricelistActivityLogRepository extends JpaRepository<PricelistA
 
     @Query(value = """
             WITH active_transitions AS (
-                SELECT pricelist_id, MIN(timestamp) AS active_at
-                FROM pricelist_activity_logs
-                WHERE action_type = 'STATUS_CHANGE'
-                  AND status_to = 'ACTIVE'
-                  AND timestamp >= :start
-                  AND timestamp <= :end
-                  AND (:teamId IS NULL OR team_id = :teamId)
-                GROUP BY pricelist_id
+                SELECT log.pricelist_id, MIN(log.timestamp) AS active_at
+                FROM pricelist_activity_logs log
+                JOIN pricelists p ON p.id = log.pricelist_id
+                WHERE log.action_type = 'STATUS_CHANGE'
+                  AND log.status_to = 'ACTIVE'
+                  AND log.timestamp >= :start
+                  AND log.timestamp <= :end
+                  AND (:teamId IS NULL OR p.team_id = :teamId OR (p.team_id IS NULL AND log.team_id = :teamId))
+                GROUP BY log.pricelist_id
             ),
             create_events AS (
                 SELECT pricelist_id, MIN(timestamp) AS created_at

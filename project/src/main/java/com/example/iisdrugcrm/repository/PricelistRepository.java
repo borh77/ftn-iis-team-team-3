@@ -125,14 +125,21 @@ public interface PricelistRepository extends JpaRepository<Pricelist, Long> {
             select count(distinct p.id)
             from Pricelist p
             where p.status = :status
-              and (:teamId is null or exists (
-                  select 1
-                  from PricelistActivityLog log
-                  where log.pricelistId = p.id
-                    and log.teamId = :teamId
-              ))
+              and (
+                  :teamId is null
+                  or p.team.id = :teamId
+                  or (
+                      p.team is null
+                      and exists (
+                          select 1
+                          from PricelistActivityLog log
+                          where log.pricelistId = p.id
+                            and log.teamId = :teamId
+                      )
+                  )
+              )
             """)
-    Long countByStatusAndOptionalAuditTeamId(
+    Long countByStatusAndOptionalTeamId(
             @Param("status") PricelistStatus status,
             @Param("teamId") Long teamId
     );

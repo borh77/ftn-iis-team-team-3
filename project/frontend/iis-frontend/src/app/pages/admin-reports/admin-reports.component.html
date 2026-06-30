@@ -9,18 +9,16 @@
     <form class="filters" [formGroup]="form" (ngSubmit)="generateReport()">
       <label>
         <span>Team</span>
-        <select formControlName="teamMode">
-          <option value="all">All teams</option>
-          <option value="specific">Specific team</option>
+        <select formControlName="teamId" [disabled]="lookupLoading">
+          <option value="">All teams</option>
+          @if (teamOptions.length === 0 && !lookupLoading) {
+            <option value="" disabled>No teams available</option>
+          }
+          @for (team of teamOptions; track team.id) {
+            <option [value]="team.id">{{ team.label }}</option>
+          }
         </select>
       </label>
-
-      @if (isSpecificTeam()) {
-        <label>
-          <span>Team ID</span>
-          <input type="number" min="1" formControlName="teamId" placeholder="Enter team ID" />
-        </label>
-      }
 
       <label>
         <span>Start date</span>
@@ -37,13 +35,20 @@
         <button type="button" class="secondary" [disabled]="loading || pdfDownloading" (click)="downloadPdf()">
           {{ pdfDownloading ? 'Downloading...' : 'Download PDF' }}
         </button>
+        <button type="button" class="secondary" [disabled]="loading || pdfDownloading" (click)="resetFilters()">
+          Reset filters
+        </button>
       </div>
     </form>
 
     @if (submitted && form.invalid) {
       <p class="error">Start and end dates are required.</p>
-    } @else if (submitted && isSpecificTeam() && !form.controls.teamId.value.trim()) {
-      <p class="error">Team ID is required for a specific team report.</p>
+    }
+
+    @if (lookupLoading) {
+      <p class="muted">Loading filter options...</p>
+    } @else if (lookupErrorMessage) {
+      <p class="error">{{ lookupErrorMessage }}</p>
     }
 
     @if (pdfErrorMessage) {

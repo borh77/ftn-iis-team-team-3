@@ -6,6 +6,11 @@ import {
   AnalyticsService,
   PricelistActivityLog,
 } from '../../core/analytics.service';
+import {
+  AdminFilterOptionsService,
+  AdminLookupOption,
+  AdminUserLookupOption,
+} from '../../core/admin-filter-options.service';
 import { SpringPage } from '../../core/auth/auth.models';
 import { ERROR_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 
@@ -18,6 +23,7 @@ import { ERROR_MESSAGE_MS, TransientMessageService } from '../../core/transient-
 })
 export class AdminLogsComponent implements OnInit, OnDestroy {
   private readonly analyticsService = inject(AnalyticsService);
+  private readonly filterOptionsService = inject(AdminFilterOptionsService);
   private readonly fb = inject(FormBuilder);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly transientMessages = inject(TransientMessageService);
@@ -25,7 +31,6 @@ export class AdminLogsComponent implements OnInit, OnDestroy {
   readonly pageSize = 10;
   readonly defaultSort = 'timestamp,desc';
 
-  // TODO: Replace numeric IDs with real team/user selects once admin lookup endpoints are available.
   readonly filtersForm = this.fb.nonNullable.group({
     teamId: [''],
     userId: [''],
@@ -34,11 +39,16 @@ export class AdminLogsComponent implements OnInit, OnDestroy {
   });
 
   loading = false;
+  lookupLoading = false;
   errorMessage = '';
+  lookupErrorMessage = '';
   page = 0;
   data: SpringPage<PricelistActivityLog> | null = null;
+  teamOptions: AdminLookupOption[] = [];
+  userOptions: AdminUserLookupOption[] = [];
 
   ngOnInit(): void {
+    this.loadFilterOptions();
     this.loadLogs(0);
   }
 
@@ -123,6 +133,27 @@ export class AdminLogsComponent implements OnInit, OnDestroy {
           this.cdr.detectChanges();
         },
       });
+  }
+
+  private loadFilterOptions(): void {
+    this.lookupLoading = true;
+    this.lookupErrorMessage = '';
+
+    this.filterOptionsService.getFilterOptions().subscribe({
+      next: (options) => {
+        this.lookupLoading = false;
+        this.teamOptions = options.teams ?? [];
+        this.userOptions = options.users ?? [];
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.lookupLoading = false;
+        this.lookupErrorMessage = 'Unable to load team and user filter options.';
+        this.teamOptions = [];
+        this.userOptions = [];
+        this.cdr.detectChanges();
+      },
+    });
   }
 
   private buildFilters(): ActivityLogFilters {

@@ -8,13 +8,29 @@
   <section class="panel">
     <form class="filters" [formGroup]="filtersForm" (ngSubmit)="applyFilters()">
       <label>
-        <span>Team ID</span>
-        <input type="number" min="1" formControlName="teamId" placeholder="All teams" />
+        <span>Team</span>
+        <select formControlName="teamId" [disabled]="lookupLoading">
+          <option value="">All teams</option>
+          @if (teamOptions.length === 0 && !lookupLoading) {
+            <option value="" disabled>No teams available</option>
+          }
+          @for (team of teamOptions; track team.id) {
+            <option [value]="team.id">{{ team.label }}</option>
+          }
+        </select>
       </label>
 
       <label>
-        <span>User ID</span>
-        <input type="number" min="1" formControlName="userId" placeholder="All users" />
+        <span>User</span>
+        <select formControlName="userId" [disabled]="lookupLoading">
+          <option value="">All users</option>
+          @if (userOptions.length === 0 && !lookupLoading) {
+            <option value="" disabled>No users available</option>
+          }
+          @for (user of userOptions; track user.id) {
+            <option [value]="user.id">{{ user.label }}</option>
+          }
+        </select>
       </label>
 
       <label>
@@ -34,6 +50,12 @@
         </button>
       </div>
     </form>
+
+    @if (lookupLoading) {
+      <p class="muted">Loading filter options...</p>
+    } @else if (lookupErrorMessage) {
+      <p class="error">{{ lookupErrorMessage }}</p>
+    }
   </section>
 
   <section class="panel">

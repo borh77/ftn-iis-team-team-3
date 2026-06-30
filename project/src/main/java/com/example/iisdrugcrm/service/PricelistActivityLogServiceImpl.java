@@ -22,8 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PricelistActivityLogServiceImpl implements PricelistActivityLogService {
 
-    private static final String TEAM_FILTER_LIMITATION = "Pricelists do not store a direct team assignment yet. Team filters use pricelist_activity_logs.team_id where available.";
-
     private final PricelistActivityLogRepository repository;
     private final PricelistRepository pricelistRepository;
 
@@ -62,12 +60,9 @@ public class PricelistActivityLogServiceImpl implements PricelistActivityLogServ
         report.setActivatedPricelistsCount(nullSafe(summary.getActivatedPricelistsCount()));
         report.setAverageTotalProcessingTimeHours(nullSafe(summary.getAverageTotalProcessingTimeHours()));
         report.setAverageReviewTimeHours(nullSafe(summary.getAverageReviewTimeHours()));
-        report.setStuckDraftCount(nullSafe(pricelistRepository.countByStatusAndOptionalAuditTeamId(PricelistStatus.DRAFT, teamId)));
-        report.setStuckInReviewCount(nullSafe(pricelistRepository.countByStatusAndOptionalAuditTeamId(PricelistStatus.IN_REVIEW, teamId)));
+        report.setStuckDraftCount(nullSafe(pricelistRepository.countByStatusAndOptionalTeamId(PricelistStatus.DRAFT, teamId)));
+        report.setStuckInReviewCount(nullSafe(pricelistRepository.countByStatusAndOptionalTeamId(PricelistStatus.IN_REVIEW, teamId)));
         report.setMonthlyTrend(monthlyTrend(teamId, normalizedStart, normalizedEnd));
-        if (teamId != null) {
-            report.setTeamFilterLimitation(TEAM_FILTER_LIMITATION);
-        }
         return report;
     }
 

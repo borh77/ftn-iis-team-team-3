@@ -100,8 +100,8 @@ class PricelistActivityLogServiceImplTest {
         when(repository.findPerformanceSummary(null, start, end)).thenReturn(summary);
         when(repository.findMonthlyPerformanceTrend(null, start, end))
                 .thenReturn(List.of(new MonthlyPerformanceStub("2026-06", new BigDecimal("60.00"), 1L)));
-        when(pricelistRepository.countByStatusAndOptionalAuditTeamId(PricelistStatus.DRAFT, null)).thenReturn(0L);
-        when(pricelistRepository.countByStatusAndOptionalAuditTeamId(PricelistStatus.IN_REVIEW, null)).thenReturn(0L);
+        when(pricelistRepository.countByStatusAndOptionalTeamId(PricelistStatus.DRAFT, null)).thenReturn(0L);
+        when(pricelistRepository.countByStatusAndOptionalTeamId(PricelistStatus.IN_REVIEW, null)).thenReturn(0L);
 
         TeamPerformanceReportDTO report = service.getPerformanceReport(null, start, end);
 
@@ -124,8 +124,8 @@ class PricelistActivityLogServiceImplTest {
                 .thenReturn(summary);
         when(repository.findMonthlyPerformanceTrend(eq(5L), any(OffsetDateTime.class), any(OffsetDateTime.class)))
                 .thenReturn(List.of(new MonthlyPerformanceStub("2026-06", new BigDecimal("48.50"), 1L)));
-        when(pricelistRepository.countByStatusAndOptionalAuditTeamId(PricelistStatus.DRAFT, 5L)).thenReturn(2L);
-        when(pricelistRepository.countByStatusAndOptionalAuditTeamId(PricelistStatus.IN_REVIEW, 5L)).thenReturn(3L);
+        when(pricelistRepository.countByStatusAndOptionalTeamId(PricelistStatus.DRAFT, 5L)).thenReturn(2L);
+        when(pricelistRepository.countByStatusAndOptionalTeamId(PricelistStatus.IN_REVIEW, 5L)).thenReturn(3L);
 
         TeamPerformanceReportDTO report = service.getPerformanceReport(5L, start, end);
 
@@ -139,8 +139,8 @@ class PricelistActivityLogServiceImplTest {
         assertEquals("2026-06", report.getMonthlyTrend().get(0).getMonth());
         assertEquals(new BigDecimal("48.50"), report.getMonthlyTrend().get(0).getAverageTotalProcessingTimeHours());
         verify(repository).findPerformanceSummary(5L, OffsetDateTime.parse("2026-05-31T22:00:00Z"), OffsetDateTime.parse("2026-06-30T21:59:59Z"));
-        verify(pricelistRepository).countByStatusAndOptionalAuditTeamId(PricelistStatus.DRAFT, 5L);
-        verify(pricelistRepository).countByStatusAndOptionalAuditTeamId(PricelistStatus.IN_REVIEW, 5L);
+        verify(pricelistRepository).countByStatusAndOptionalTeamId(PricelistStatus.DRAFT, 5L);
+        verify(pricelistRepository).countByStatusAndOptionalTeamId(PricelistStatus.IN_REVIEW, 5L);
     }
 
     @Test
@@ -150,8 +150,8 @@ class PricelistActivityLogServiceImplTest {
         when(repository.findPerformanceSummary(null, start, end))
                 .thenReturn(new PerformanceSummaryStub(0L, BigDecimal.ZERO, BigDecimal.ZERO));
         when(repository.findMonthlyPerformanceTrend(null, start, end)).thenReturn(List.of());
-        when(pricelistRepository.countByStatusAndOptionalAuditTeamId(PricelistStatus.DRAFT, null)).thenReturn(4L);
-        when(pricelistRepository.countByStatusAndOptionalAuditTeamId(PricelistStatus.IN_REVIEW, null)).thenReturn(2L);
+        when(pricelistRepository.countByStatusAndOptionalTeamId(PricelistStatus.DRAFT, null)).thenReturn(4L);
+        when(pricelistRepository.countByStatusAndOptionalTeamId(PricelistStatus.IN_REVIEW, null)).thenReturn(2L);
 
         TeamPerformanceReportDTO report = service.getPerformanceReport(null, start, end);
 

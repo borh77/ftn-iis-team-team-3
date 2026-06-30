@@ -2,6 +2,19 @@
   display: block;
 }
 
+.filters {
+  grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
+}
+
+.filter-actions {
+  align-self: end;
+  justify-content: flex-start;
+}
+
+.filter-actions button {
+  flex: 0 1 auto;
+}
+
 table {
   min-width: 960px;
 }
@@ -9,4 +22,10 @@ table {
 .result-count {
   color: var(--color-muted);
   font-weight: 800;
+}
+
+@media (min-width: 761px) {
+  .filter-actions button {
+    width: auto;
+  }
 }

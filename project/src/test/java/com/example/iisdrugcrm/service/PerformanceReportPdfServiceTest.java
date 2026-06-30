@@ -43,7 +43,6 @@ class PerformanceReportPdfServiceTest {
         report.setStuckDraftCount(2L);
         report.setStuckInReviewCount(1L);
         report.setMonthlyTrend(List.of(new MonthlyPerformancePointDTO("2026-06", new BigDecimal("48.50"), 3L)));
-        report.setTeamFilterLimitation("Team filters use audit log team_id where available.");
         return report;
     }
 }

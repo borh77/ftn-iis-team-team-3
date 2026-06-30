@@ -1,6 +1,7 @@
 package com.example.iisdrugcrm.repository;
 
 import com.example.iisdrugcrm.domain.PricelistStatus;
+import com.example.iisdrugcrm.domain.PricelistTeam;
 import com.example.iisdrugcrm.domain.Region;
 import com.example.iisdrugcrm.domain.pricelist.PricelistActionType;
 import com.example.iisdrugcrm.domain.pricelist.PricelistActivityLog;
@@ -31,6 +32,9 @@ class PricelistActivityLogRepositoryTest {
 
     @Autowired
     private RegionRepository regionRepository;
+
+    @Autowired
+    private PricelistTeamRepository teamRepository;
 
     private PricelistActivityLogServiceImpl service;
 
@@ -120,12 +124,18 @@ class PricelistActivityLogRepositoryTest {
     }
 
     @Test
-    void countsStuckDraftAndInReviewByCurrentPricelistStatusAndOptionalAuditTeam() {
+    void countsStuckDraftAndInReviewByCurrentPricelistStatusAndOptionalTeam() {
         Region region = regionRepository.save(new Region("Serbia", "RS"));
+        PricelistTeam teamFive = teamRepository.save(new PricelistTeam("Team Five", 99L));
+        PricelistTeam teamSix = teamRepository.save(new PricelistTeam("Team Six", 100L));
         Pricelist teamFiveDraft = pricelist(region, PricelistStatus.DRAFT, "Hospitals");
         Pricelist teamSixDraft = pricelist(region, PricelistStatus.DRAFT, "Pharmacies");
         Pricelist teamFiveReview = pricelist(region, PricelistStatus.IN_REVIEW, "Clinics");
         Pricelist active = pricelist(region, PricelistStatus.ACTIVE, "Distributors");
+        teamFiveDraft.setTeam(teamFive);
+        teamSixDraft.setTeam(teamSix);
+        teamFiveReview.setTeam(teamFive);
+        active.setTeam(teamFive);
         pricelistRepository.save(teamFiveDraft);
         pricelistRepository.save(teamSixDraft);
         pricelistRepository.save(teamFiveReview);
@@ -135,10 +145,10 @@ class PricelistActivityLogRepositoryTest {
         repository.save(log(teamFiveReview.getId(), 5L));
         repository.save(log(active.getId(), 5L));
 
-        assertThat(pricelistRepository.countByStatusAndOptionalAuditTeamId(PricelistStatus.DRAFT, null)).isEqualTo(2L);
-        assertThat(pricelistRepository.countByStatusAndOptionalAuditTeamId(PricelistStatus.IN_REVIEW, null)).isEqualTo(1L);
-        assertThat(pricelistRepository.countByStatusAndOptionalAuditTeamId(PricelistStatus.DRAFT, 5L)).isEqualTo(1L);
-        assertThat(pricelistRepository.countByStatusAndOptionalAuditTeamId(PricelistStatus.IN_REVIEW, 5L)).isEqualTo(1L);
+        assertThat(pricelistRepository.countByStatusAndOptionalTeamId(PricelistStatus.DRAFT, null)).isEqualTo(2L);
+        assertThat(pricelistRepository.countByStatusAndOptionalTeamId(PricelistStatus.IN_REVIEW, null)).isEqualTo(1L);
+        assertThat(pricelistRepository.countByStatusAndOptionalTeamId(PricelistStatus.DRAFT, teamFive.getId())).isEqualTo(1L);
+        assertThat(pricelistRepository.countByStatusAndOptionalTeamId(PricelistStatus.IN_REVIEW, teamFive.getId())).isEqualTo(1L);
     }
 
     private void seedLogs() {
