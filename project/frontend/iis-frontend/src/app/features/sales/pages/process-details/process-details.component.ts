@@ -100,7 +100,7 @@ export class ProcessDetailsComponent implements OnInit, OnDestroy {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.loading = true;
 
-    this.salesApiService.getSalesProcessById(id).pipe(finalize(() => (this.loading = false))).subscribe({
+    this.salesApiService.getSalesProcessById(id).subscribe({
       next: (process) => {
         this.process = process;
         this.selectedStage = process.stage;
@@ -137,16 +137,19 @@ export class ProcessDetailsComponent implements OnInit, OnDestroy {
               ? this.workflowStages
               : [process.stage, ...this.workflowStages];
 
+            this.loading = false;
             this.cdr.detectChanges();
           },
           error: (error) => {
             this.showError(extractBackendErrorMessage(error, 'Failed to load process details.'));
+            this.loading = false;
             this.cdr.detectChanges();
           },
         });
       },
       error: (error) => {
         this.showError(extractBackendErrorMessage(error, 'Failed to load process.'));
+        this.loading = false;
         this.cdr.detectChanges();
       },
     });
@@ -390,7 +393,12 @@ export class ProcessDetailsComponent implements OnInit, OnDestroy {
     this.clearError();
     this.salesApiService
         .createCustomerCommunication(this.process.customerId, this.newCommunication)
-        .pipe(finalize(() => (this.savingCommunication = false)))
+        .pipe(
+          finalize(() => {
+            this.savingCommunication = false;
+            this.cdr.detectChanges();
+          }),
+        )
         .subscribe({
         next: () => {
             this.showCommunicationForm = false;

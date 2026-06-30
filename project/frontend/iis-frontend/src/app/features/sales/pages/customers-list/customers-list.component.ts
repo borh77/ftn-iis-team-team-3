@@ -67,7 +67,12 @@ export class CustomersListComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.clearError();
 
-    this.salesApiService.getCustomers().pipe(finalize(() => (this.loading = false))).subscribe({
+    this.salesApiService.getCustomers().pipe(
+      finalize(() => {
+        this.loading = false;
+        this.cdr.detectChanges();
+      }),
+    ).subscribe({
       next: (response) => {
         this.customers = response ?? [];
         this.cdr.detectChanges();
@@ -99,7 +104,12 @@ export class CustomersListComponent implements OnInit, OnDestroy {
     this.saving = true;
     this.clearError();
 
-    this.salesApiService.createCustomer(this.newCustomer).pipe(finalize(() => (this.saving = false))).subscribe({
+    this.salesApiService.createCustomer(this.newCustomer).pipe(
+      finalize(() => {
+        this.saving = false;
+        this.cdr.detectChanges();
+      }),
+    ).subscribe({
       next: () => {
         this.newCustomer = {
           name: '',

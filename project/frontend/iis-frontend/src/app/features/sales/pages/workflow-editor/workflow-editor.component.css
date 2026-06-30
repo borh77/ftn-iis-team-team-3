@@ -39,6 +39,8 @@
 .sidebar-panel {
   position: sticky;
   top: 24px;
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
 }
 
 .content {
@@ -48,7 +50,12 @@
 
 .workflow-item {
   display: grid;
+  grid-template-columns: 1fr;
   gap: 8px;
+  justify-content: stretch;
+  justify-items: start;
+  align-content: start;
+  align-items: start;
   width: 100%;
   padding: 14px;
   margin-bottom: 10px;
@@ -56,6 +63,7 @@
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 14px;
+  color: #111827;
   cursor: pointer;
 }
 
@@ -63,6 +71,7 @@
 .workflow-item.active {
   border-color: #1f2937;
   background: #f9fafb;
+  color: #111827;
 }
 
 .workflow-item.active {
@@ -70,10 +79,29 @@
 }
 
 .workflow-item span {
+  display: block;
+  width: 100%;
+  color: #111827;
   font-weight: 700;
+  text-align: left;
 }
 
-.workflow-item small,
+.workflow-item small {
+  color: #4b5563;
+  justify-self: start;
+  text-align: left;
+}
+
+.workflow-item:hover span,
+.workflow-item.active span {
+  color: #0f172a;
+}
+
+.workflow-item:hover small,
+.workflow-item.active small {
+  color: #374151;
+}
+
 .muted {
   color: #6b7280;
 }
@@ -88,6 +116,14 @@
   color: #047857;
   font-size: 12px;
   font-weight: 800;
+}
+
+.workflow-item .region-badge,
+.workflow-item:hover .region-badge,
+.workflow-item.active .region-badge {
+  background: #ecfdf5;
+  color: #047857;
+  justify-self: start;
 }
 
 .divider {
@@ -384,4 +420,17 @@ select:disabled {
   .stage-step:not(:last-child)::after {
     content: "";
   }
+}
+
+.workflow-item {
+  color: #111827;
+}
+
+.workflow-item span,
+.workflow-item strong {
+  color: #111827;
+}
+
+.workflow-item small {
+  color: #64748b;
 }

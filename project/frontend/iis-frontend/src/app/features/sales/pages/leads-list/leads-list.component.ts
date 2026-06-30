@@ -63,7 +63,12 @@ export class LeadsListComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.clearError();
 
-    this.salesApiService.getLeads().pipe(finalize(() => (this.loading = false))).subscribe({
+    this.salesApiService.getLeads().pipe(
+      finalize(() => {
+        this.loading = false;
+        this.cdr.detectChanges();
+      }),
+    ).subscribe({
         next: (response) => {
         this.leads = response ?? [];
         this.cdr.detectChanges();
@@ -89,7 +94,12 @@ export class LeadsListComponent implements OnInit, OnDestroy {
     this.saving = true;
     this.clearError();
 
-    this.salesApiService.createLead(this.newLead).pipe(finalize(() => (this.saving = false))).subscribe({
+    this.salesApiService.createLead(this.newLead).pipe(
+      finalize(() => {
+        this.saving = false;
+        this.cdr.detectChanges();
+      }),
+    ).subscribe({
         next: () => {
         this.newLead = {
             name: '',

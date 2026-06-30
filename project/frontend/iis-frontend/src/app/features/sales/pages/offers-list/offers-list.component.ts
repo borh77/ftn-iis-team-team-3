@@ -83,7 +83,12 @@ export class OffersListComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.clearError();
 
-    this.salesApiService.getOffers().pipe(finalize(() => (this.loading = false))).subscribe({
+    this.salesApiService.getOffers().pipe(
+      finalize(() => {
+        this.loading = false;
+        this.cdr.detectChanges();
+      }),
+    ).subscribe({
       next: (response) => {
         this.offers = response ?? [];
         this.cdr.detectChanges();
@@ -130,7 +135,12 @@ export class OffersListComponent implements OnInit, OnDestroy {
   acceptOffer(offer: Offer): void {
     this.acceptingOfferId = offer.id;
     this.clearError();
-    this.salesApiService.acceptOffer(offer.id).pipe(finalize(() => (this.acceptingOfferId = null))).subscribe({
+    this.salesApiService.acceptOffer(offer.id).pipe(
+      finalize(() => {
+        this.acceptingOfferId = null;
+        this.cdr.detectChanges();
+      }),
+    ).subscribe({
       next: () => this.loadData(),
       error: (error) => this.showError(extractBackendErrorMessage(error, 'Failed to accept offer.')),
     });
@@ -153,7 +163,12 @@ export class OffersListComponent implements OnInit, OnDestroy {
   createContract(): void {
     this.savingContract = true;
     this.clearError();
-    this.salesApiService.createContract(this.newContract).pipe(finalize(() => (this.savingContract = false))).subscribe({
+    this.salesApiService.createContract(this.newContract).pipe(
+      finalize(() => {
+        this.savingContract = false;
+        this.cdr.detectChanges();
+      }),
+    ).subscribe({
       next: () => {
         this.showContractFormForOfferId = null;
         this.loadData();
