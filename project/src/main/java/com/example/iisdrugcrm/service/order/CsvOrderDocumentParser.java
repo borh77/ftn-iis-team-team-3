@@ -31,6 +31,7 @@ public class CsvOrderDocumentParser implements OrderDocumentParser {
                 throw new IllegalArgumentException("CSV document is empty");
             }
             validateHeader(header);
+            CsvFormat format = CsvFormat.fromHeader(header);
 
             String line;
             int lineNumber = 1;
@@ -40,13 +41,11 @@ public class CsvOrderDocumentParser implements OrderDocumentParser {
                     continue;
                 }
                 String[] columns = line.split(",", -1);
-                if (columns.length != 2) {
-                    throw new IllegalArgumentException("Invalid CSV row at line " + lineNumber + ". Expected variantId,requestedQuantity.");
+                if (columns.length != format.columnCount()) {
+                    throw new IllegalArgumentException("Invalid CSV row at line " + lineNumber + ". Expected " + format.expectedColumns() + ".");
                 }
                 try {
-                    Long variantId = Long.valueOf(columns[0].trim());
-                    Integer requestedQuantity = Integer.valueOf(columns[1].trim());
-                    items.add(new OrderDocumentItemDTO(variantId, requestedQuantity));
+                    items.add(format.toItem(columns));
                 } catch (NumberFormatException exception) {
                     throw new IllegalArgumentException("Invalid number in CSV row at line " + lineNumber + ".");
                 }
@@ -57,12 +56,77 @@ public class CsvOrderDocumentParser implements OrderDocumentParser {
 
     private void validateHeader(String header) {
         String normalized = header.trim().replace(" ", "").toLowerCase();
-        if (!"variantid,requestedquantity".equals(normalized)) {
-            throw new IllegalArgumentException("CSV header must be variantId,requestedQuantity");
+        if (!CsvFormat.supports(normalized)) {
+            throw new IllegalArgumentException("CSV header must be variantId,requestedQuantity; variantName,requestedQuantity; or productName,form,dosage,requestedQuantity");
         }
     }
 
     private boolean hasExtension(String filename, String extension) {
         return filename != null && filename.toLowerCase().endsWith(extension);
+    }
+
+    private enum CsvFormat {
+        VARIANT_ID("variantid,requestedquantity", 2, "variantId,requestedQuantity") {
+            @Override
+            OrderDocumentItemDTO toItem(String[] columns) {
+                return new OrderDocumentItemDTO(Long.valueOf(columns[0].trim()), Integer.valueOf(columns[1].trim()));
+            }
+        },
+        VARIANT_NAME("variantname,requestedquantity", 2, "variantName,requestedQuantity") {
+            @Override
+            OrderDocumentItemDTO toItem(String[] columns) {
+                return new OrderDocumentItemDTO(columns[0].trim(), Integer.valueOf(columns[1].trim()));
+            }
+        },
+        STRUCTURED("productname,form,dosage,requestedquantity", 4, "productName,form,dosage,requestedQuantity") {
+            @Override
+            OrderDocumentItemDTO toItem(String[] columns) {
+                return new OrderDocumentItemDTO(
+                        columns[0].trim(),
+                        columns[1].trim(),
+                        columns[2].trim(),
+                        Integer.valueOf(columns[3].trim())
+                );
+            }
+        };
+
+        private final String normalizedHeader;
+        private final int columnCount;
+        private final String expectedColumns;
+
+        CsvFormat(String normalizedHeader, int columnCount, String expectedColumns) {
+            this.normalizedHeader = normalizedHeader;
+            this.columnCount = columnCount;
+            this.expectedColumns = expectedColumns;
+        }
+
+        abstract OrderDocumentItemDTO toItem(String[] columns);
+
+        int columnCount() {
+            return columnCount;
+        }
+
+        String expectedColumns() {
+            return expectedColumns;
+        }
+
+        static boolean supports(String normalizedHeader) {
+            for (CsvFormat format : values()) {
+                if (format.normalizedHeader.equals(normalizedHeader)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        static CsvFormat fromHeader(String header) {
+            String normalized = header.trim().replace(" ", "").toLowerCase();
+            for (CsvFormat format : values()) {
+                if (format.normalizedHeader.equals(normalized)) {
+                    return format;
+                }
+            }
+            throw new IllegalArgumentException("CSV header must be variantId,requestedQuantity; variantName,requestedQuantity; or productName,form,dosage,requestedQuantity");
+        }
     }
 }

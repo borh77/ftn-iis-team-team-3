@@ -144,6 +144,88 @@ class OrderValidationServiceImplTest {
     }
 
     @Test
+    void variantNameResolvesToExistingVariantBeforeValidation() throws Exception {
+        when(parser.parse(file)).thenReturn(List.of(new OrderDocumentItemDTO(" medicine a 10mg ", 10)));
+        when(catalogService.findVariantsByDisplayNameIncludingInactive(" medicine a 10mg "))
+                .thenReturn(List.of(catalogVariant(101L, "Medicine A 10mg", true, null, null)));
+        when(catalogService.findVariantsByIdsIncludingInactive(anyCollection()))
+                .thenReturn(Map.of(101L, catalogVariant(101L, "Medicine A 10mg", true, null, null)));
+
+        ValidationResultDTO result = service.validateOrderDocument("buyer", file);
+
+        assertTrue(result.isValid());
+        assertEquals(101L, result.getValidatedItems().get(0).getVariantId());
+        assertEquals("Medicine A 10mg", result.getValidatedItems().get(0).getVariantName());
+    }
+
+    @Test
+    void structuredProductFieldsResolveToExistingVariantBeforeValidation() throws Exception {
+        when(parser.parse(file)).thenReturn(List.of(new OrderDocumentItemDTO("Medicine A", "tablet", "10mg", 10)));
+        when(catalogService.findVariantsByProductFormDosageIncludingInactive("Medicine A", "tablet", "10mg"))
+                .thenReturn(List.of(catalogVariant(101L, "Medicine A 10mg", true, null, null)));
+        when(catalogService.findVariantsByIdsIncludingInactive(anyCollection()))
+                .thenReturn(Map.of(101L, catalogVariant(101L, "Medicine A 10mg", true, null, null)));
+
+        ValidationResultDTO result = service.validateOrderDocument("buyer", file);
+
+        assertTrue(result.isValid());
+        assertEquals(101L, result.getValidatedItems().get(0).getVariantId());
+    }
+
+    @Test
+    void unknownVariantNameReturnsProblematicItem() throws Exception {
+        when(parser.parse(file)).thenReturn(List.of(new OrderDocumentItemDTO("Wrong Medicine", 10)));
+        when(catalogService.findVariantsByDisplayNameIncludingInactive("Wrong Medicine"))
+                .thenReturn(List.of());
+
+        ValidationResultDTO result = service.validateOrderDocument("buyer", file);
+
+        assertFalse(result.isValid());
+        assertEquals(1, result.getInvalidItems().size());
+        assertEquals("VARIANT_NOT_FOUND", result.getInvalidItems().get(0).getErrorCode());
+        assertEquals("Wrong Medicine", result.getInvalidItems().get(0).getVariantName());
+        assertEquals("Variant was not found in the catalog.", result.getInvalidItems().get(0).getMessage());
+    }
+
+    @Test
+    void ambiguousVariantNameReturnsProblematicItem() throws Exception {
+        when(parser.parse(file)).thenReturn(List.of(new OrderDocumentItemDTO("Medicine A 10mg", 10)));
+        when(catalogService.findVariantsByDisplayNameIncludingInactive("Medicine A 10mg"))
+                .thenReturn(List.of(
+                        catalogVariant(101L, "Medicine A 10mg", true, null, null),
+                        catalogVariant(102L, "Medicine A 10mg", true, null, null)
+                ));
+
+        ValidationResultDTO result = service.validateOrderDocument("buyer", file);
+
+        assertFalse(result.isValid());
+        assertEquals(1, result.getInvalidItems().size());
+        assertEquals("AMBIGUOUS_VARIANT_NAME", result.getInvalidItems().get(0).getErrorCode());
+    }
+
+    @Test
+    void discontinuedVariantResolvedByNameReturnsReplacementSuggestion() throws Exception {
+        when(parser.parse(file)).thenReturn(List.of(new OrderDocumentItemDTO("Old Medicine 10mg", 55)));
+        when(catalogService.findVariantsByDisplayNameIncludingInactive("Old Medicine 10mg"))
+                .thenReturn(List.of(catalogVariant(202L, "Old Medicine 10mg", false, 303L, "Replacement Medicine 20mg")));
+        when(catalogService.findVariantsByIdsIncludingInactive(any()))
+                .thenReturn(
+                        Map.of(202L, catalogVariant(202L, "Old Medicine 10mg", false, 303L, "Replacement Medicine 20mg")),
+                        Map.of(303L, catalogVariant(303L, "Replacement Medicine 20mg", true, null, null))
+                );
+
+        ValidationResultDTO result = service.validateOrderDocument("buyer", file);
+
+        assertFalse(result.isValid());
+        assertEquals(1, result.getReplacements().size());
+        ReplacementSuggestionDTO replacement = result.getReplacements().get(0);
+        assertEquals(202L, replacement.getOldVariantId());
+        assertEquals("Old Medicine 10mg", replacement.getOldVariantName());
+        assertEquals(303L, replacement.getNewVariantId());
+        assertEquals(55, replacement.getRequestedQuantity());
+    }
+
+    @Test
     void discontinuedVariantWithValidSuccessorReturnsReplacementSuggestion() throws Exception {
         when(parser.parse(file)).thenReturn(List.of(new OrderDocumentItemDTO(202L, 55)));
         when(catalogService.findVariantsByIdsIncludingInactive(any()))

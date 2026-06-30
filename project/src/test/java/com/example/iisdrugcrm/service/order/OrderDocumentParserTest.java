@@ -48,6 +48,42 @@ class OrderDocumentParserTest {
     }
 
     @Test
+    void csvParserParsesVariantNameDocument() throws Exception {
+        CsvOrderDocumentParser parser = new CsvOrderDocumentParser();
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "order.csv",
+                "text/csv",
+                "variantName,requestedQuantity\nBrufen LIQUID 400mg,10\n".getBytes()
+        );
+
+        List<OrderDocumentItemDTO> items = parser.parse(file);
+
+        assertEquals(1, items.size());
+        assertEquals("Brufen LIQUID 400mg", items.get(0).getVariantName());
+        assertEquals(10, items.get(0).getRequestedQuantity());
+    }
+
+    @Test
+    void csvParserParsesStructuredProductDocument() throws Exception {
+        CsvOrderDocumentParser parser = new CsvOrderDocumentParser();
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "order.csv",
+                "text/csv",
+                "productName,form,dosage,requestedQuantity\nBrufen,LIQUID,400mg,10\n".getBytes()
+        );
+
+        List<OrderDocumentItemDTO> items = parser.parse(file);
+
+        assertEquals(1, items.size());
+        assertEquals("Brufen", items.get(0).getProductName());
+        assertEquals("LIQUID", items.get(0).getForm());
+        assertEquals("400mg", items.get(0).getDosage());
+        assertEquals(10, items.get(0).getRequestedQuantity());
+    }
+
+    @Test
     void resolverRejectsUnsupportedFormat() {
         OrderDocumentParserResolver resolver = new OrderDocumentParserResolver(List.of(
                 new JsonOrderDocumentParser(new ObjectMapper()),

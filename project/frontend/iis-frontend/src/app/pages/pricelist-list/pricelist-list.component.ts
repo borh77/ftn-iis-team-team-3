@@ -48,9 +48,10 @@ export class PricelistListComponent implements OnInit, OnDestroy {
   activationErrorByOfferId: Record<number, string> = {};
   loadingOffersId: number | null = null;
   changingOfferId: number | null = null;
-  loadingSuggestionsId: number | null = null;
+  loadingSuggestionKeyByPricelist: Record<number, string> = {};
   promotionSuggestionsByPricelist: Record<number, PromotionSuggestion[]> = {};
   suggestionSegmentByPricelist: Record<number, string> = {};
+  loadedSuggestionKeyByPricelist: Record<number, string> = {};
   suggestionErrorByPricelist: Record<number, string> = {};
   replacingItemId: number | null = null;
   replacementVariantIds: Record<number, number | null> = {};
@@ -302,28 +303,53 @@ export class PricelistListComponent implements OnInit, OnDestroy {
     if (this.expandedOffers[pricelist.id]) {
       this.ensureOfferForm(pricelist);
       this.ensureSuggestionSegment(pricelist);
+      this.ensurePromotionSuggestions(pricelist);
       this.loadOffers(pricelist.id);
     }
   }
 
-  generatePromotionSuggestions(pricelist: Pricelist): void {
+  onSuggestionSegmentChanged(pricelist: Pricelist): void {
+    this.ensurePromotionSuggestions(pricelist);
+  }
+
+  generatePromotionSuggestions(pricelist: Pricelist, force = true): void {
     const segment = this.ensureSuggestionSegment(pricelist).trim();
     if (!segment) {
       this.suggestionErrorByPricelist[pricelist.id] = 'Customer segment is required.';
       return;
     }
 
-    this.loadingSuggestionsId = pricelist.id;
+    const key = this.suggestionKey(pricelist.id, segment);
+    if (!force && this.loadedSuggestionKeyByPricelist[pricelist.id] === key) {
+      return;
+    }
+    if (this.loadingSuggestionKeyByPricelist[pricelist.id] === key) {
+      return;
+    }
+
+    this.loadingSuggestionKeyByPricelist[pricelist.id] = key;
     this.suggestionErrorByPricelist[pricelist.id] = '';
-    this.offerService.getPromotionSuggestions(segment).pipe(finalize(() => (this.loadingSuggestionsId = null))).subscribe({
+    this.offerService.getPromotionSuggestions(segment).pipe(finalize(() => {
+      if (this.loadingSuggestionKeyByPricelist[pricelist.id] === key) {
+        delete this.loadingSuggestionKeyByPricelist[pricelist.id];
+      }
+    })).subscribe({
       next: (suggestions) => {
+        if (this.suggestionKey(pricelist.id, this.ensureSuggestionSegment(pricelist)) !== key) {
+          return;
+        }
         this.promotionSuggestionsByPricelist[pricelist.id] = suggestions
           .filter((suggestion) => this.canApplySuggestionToPricelist(pricelist, suggestion))
           .slice(0, 5);
+        this.loadedSuggestionKeyByPricelist[pricelist.id] = key;
         this.cdr.detectChanges();
       },
       error: (error) => {
+        if (this.suggestionKey(pricelist.id, this.ensureSuggestionSegment(pricelist)) !== key) {
+          return;
+        }
         this.promotionSuggestionsByPricelist[pricelist.id] = [];
+        delete this.loadedSuggestionKeyByPricelist[pricelist.id];
         this.suggestionErrorByPricelist[pricelist.id] = extractBackendErrorMessage(error, 'Promotion suggestions could not be loaded.');
         this.cdr.detectChanges();
       },
@@ -344,7 +370,11 @@ export class PricelistListComponent implements OnInit, OnDestroy {
   }
 
   isLoadingSuggestions(pricelist: Pricelist): boolean {
-    return this.loadingSuggestionsId === pricelist.id;
+    return !!this.loadingSuggestionKeyByPricelist[pricelist.id];
+  }
+
+  hasLoadedSuggestions(pricelist: Pricelist): boolean {
+    return !!this.loadedSuggestionKeyByPricelist[pricelist.id];
   }
 
   segmentOptions(): string[] {
@@ -683,6 +713,14 @@ export class PricelistListComponent implements OnInit, OnDestroy {
       this.suggestionSegmentByPricelist[pricelist.id] = pricelist.customerSegment ?? '';
     }
     return this.suggestionSegmentByPricelist[pricelist.id];
+  }
+
+  private ensurePromotionSuggestions(pricelist: Pricelist): void {
+    this.generatePromotionSuggestions(pricelist, false);
+  }
+
+  private suggestionKey(pricelistId: number, segment: string): string {
+    return `${pricelistId}:${segment.trim().toLocaleLowerCase()}`;
   }
 
   private canApplySuggestionToPricelist(pricelist: Pricelist, suggestion: PromotionSuggestion): boolean {

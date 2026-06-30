@@ -29,7 +29,9 @@
       <span class="upload-icon">CSV</span>
       <div>
         <h3>{{ selectedFile ? selectedFile.name : 'Drop your order document here' }}</h3>
-        <p class="muted">Supported formats: JSON, CSV</p>
+        <p class="muted">
+          Supported CSV columns: variantId, requestedQuantity; variantName, requestedQuantity; or productName, form, dosage, requestedQuantity.
+        </p>
       </div>
     </div>
 

@@ -29,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -76,10 +77,12 @@ public class OrderValidationServiceImpl implements OrderValidationService {
         if (orderItems.isEmpty()) {
             throw new IllegalArgumentException("Order document does not contain any items");
         }
+        ValidationResultDTO result = new ValidationResultDTO();
+        List<OrderDocumentItemDTO> resolvedOrderItems = resolveVariantIdentifiers(orderItems, result);
 
         Map<Long, PricelistItem> pricelistItemsByVariantId = pricelist.getItems().stream()
                 .collect(Collectors.toMap(PricelistItem::getVariantId, Function.identity(), (first, ignored) -> first));
-        Set<Long> requestedVariantIds = orderItems.stream()
+        Set<Long> requestedVariantIds = resolvedOrderItems.stream()
                 .map(OrderDocumentItemDTO::getVariantId)
                 .filter(variantId -> variantId != null)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
@@ -97,10 +100,9 @@ public class OrderValidationServiceImpl implements OrderValidationService {
                 .stream()
                 .collect(Collectors.toMap(SpecialOffer::getVariantId, Function.identity(), (first, ignored) -> first));
 
-        ValidationResultDTO result = new ValidationResultDTO();
         BigDecimal totalPrice = BigDecimal.ZERO;
 
-        for (OrderDocumentItemDTO orderItem : orderItems) {
+        for (OrderDocumentItemDTO orderItem : resolvedOrderItems) {
             InvalidOrderItemDTO invalidItem = validateItemBasics(orderItem, catalogVariants);
             if (invalidItem != null) {
                 result.getInvalidItems().add(invalidItem);
@@ -127,6 +129,10 @@ public class OrderValidationServiceImpl implements OrderValidationService {
             if (!pricelistItemsByVariantId.containsKey(orderItem.getVariantId())) {
                 result.getInvalidItems().add(new InvalidOrderItemDTO(
                         orderItem.getVariantId(),
+                        orderItem.getVariantName(),
+                        orderItem.getProductName(),
+                        orderItem.getForm(),
+                        orderItem.getDosage(),
                         orderItem.getRequestedQuantity(),
                         "VARIANT_NOT_IN_PRICELIST",
                         "Variant is not available in the active pricelist."
@@ -139,6 +145,10 @@ public class OrderValidationServiceImpl implements OrderValidationService {
             if (threshold == null) {
                 result.getInvalidItems().add(new InvalidOrderItemDTO(
                         orderItem.getVariantId(),
+                        orderItem.getVariantName(),
+                        orderItem.getProductName(),
+                        orderItem.getForm(),
+                        orderItem.getDosage(),
                         orderItem.getRequestedQuantity(),
                         "NO_QUANTITY_THRESHOLD",
                         "No quantity threshold matches the requested quantity."
@@ -195,15 +205,70 @@ public class OrderValidationServiceImpl implements OrderValidationService {
             Map<Long, CatalogVariantDTO> catalogVariants
     ) {
         if (item.getVariantId() == null) {
-            return new InvalidOrderItemDTO(null, item.getRequestedQuantity(), "MISSING_VARIANT_ID", "Variant id is required.");
+            return invalidItem(item, "MISSING_VARIANT_IDENTIFIER", "Variant id, variant name, or product/form/dosage is required.");
         }
         if (item.getRequestedQuantity() == null || item.getRequestedQuantity() <= 0) {
-            return new InvalidOrderItemDTO(item.getVariantId(), item.getRequestedQuantity(), "INVALID_QUANTITY", "Requested quantity must be positive.");
+            return invalidItem(item, "INVALID_QUANTITY", "Requested quantity must be positive.");
         }
         if (!catalogVariants.containsKey(item.getVariantId())) {
-            return new InvalidOrderItemDTO(item.getVariantId(), item.getRequestedQuantity(), "VARIANT_NOT_FOUND", "Variant does not exist.");
+            return invalidItem(item, "VARIANT_NOT_FOUND", "Variant was not found in the catalog.");
         }
         return null;
+    }
+
+    private List<OrderDocumentItemDTO> resolveVariantIdentifiers(List<OrderDocumentItemDTO> orderItems, ValidationResultDTO result) {
+        return orderItems.stream()
+                .map(item -> resolveVariantIdentifier(item, result))
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private OrderDocumentItemDTO resolveVariantIdentifier(OrderDocumentItemDTO item, ValidationResultDTO result) {
+        if (item.getVariantId() != null) {
+            return item;
+        }
+
+        if (hasText(item.getVariantName())) {
+            List<CatalogVariantDTO> matches = catalogService.findVariantsByDisplayNameIncludingInactive(item.getVariantName());
+            return applyVariantResolution(item, matches, result);
+        }
+
+        if (hasText(item.getProductName()) && hasText(item.getForm()) && hasText(item.getDosage())) {
+            List<CatalogVariantDTO> matches = catalogService.findVariantsByProductFormDosageIncludingInactive(
+                    item.getProductName(),
+                    item.getForm(),
+                    item.getDosage()
+            );
+            return applyVariantResolution(item, matches, result);
+        }
+
+        result.getInvalidItems().add(invalidItem(item, "MISSING_VARIANT_IDENTIFIER", "Variant id, variant name, or product/form/dosage is required."));
+        return null;
+    }
+
+    private OrderDocumentItemDTO applyVariantResolution(
+            OrderDocumentItemDTO item,
+            List<CatalogVariantDTO> matches,
+            ValidationResultDTO result
+    ) {
+        if (matches.isEmpty()) {
+            result.getInvalidItems().add(invalidItem(item, "VARIANT_NOT_FOUND", "Variant was not found in the catalog."));
+            return null;
+        }
+        if (matches.size() > 1) {
+            result.getInvalidItems().add(invalidItem(
+                    item,
+                    "AMBIGUOUS_VARIANT_NAME",
+                    "More than one variant matches this name. Please use variant ID or provide product, form, and dosage."
+            ));
+            return null;
+        }
+
+        item.setVariantId(matches.get(0).getId());
+        if (!hasText(item.getVariantName())) {
+            item.setVariantName(matches.get(0).getName());
+        }
+        return item;
     }
 
     private ReplacementResolution resolveReplacementSuggestion(
@@ -216,6 +281,10 @@ public class OrderValidationServiceImpl implements OrderValidationService {
         if (oldVariant.getReplacementVariantId() == null) {
             return ReplacementResolution.invalid(new InvalidOrderItemDTO(
                     orderItem.getVariantId(),
+                    orderItem.getVariantName(),
+                    orderItem.getProductName(),
+                    orderItem.getForm(),
+                    orderItem.getDosage(),
                     orderItem.getRequestedQuantity(),
                     "DISCONTINUED_NO_REPLACEMENT",
                     "Medicine is discontinued and has no available replacement in the active pricelist."
@@ -226,6 +295,10 @@ public class OrderValidationServiceImpl implements OrderValidationService {
         if (replacementVariant == null || !replacementVariant.isActive()) {
             return ReplacementResolution.invalid(new InvalidOrderItemDTO(
                     orderItem.getVariantId(),
+                    orderItem.getVariantName(),
+                    orderItem.getProductName(),
+                    orderItem.getForm(),
+                    orderItem.getDosage(),
                     orderItem.getRequestedQuantity(),
                     "REPLACEMENT_NOT_ACTIVE",
                     "Medicine is discontinued and its replacement is not active."
@@ -236,6 +309,10 @@ public class OrderValidationServiceImpl implements OrderValidationService {
         if (replacementItem == null) {
             return ReplacementResolution.invalid(new InvalidOrderItemDTO(
                     orderItem.getVariantId(),
+                    orderItem.getVariantName(),
+                    orderItem.getProductName(),
+                    orderItem.getForm(),
+                    orderItem.getDosage(),
                     orderItem.getRequestedQuantity(),
                     "REPLACEMENT_NOT_IN_PRICELIST",
                     "Medicine is discontinued and has no available replacement in the active pricelist."
@@ -246,6 +323,10 @@ public class OrderValidationServiceImpl implements OrderValidationService {
         if (threshold == null) {
             return ReplacementResolution.invalid(new InvalidOrderItemDTO(
                     orderItem.getVariantId(),
+                    orderItem.getVariantName(),
+                    orderItem.getProductName(),
+                    orderItem.getForm(),
+                    orderItem.getDosage(),
                     orderItem.getRequestedQuantity(),
                     "REPLACEMENT_NO_QUANTITY_THRESHOLD",
                     "Replacement medicine has no quantity threshold for the requested quantity."
@@ -340,6 +421,23 @@ public class OrderValidationServiceImpl implements OrderValidationService {
 
     private BigDecimal scaleMoney(BigDecimal value) {
         return value.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private InvalidOrderItemDTO invalidItem(OrderDocumentItemDTO item, String errorCode, String message) {
+        return new InvalidOrderItemDTO(
+                item.getVariantId(),
+                item.getVariantName(),
+                item.getProductName(),
+                item.getForm(),
+                item.getDosage(),
+                item.getRequestedQuantity(),
+                errorCode,
+                message
+        );
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private record ReplacementResolution(ReplacementSuggestionDTO suggestion, InvalidOrderItemDTO invalidItem) {

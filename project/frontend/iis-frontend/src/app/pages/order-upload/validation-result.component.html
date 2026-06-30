@@ -140,7 +140,7 @@
         <table class="result-table">
           <thead>
             <tr>
-              <th>Variant ID</th>
+              <th>Variant</th>
               <th>Quantity</th>
               <th>Error code</th>
               <th>Message</th>
@@ -149,7 +149,25 @@
           <tbody>
             @for (item of result.invalidItems; track item.errorCode + '-' + ($index)) {
               <tr>
-                <td>{{ item.variantId ?? '-' }}</td>
+                <td>
+                  <strong>
+                    {{ item.variantId ? (item.variantName || 'Variant ' + item.variantId) : 'Unknown variant' }}
+                  </strong>
+                  @if (item.variantId) {
+                    <span class="muted">ID: {{ item.variantId }}</span>
+                  }
+                  @if (item.variantName) {
+                    <span class="muted">Provided name: {{ item.variantName }}</span>
+                  }
+                  @if (item.productName || item.form || item.dosage) {
+                    <span class="muted">
+                      Provided details:
+                      {{ item.productName || '-' }}
+                      {{ item.form || '-' }}
+                      {{ item.dosage || '-' }}
+                    </span>
+                  }
+                </td>
                 <td>{{ item.requestedQuantity ?? '-' }}</td>
                 <td><span class="error-code">{{ item.errorCode }}</span></td>
                 <td>{{ item.message }}</td>

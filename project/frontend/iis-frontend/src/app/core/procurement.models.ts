@@ -13,6 +13,10 @@ export interface ValidatedOrderItem {
 
 export interface InvalidOrderItem {
   variantId?: number | null;
+  variantName?: string | null;
+  productName?: string | null;
+  form?: string | null;
+  dosage?: string | null;
   requestedQuantity?: number | null;
   errorCode: string;
   message: string;

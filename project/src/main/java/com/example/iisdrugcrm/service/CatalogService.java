@@ -11,5 +11,9 @@ public interface CatalogService {
 
     Map<Long, CatalogVariantDTO> findVariantsByIdsIncludingInactive(Collection<Long> variantIds);
 
+    List<CatalogVariantDTO> findVariantsByDisplayNameIncludingInactive(String variantName);
+
+    List<CatalogVariantDTO> findVariantsByProductFormDosageIncludingInactive(String productName, String form, String dosage);
+
     List<CatalogVariantDTO> getActiveVariants();
 }
