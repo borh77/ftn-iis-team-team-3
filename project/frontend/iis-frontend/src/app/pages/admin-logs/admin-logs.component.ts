@@ -40,8 +40,10 @@ export class AdminLogsComponent implements OnInit, OnDestroy {
 
   loading = false;
   lookupLoading = false;
+  exportLoading = false;
   errorMessage = '';
   lookupErrorMessage = '';
+  exportErrorMessage = '';
   page = 0;
   data: SpringPage<PricelistActivityLog> | null = null;
   teamOptions: AdminLookupOption[] = [];
@@ -57,6 +59,7 @@ export class AdminLogsComponent implements OnInit, OnDestroy {
   }
 
   applyFilters(): void {
+    this.clearExportError();
     this.loadLogs(0);
   }
 
@@ -67,7 +70,26 @@ export class AdminLogsComponent implements OnInit, OnDestroy {
       from: '',
       to: '',
     });
+    this.clearExportError();
     this.loadLogs(0);
+  }
+
+  exportPdf(): void {
+    this.exportLoading = true;
+    this.clearExportError();
+
+    this.analyticsService.downloadActivityLogsPdf(this.buildFilters()).subscribe({
+      next: (blob) => {
+        this.exportLoading = false;
+        this.savePdf(blob);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.exportLoading = false;
+        this.showExportError('Unable to export activity logs PDF.');
+        this.cdr.detectChanges();
+      },
+    });
   }
 
   previousPage(): void {
@@ -189,8 +211,27 @@ export class AdminLogsComponent implements OnInit, OnDestroy {
     this.transientMessages.setField(this, 'errorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
   }
 
+  private showExportError(message: string): void {
+    this.transientMessages.setField(this, 'exportErrorMessage', message, ERROR_MESSAGE_MS, () => this.cdr.detectChanges());
+  }
+
   private clearError(): void {
     this.transientMessages.clearField(this, 'errorMessage', () => this.cdr.detectChanges());
+  }
+
+  private clearExportError(): void {
+    this.transientMessages.clearField(this, 'exportErrorMessage', () => this.cdr.detectChanges());
+  }
+
+  private savePdf(blob: Blob): void {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `activity-log-report-${new Date().toISOString().slice(0, 10)}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   }
 }
 

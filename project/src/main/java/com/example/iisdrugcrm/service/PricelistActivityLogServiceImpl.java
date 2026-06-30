@@ -40,6 +40,14 @@ public class PricelistActivityLogServiceImpl implements PricelistActivityLogServ
 
     @Override
     @Transactional(readOnly = true)
+    public List<PricelistActivityLogResponseDTO> findLogsForExport(Long teamId, Long userId, OffsetDateTime from, OffsetDateTime to) {
+        return repository.findAll(filter(teamId, userId, from, to), defaultSort()).stream()
+                .map(PricelistActivityLogResponseDTO::fromEntity)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public TeamPerformanceReportDTO getPerformanceReport(Long teamId, OffsetDateTime start, OffsetDateTime end) {
         if (start == null || end == null) {
             throw new IllegalArgumentException("Start and end timestamps are required.");

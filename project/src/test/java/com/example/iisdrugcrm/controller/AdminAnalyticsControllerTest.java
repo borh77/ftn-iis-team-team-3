@@ -3,6 +3,7 @@ package com.example.iisdrugcrm.controller;
 import com.example.iisdrugcrm.domain.pricelist.PricelistActionType;
 import com.example.iisdrugcrm.dto.pricelist.PricelistActivityLogResponseDTO;
 import com.example.iisdrugcrm.dto.pricelist.TeamPerformanceReportDTO;
+import com.example.iisdrugcrm.service.ActivityLogPdfExportService;
 import com.example.iisdrugcrm.service.PerformanceReportPdfService;
 import com.example.iisdrugcrm.service.PricelistActivityLogService;
 import java.math.BigDecimal;
@@ -39,13 +40,15 @@ class AdminAnalyticsControllerTest {
 
     private PricelistActivityLogService service;
     private PerformanceReportPdfService pdfService;
+    private ActivityLogPdfExportService activityLogPdfExportService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         service = mock(PricelistActivityLogService.class);
         pdfService = mock(PerformanceReportPdfService.class);
-        mockMvc = standaloneSetup(new AdminAnalyticsController(service, pdfService))
+        activityLogPdfExportService = mock(ActivityLogPdfExportService.class);
+        mockMvc = standaloneSetup(new AdminAnalyticsController(service, pdfService, activityLogPdfExportService))
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .build();
     }
@@ -187,6 +190,52 @@ class AdminAnalyticsControllerTest {
                 Long.class,
                 OffsetDateTime.class,
                 OffsetDateTime.class
+        );
+
+        PreAuthorize preAuthorize = method.getAnnotation(PreAuthorize.class);
+
+        assertEquals("hasRole('ADMIN')", preAuthorize.value());
+    }
+
+    @Test
+    void activityLogsPdfEndpointBindsFiltersAndReturnsAttachment() throws Exception {
+        byte[] pdf = "%PDF-1.4 activity logs".getBytes();
+        when(activityLogPdfExportService.generateActivityLogPdf(
+                eq(5L),
+                eq(99L),
+                eq(OffsetDateTime.parse("2026-06-01T00:00:00Z")),
+                eq(OffsetDateTime.parse("2026-06-30T23:59:59Z")),
+                any()
+        )).thenReturn(pdf);
+
+        mockMvc.perform(get("/api/admin/activity-logs/pdf")
+                        .param("teamId", "5")
+                        .param("userId", "99")
+                        .param("from", "2026-06-01T00:00:00Z")
+                        .param("to", "2026-06-30T23:59:59Z"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PDF))
+                .andExpect(content().bytes(pdf))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, org.hamcrest.Matchers.startsWith("attachment; filename=\"activity-log-report-")));
+
+        verify(activityLogPdfExportService).generateActivityLogPdf(
+                eq(5L),
+                eq(99L),
+                eq(OffsetDateTime.parse("2026-06-01T00:00:00Z")),
+                eq(OffsetDateTime.parse("2026-06-30T23:59:59Z")),
+                any()
+        );
+    }
+
+    @Test
+    void activityLogsPdfEndpointRequiresAdminRole() throws Exception {
+        Method method = AdminAnalyticsController.class.getMethod(
+                "getActivityLogsPdf",
+                Long.class,
+                Long.class,
+                OffsetDateTime.class,
+                OffsetDateTime.class,
+                org.springframework.security.core.Authentication.class
         );
 
         PreAuthorize preAuthorize = method.getAnnotation(PreAuthorize.class);

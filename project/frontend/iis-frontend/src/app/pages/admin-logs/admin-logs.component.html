@@ -44,9 +44,12 @@
       </label>
 
       <div class="filter-actions">
-        <button type="submit" [disabled]="loading">Apply filters</button>
-        <button class="secondary" type="button" (click)="resetFilters()" [disabled]="loading">
+        <button type="submit" [disabled]="loading || exportLoading">Apply filters</button>
+        <button class="secondary" type="button" (click)="resetFilters()" [disabled]="loading || exportLoading">
           Reset filters
+        </button>
+        <button class="secondary" type="button" (click)="exportPdf()" [disabled]="exportLoading">
+          {{ exportLoading ? 'Exporting...' : 'Export PDF' }}
         </button>
       </div>
     </form>
@@ -55,6 +58,10 @@
       <p class="muted">Loading filter options...</p>
     } @else if (lookupErrorMessage) {
       <p class="error">{{ lookupErrorMessage }}</p>
+    }
+
+    @if (exportErrorMessage) {
+      <p class="error">{{ exportErrorMessage }}</p>
     }
   </section>
 

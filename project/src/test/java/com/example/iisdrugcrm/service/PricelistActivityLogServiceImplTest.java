@@ -89,6 +89,34 @@ class PricelistActivityLogServiceImplTest {
     }
 
     @Test
+    void findLogsForExportUsesSameFiltersWithoutPaging() {
+        PricelistActivityLog log = new PricelistActivityLog(
+                10L,
+                99L,
+                5L,
+                PricelistActionType.CREATE,
+                "Created pricelist",
+                OffsetDateTime.parse("2026-06-27T10:00:00Z")
+        );
+        when(repository.findAll(any(Specification.class), any(Sort.class))).thenReturn(List.of(log));
+
+        List<PricelistActivityLogResponseDTO> result = service.findLogsForExport(
+                5L,
+                99L,
+                OffsetDateTime.parse("2026-06-01T00:00:00Z"),
+                OffsetDateTime.parse("2026-06-30T23:59:59Z")
+        );
+
+        ArgumentCaptor<Sort> sortCaptor = ArgumentCaptor.forClass(Sort.class);
+        verify(repository).findAll(any(Specification.class), sortCaptor.capture());
+        Sort.Order timestampSort = sortCaptor.getValue().getOrderFor("timestamp");
+        assertEquals(Sort.Direction.DESC, timestampSort.getDirection());
+        assertEquals(10L, result.get(0).getPricelistId());
+        assertEquals(99L, result.get(0).getUserId());
+        assertEquals(5L, result.get(0).getTeamId());
+    }
+
+    @Test
     void getPerformanceReportCalculatesTotalAndReviewTimeFromRepositoryProjection() {
         OffsetDateTime start = OffsetDateTime.parse("2026-06-01T00:00:00Z");
         OffsetDateTime end = OffsetDateTime.parse("2026-06-30T23:59:59Z");

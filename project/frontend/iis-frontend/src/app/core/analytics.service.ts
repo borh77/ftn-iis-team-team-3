@@ -19,6 +19,8 @@ export interface PricelistActivityLog {
   actionType: string;
   description: string;
   timestamp: string;
+  statusFrom?: string | null;
+  statusTo?: string | null;
 }
 
 export interface PerformanceReportFilters {
@@ -57,26 +59,20 @@ export class AnalyticsService {
     size = 10,
     sort = 'timestamp,desc',
   ): Observable<SpringPage<PricelistActivityLog>> {
-    let params = new HttpParams()
+    let params = this.activityLogParams(filters)
       .set('page', page.toString())
       .set('size', size.toString())
       .set('sort', sort);
 
-    if (filters.teamId !== null && filters.teamId !== undefined) {
-      params = params.set('teamId', filters.teamId.toString());
-    }
-    if (filters.userId !== null && filters.userId !== undefined) {
-      params = params.set('userId', filters.userId.toString());
-    }
-    if (filters.from) {
-      params = params.set('from', filters.from);
-    }
-    if (filters.to) {
-      params = params.set('to', filters.to);
-    }
-
     return this.http.get<SpringPage<PricelistActivityLog>>(`${this.apiBaseUrl}/api/admin/logs`, {
       params,
+    });
+  }
+
+  downloadActivityLogsPdf(filters: ActivityLogFilters): Observable<Blob> {
+    return this.http.get(`${this.apiBaseUrl}/api/admin/activity-logs/pdf`, {
+      params: this.activityLogParams(filters),
+      responseType: 'blob',
     });
   }
 
@@ -103,6 +99,25 @@ export class AnalyticsService {
 
     if (filters.teamId !== null && filters.teamId !== undefined) {
       params = params.set('teamId', filters.teamId.toString());
+    }
+
+    return params;
+  }
+
+  private activityLogParams(filters: ActivityLogFilters): HttpParams {
+    let params = new HttpParams();
+
+    if (filters.teamId !== null && filters.teamId !== undefined) {
+      params = params.set('teamId', filters.teamId.toString());
+    }
+    if (filters.userId !== null && filters.userId !== undefined) {
+      params = params.set('userId', filters.userId.toString());
+    }
+    if (filters.from) {
+      params = params.set('from', filters.from);
+    }
+    if (filters.to) {
+      params = params.set('to', filters.to);
     }
 
     return params;
