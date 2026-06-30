@@ -4,7 +4,6 @@ import com.example.iisdrugcrm.domain.User;
 import com.example.iisdrugcrm.domain.sales.Customer;
 import com.example.iisdrugcrm.domain.sales.SalesProcess;
 import com.example.iisdrugcrm.domain.sales.SalesProcessHistory;
-import com.example.iisdrugcrm.domain.sales.SalesStage;
 import com.example.iisdrugcrm.dto.sales.process.CreateSalesProcessRequestDTO;
 import com.example.iisdrugcrm.dto.sales.process.SalesProcessHistoryResponseDTO;
 import com.example.iisdrugcrm.dto.sales.process.SalesProcessResponseDTO;
@@ -14,6 +13,7 @@ import com.example.iisdrugcrm.repository.sales.CustomerRepository;
 import com.example.iisdrugcrm.repository.sales.SalesProcessHistoryRepository;
 import com.example.iisdrugcrm.repository.sales.SalesProcessRepository;
 import com.example.iisdrugcrm.service.sales.workflow.SalesWorkflowService;
+import com.example.iisdrugcrm.domain.sales.workflow.SalesWorkflow;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +42,7 @@ public class SalesProcessService {
         this.userRepository = userRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<SalesProcessResponseDTO> getAll() {
         return salesProcessRepository.findAll()
                 .stream()
@@ -49,11 +50,20 @@ public class SalesProcessService {
                 .toList();
     }
 
+    @Transactional
     public SalesProcessResponseDTO create(CreateSalesProcessRequestDTO dto) {
         Customer customer = customerRepository.findById(dto.getCustomerId())
                 .orElseThrow(() -> new IllegalArgumentException("Customer not found."));
 
-        SalesProcess salesProcess = new SalesProcess(customer, dto.getTitle());
+        SalesWorkflow workflow = salesWorkflowService.findActiveWorkflowEntity(dto.getWorkflowId());
+        var startStage = salesWorkflowService.findStartStage(workflow.getId());
+
+        SalesProcess salesProcess = new SalesProcess(
+                customer,
+                dto.getTitle(),
+                workflow,
+                startStage.name()
+        );
 
         return mapToDto(salesProcessRepository.save(salesProcess));
     }
@@ -63,9 +73,13 @@ public class SalesProcessService {
         SalesProcess process = salesProcessRepository.findWithCustomerById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Sales process not found."));
 
-        SalesStage previousStage = process.getStage();
+        String previousStage = process.getStage();
 
-        if (!salesWorkflowService.isTransitionAllowed(previousStage, dto.getStage())) {
+        if (process.getWorkflow() == null) {
+            throw new IllegalArgumentException("Sales process does not have a workflow assigned.");
+        }
+
+        if (!salesWorkflowService.isTransitionAllowed(process.getWorkflow().getId(), previousStage, dto.getStage())) {
             throw new IllegalArgumentException(
                     "Transition from " + previousStage + " to " + dto.getStage() + " is not allowed by workflow."
             );
@@ -74,7 +88,13 @@ public class SalesProcessService {
         User changedBy = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("Authenticated user not found."));
 
-        process.changeStage(dto.getStage());
+        var targetStage = salesWorkflowService.findStageByName(process.getWorkflow().getId(), dto.getStage());
+        
+        process.changeStage(
+                dto.getStage(),
+                targetStage.endStage(),
+                targetStage.successfulEnd()
+        );
 
         salesProcessHistoryRepository.save(
                 new SalesProcessHistory(process, previousStage, dto.getStage(), changedBy)
@@ -108,11 +128,18 @@ public class SalesProcessService {
     }
 
     @Transactional(readOnly = true)
-    public List<SalesStage> getAvailableTransitions(Long processId) {
+    public List<String> getAvailableTransitions(Long processId) {
         SalesProcess process = salesProcessRepository.findWithCustomerById(processId)
                 .orElseThrow(() -> new IllegalArgumentException("Sales process not found."));
 
-        return salesWorkflowService.getAvailableTransitions(process.getStage());
+        if (process.getWorkflow() == null) {
+                return List.of();
+        }
+
+        return salesWorkflowService.getAvailableTransitions(
+                process.getWorkflow().getId(),
+                process.getStage()
+        );
     }
 
     private SalesProcessResponseDTO mapToDto(SalesProcess salesProcess) {
@@ -121,6 +148,8 @@ public class SalesProcessService {
                 salesProcess.getCustomer().getId(),
                 salesProcess.getCustomer().getName(),
                 salesProcess.getTitle(),
+                salesProcess.getWorkflow() != null ? salesProcess.getWorkflow().getId() : null,
+                salesProcess.getWorkflow() != null ? salesProcess.getWorkflow().getName() : null,
                 salesProcess.getStage(),
                 salesProcess.getStatus(),
                 salesProcess.getOutcome(),

@@ -87,6 +87,13 @@
   align-items: center;
 }
 
+.summary-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .summary-stats {
   display: flex;
   gap: 10px;
@@ -150,10 +157,41 @@ td {
   color: #6b7280;
 }
 
+.empty-workflow-panel h2 {
+  margin: 0 0 8px;
+}
+
+.empty-workflow-panel p {
+  margin: 0;
+  color: #6b7280;
+}
+
 .forms-grid {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
   gap: 20px;
+}
+
+.form-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 16px;
+}
+
+.form-heading h2,
+.form-heading p {
+  margin: 0;
+}
+
+.form-heading p {
+  margin-top: 4px;
+  color: #6b7280;
+}
+
+.collapsed-panel {
+  align-self: start;
 }
 
 .form {
@@ -204,7 +242,8 @@ select {
   cursor: pointer;
 }
 
-.primary-button:disabled {
+.primary-button:disabled,
+.secondary-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -222,5 +261,103 @@ select {
 
   .workflow-summary {
     display: block;
+  }
+}
+
+.secondary-button {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #374151;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.secondary-button:hover {
+  background: #f9fafb;
+}
+
+.order-helper {
+  display: flex;
+  align-items: end;
+}
+
+.error-text {
+  color: #dc2626;
+  font-weight: 700;
+  margin: 0;
+}
+
+.validation-text {
+  color: #b45309;
+  font-weight: 700;
+  margin: -6px 0 0;
+}
+
+.stage-timeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  align-items: stretch;
+  padding: 8px 0;
+}
+
+.stage-step {
+  position: relative;
+  min-width: 160px;
+  padding: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+}
+
+.stage-step:not(:last-child)::after {
+  content: "->";
+  position: absolute;
+  right: -24px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 900;
+  color: #6b7280;
+}
+
+.stage-node {
+  display: grid;
+  gap: 6px;
+}
+
+.stage-order {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #111827;
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.stage-flags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+@media (max-width: 1000px) {
+  .summary-actions,
+  .form-heading {
+    justify-content: flex-start;
+  }
+
+  .form-heading {
+    flex-direction: column;
+  }
+
+  .stage-step:not(:last-child)::after {
+    content: "";
   }
 }

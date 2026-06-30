@@ -126,18 +126,20 @@ public class OfferService {
         }
 
         SalesProcess salesProcess = offer.getSalesProcess();
-        SalesStage previousStage = salesProcess.getStage();
+        String previousStage = salesProcess.getStage();
 
         offer.markAsAccepted();
 
-        if (previousStage != SalesStage.WON) {
-            salesProcess.changeStage(SalesStage.WON);
+        String wonStage = "Closed Won";
 
+        if (!previousStage.equalsIgnoreCase(wonStage)) {
             User changedBy = userRepository.findByUsername(username)
                     .orElseThrow(() -> new IllegalArgumentException("Authenticated user not found."));
 
+            salesProcess.changeStage(wonStage, true, true);
+
             salesProcessHistoryRepository.save(
-                new SalesProcessHistory(salesProcess, previousStage, SalesStage.WON, changedBy)
+                    new SalesProcessHistory(salesProcess, previousStage, wonStage, changedBy)
             );
         }
 

@@ -8,7 +8,9 @@ import java.util.List;
 public record SalesWorkflowResponse(
         Long id,
         String name,
-        String region,
+        Long regionId,
+        String regionName,
+        String regionCode,
         boolean active,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
@@ -18,7 +20,9 @@ public record SalesWorkflowResponse(
         return new SalesWorkflowResponse(
                 workflow.getId(),
                 workflow.getName(),
-                workflow.getRegion(),
+                workflow.getRegion() != null ? workflow.getRegion().getId() : null,
+                workflow.getRegion() != null ? workflow.getRegion().getName() : "GLOBAL",
+                workflow.getRegion() != null ? workflow.getRegion().getCode() : "GLOBAL",
                 workflow.isActive(),
                 workflow.getCreatedAt(),
                 workflow.getUpdatedAt(),

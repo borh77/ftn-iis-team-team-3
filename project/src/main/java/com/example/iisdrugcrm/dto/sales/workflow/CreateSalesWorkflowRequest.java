@@ -8,8 +8,6 @@ public record CreateSalesWorkflowRequest(
         @Size(max = 150)
         String name,
 
-        @NotBlank(message = "Region is required")
-        @Size(max = 100)
-        String region
+        Long regionId
 ) {
 }

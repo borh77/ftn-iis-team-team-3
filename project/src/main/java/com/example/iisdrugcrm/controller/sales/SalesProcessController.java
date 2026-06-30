@@ -1,6 +1,5 @@
 package com.example.iisdrugcrm.controller.sales;
 
-import com.example.iisdrugcrm.domain.sales.SalesStage;
 import com.example.iisdrugcrm.dto.sales.process.CreateSalesProcessRequestDTO;
 import com.example.iisdrugcrm.dto.sales.process.SalesProcessHistoryResponseDTO;
 import com.example.iisdrugcrm.dto.sales.process.SalesProcessResponseDTO;
@@ -63,7 +62,7 @@ public class SalesProcessController {
 
     @GetMapping("/{id}/available-transitions")
     @PreAuthorize("hasAnyRole('SALES_REPRESENTATIVE', 'SALES_MANAGER', 'ACCOUNT_MANAGER')")
-    public ResponseEntity<List<SalesStage>> getAvailableTransitions(@PathVariable Long id) {
+    public ResponseEntity<List<String>> getAvailableTransitions(@PathVariable Long id) {
         return ResponseEntity.ok(salesProcessService.getAvailableTransitions(id));
     }
 }

@@ -1,13 +1,12 @@
 package com.example.iisdrugcrm.dto.sales.process;
 
-import com.example.iisdrugcrm.domain.sales.SalesStage;
 import java.time.LocalDateTime;
 
 public class SalesProcessHistoryResponseDTO {
     private Long id;
     private Long salesProcessId;
-    private SalesStage previousStage;
-    private SalesStage newStage;
+    private String previousStage;
+    private String newStage;
     private LocalDateTime changedAt;
     private Long changedById;
     private String changedByUsername;
@@ -15,8 +14,8 @@ public class SalesProcessHistoryResponseDTO {
     public SalesProcessHistoryResponseDTO(
             Long id,
             Long salesProcessId,
-            SalesStage previousStage,
-            SalesStage newStage,
+            String previousStage,
+            String newStage,
             LocalDateTime changedAt,
             Long changedById,
             String changedByUsername
@@ -32,8 +31,8 @@ public class SalesProcessHistoryResponseDTO {
 
     public Long getId() { return id; }
     public Long getSalesProcessId() { return salesProcessId; }
-    public SalesStage getPreviousStage() { return previousStage; }
-    public SalesStage getNewStage() { return newStage; }
+    public String getPreviousStage() { return previousStage; }
+    public String getNewStage() { return newStage; }
     public LocalDateTime getChangedAt() { return changedAt; }
     public Long getChangedById() { return changedById; }
     public String getChangedByUsername() { return changedByUsername; }

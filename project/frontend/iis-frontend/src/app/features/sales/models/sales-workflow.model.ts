@@ -1,11 +1,18 @@
 export interface SalesWorkflow {
   id: number;
   name: string;
-  region: string;
+  regionId: number | null;
+  regionName: string;
+  regionCode: string;
   active: boolean;
   createdAt: string;
   updatedAt: string;
   stages: SalesStageDefinition[];
+}
+
+export interface CreateSalesWorkflowRequest {
+  name: string;
+  regionId: number | null;
 }
 
 export interface SalesStageDefinition {
@@ -30,11 +37,6 @@ export interface SalesStageTransition {
   toStageName: string;
   conditionType: string;
   conditionDescription: string;
-}
-
-export interface CreateSalesWorkflowRequest {
-  name: string;
-  region: string;
 }
 
 export interface CreateSalesStageRequest {

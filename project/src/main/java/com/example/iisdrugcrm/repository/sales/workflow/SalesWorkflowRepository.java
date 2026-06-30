@@ -10,5 +10,9 @@ public interface SalesWorkflowRepository extends JpaRepository<SalesWorkflow, Lo
 
     List<SalesWorkflow> findByActiveTrue();
 
-    Optional<SalesWorkflow> findByRegionAndActiveTrue(String region);
+    Optional<SalesWorkflow> findByIdAndActiveTrue(Long id);
+
+    Optional<SalesWorkflow> findByRegion_IdAndActiveTrue(Long regionId);
+
+    Optional<SalesWorkflow> findByRegionIsNullAndActiveTrue();
 }

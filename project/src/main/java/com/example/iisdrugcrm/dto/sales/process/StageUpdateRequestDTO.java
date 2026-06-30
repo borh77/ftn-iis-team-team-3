@@ -1,18 +1,19 @@
 package com.example.iisdrugcrm.dto.sales.process;
 
-import com.example.iisdrugcrm.domain.sales.SalesStage;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 public class StageUpdateRequestDTO {
 
-    @NotNull
-    private SalesStage stage;
+    @NotBlank
+    @Size(max = 100)
+    private String stage;
 
-    public SalesStage getStage() {
+    public String getStage() {
         return stage;
     }
 
-    public void setStage(SalesStage stage) {
+    public void setStage(String stage) {
         this.stage = stage;
     }
 }

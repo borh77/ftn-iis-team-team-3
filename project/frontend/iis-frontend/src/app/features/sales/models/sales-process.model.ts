@@ -1,11 +1,4 @@
-export type SalesStage =
-  | 'NEW'
-  | 'CONTACTED'
-  | 'QUALIFIED'
-  | 'PROPOSAL_SENT'
-  | 'NEGOTIATION'
-  | 'WON'
-  | 'LOST';
+export type SalesStage = string;
 
 export type SalesProcessStatus = 'ACTIVE' | 'SUCCESSFUL' | 'UNSUCCESSFUL';
 export type SalesProcessOutcome = 'OPEN' | 'CLOSED_WON' | 'CLOSED_LOST';
@@ -20,11 +13,14 @@ export interface SalesProcess {
   outcome: SalesProcessOutcome;
   createdAt: string;
   updatedAt: string;
+  workflowId: number | null;
+  workflowName: string | null;
 }
 
 export interface SalesProcessRequest {
   customerId: number;
   title: string;
+  workflowId: number;
 }
 
 export interface UpdateSalesStageRequest {

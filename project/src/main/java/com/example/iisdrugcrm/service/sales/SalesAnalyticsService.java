@@ -75,7 +75,7 @@ public class SalesAnalyticsService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         Map<String, Long> processesByStage = processes.stream()
-                .collect(Collectors.groupingBy(process -> process.getStage().name(), Collectors.counting()));
+                .collect(Collectors.groupingBy(SalesProcess::getStage, Collectors.counting()));
 
         Map<String, Long> offersByStatus = offers.stream()
                 .collect(Collectors.groupingBy(offer -> offer.getStatus().name(), Collectors.counting()));

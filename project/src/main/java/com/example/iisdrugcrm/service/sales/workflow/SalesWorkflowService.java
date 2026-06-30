@@ -9,13 +9,15 @@ import com.example.iisdrugcrm.dto.sales.workflow.CreateSalesWorkflowRequest;
 import com.example.iisdrugcrm.dto.sales.workflow.SalesStageResponse;
 import com.example.iisdrugcrm.dto.sales.workflow.SalesStageTransitionResponse;
 import com.example.iisdrugcrm.dto.sales.workflow.SalesWorkflowResponse;
+import com.example.iisdrugcrm.repository.RegionRepository;
 import com.example.iisdrugcrm.repository.sales.workflow.SalesStageDefinitionRepository;
 import com.example.iisdrugcrm.repository.sales.workflow.SalesStageTransitionRepository;
 import com.example.iisdrugcrm.repository.sales.workflow.SalesWorkflowRepository;
+import com.example.iisdrugcrm.domain.Region;
+import com.example.iisdrugcrm.repository.RegionRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.example.iisdrugcrm.domain.sales.SalesStage;
 
 import java.util.Comparator;
 import java.util.List;
@@ -26,15 +28,18 @@ public class SalesWorkflowService {
     private final SalesWorkflowRepository workflowRepository;
     private final SalesStageDefinitionRepository stageRepository;
     private final SalesStageTransitionRepository transitionRepository;
+    private final RegionRepository regionRepository;
 
     public SalesWorkflowService(
             SalesWorkflowRepository workflowRepository,
             SalesStageDefinitionRepository stageRepository,
-            SalesStageTransitionRepository transitionRepository
+            SalesStageTransitionRepository transitionRepository,
+            RegionRepository regionRepository
     ) {
         this.workflowRepository = workflowRepository;
         this.stageRepository = stageRepository;
         this.transitionRepository = transitionRepository;
+        this.regionRepository = regionRepository;
     }
 
     @Transactional(readOnly = true)
@@ -53,7 +58,14 @@ public class SalesWorkflowService {
 
     @Transactional
     public SalesWorkflowResponse createWorkflow(CreateSalesWorkflowRequest request) {
-        SalesWorkflow workflow = new SalesWorkflow(request.name(), request.region());
+        Region region = null;
+
+        if (request.regionId() != null) {
+            region = regionRepository.findById(request.regionId())
+                    .orElseThrow(() -> new IllegalArgumentException("Region not found."));
+        }
+
+        SalesWorkflow workflow = new SalesWorkflow(request.name(), region);
         return SalesWorkflowResponse.from(workflowRepository.save(workflow));
     }
 
@@ -65,7 +77,7 @@ public class SalesWorkflowService {
 
         SalesStageDefinition stage = new SalesStageDefinition(
                 workflow,
-                request.name(),
+                request.name().trim(),
                 request.description(),
                 request.stageOrder(),
                 request.startStage(),
@@ -132,8 +144,8 @@ public class SalesWorkflowService {
     }
 
     @Transactional(readOnly = true)
-    public boolean isTransitionAllowed(SalesStage currentStage, SalesStage targetStage) {
-        SalesWorkflow workflow = findActiveWorkflowByRegion("GLOBAL");
+    public boolean isTransitionAllowed(Long workflowId, String currentStage, String targetStage) {
+        SalesWorkflow workflow = findActiveWorkflowEntity(workflowId);
 
         SalesStageDefinition fromStage = findStageDefinition(workflow.getId(), currentStage);
         SalesStageDefinition toStage = findStageDefinition(workflow.getId(), targetStage);
@@ -148,17 +160,24 @@ public class SalesWorkflowService {
     }
 
     @Transactional(readOnly = true)
-    public List<SalesStage> getAvailableTransitions(SalesStage currentStage) {
-        SalesWorkflow workflow = findActiveWorkflowByRegion("GLOBAL");
+    public List<String> getAvailableTransitions(Long workflowId, String currentStage) {
+        SalesWorkflow workflow = findActiveWorkflowEntity(workflowId);
 
         SalesStageDefinition fromStage = findStageDefinition(workflow.getId(), currentStage);
 
         return transitionRepository.findByWorkflow_Id(workflow.getId())
                 .stream()
                 .filter(transition -> transition.getFromStage().getId().equals(fromStage.getId()))
-                .map(transition -> mapWorkflowStageNameToEnumStage(transition.getToStage().getName()))
+                .map(transition -> transition.getToStage().getName())
                 .toList();
     }
+
+    @Transactional(readOnly = true)
+    public SalesStageResponse findStageByName(Long workflowId, String stageName) {
+        SalesWorkflow workflow = findActiveWorkflowEntity(workflowId);        SalesStageDefinition stage = findStageDefinition(workflow.getId(), stageName);
+        return SalesStageResponse.from(stage);
+    }
+
 
     private SalesWorkflow findWorkflow(Long workflowId) {
         return workflowRepository.findById(workflowId)
@@ -168,6 +187,16 @@ public class SalesWorkflowService {
     private SalesStageDefinition findStage(Long stageId) {
         return stageRepository.findById(stageId)
                 .orElseThrow(() -> new EntityNotFoundException("Sales stage not found"));
+    }
+
+    private SalesStageDefinition findStageDefinition(Long workflowId, String stageName) {
+        return stageRepository.findByWorkflow_IdOrderByStageOrderAsc(workflowId)
+                .stream()
+                .filter(definition -> definition.getName().equalsIgnoreCase(stageName.trim()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "Stage " + stageName + " is not defined in active workflow."
+                ));
     }
 
     private void validateStageFlags(Long workflowId, CreateSalesStageRequest request) {
@@ -183,47 +212,20 @@ public class SalesWorkflowService {
         }
     }
 
-    private SalesWorkflow findActiveWorkflowByRegion(String region) {
-        return workflowRepository.findByRegionAndActiveTrue(region)
-                .orElseThrow(() -> new IllegalStateException(
-                        "Active sales workflow for region " + region + " not found."
-                ));
+    @Transactional(readOnly = true)
+    public SalesWorkflow findActiveWorkflowEntity(Long workflowId) {
+        return workflowRepository.findByIdAndActiveTrue(workflowId)
+                .orElseThrow(() -> new IllegalArgumentException("Active sales workflow not found."));
     }
 
-    private SalesStageDefinition findStageDefinition(Long workflowId, SalesStage stage) {
-        String stageName = mapEnumStageToWorkflowStageName(stage);
-
-        return stageRepository.findByWorkflow_IdOrderByStageOrderAsc(workflowId)
+    @Transactional(readOnly = true)
+    public SalesStageResponse findStartStage(Long workflowId) {
+        SalesStageDefinition startStage = stageRepository.findByWorkflow_IdOrderByStageOrderAsc(workflowId)
                 .stream()
-                .filter(definition -> definition.getName().equals(stageName))
+                .filter(SalesStageDefinition::isStartStage)
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException(
-                        "Stage " + stageName + " is not defined in active workflow."
-                ));
-    }
+                .orElseThrow(() -> new IllegalStateException("Selected workflow does not have a start stage."));
 
-    private String mapEnumStageToWorkflowStageName(SalesStage stage) {
-        return switch (stage) {
-            case NEW -> "New";
-            case CONTACTED -> "Contacted";
-            case QUALIFIED -> "Qualified";
-            case PROPOSAL_SENT -> "Proposal Sent";
-            case NEGOTIATION -> "Negotiation";
-            case WON -> "Closed Won";
-            case LOST -> "Closed Lost";
-        };
-    }
-
-    private SalesStage mapWorkflowStageNameToEnumStage(String stageName) {
-        return switch (stageName) {
-            case "New" -> SalesStage.NEW;
-            case "Contacted" -> SalesStage.CONTACTED;
-            case "Qualified" -> SalesStage.QUALIFIED;
-            case "Proposal Sent" -> SalesStage.PROPOSAL_SENT;
-            case "Negotiation" -> SalesStage.NEGOTIATION;
-            case "Closed Won" -> SalesStage.WON;
-            case "Closed Lost" -> SalesStage.LOST;
-            default -> throw new IllegalStateException("Unknown workflow stage name: " + stageName);
-        };
+        return SalesStageResponse.from(startStage);
     }
 }

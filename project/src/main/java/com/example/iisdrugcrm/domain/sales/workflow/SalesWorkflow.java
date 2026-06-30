@@ -1,6 +1,7 @@
 package com.example.iisdrugcrm.domain.sales.workflow;
 
 import jakarta.persistence.*;
+import com.example.iisdrugcrm.domain.Region;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -17,8 +18,9 @@ public class SalesWorkflow {
     @Column(nullable = false, length = 150)
     private String name;
 
-    @Column(nullable = false, length = 100)
-    private String region;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "region_id")
+    private Region region;
 
     @Column(nullable = false)
     private boolean active = true;
@@ -35,7 +37,7 @@ public class SalesWorkflow {
     protected SalesWorkflow() {
     }
 
-    public SalesWorkflow(String name, String region) {
+    public SalesWorkflow(String name, Region region) {
         this.name = name;
         this.region = region;
         this.active = true;
@@ -55,8 +57,7 @@ public class SalesWorkflow {
 
     public Long getId() { return id; }
     public String getName() { return name; }
-    public String getRegion() { return region; }
-    public boolean isActive() { return active; }
+    public Region getRegion() { return region; }    public boolean isActive() { return active; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public List<SalesStageDefinition> getStages() { return stages; }

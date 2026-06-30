@@ -42,6 +42,7 @@ export interface SalesMarketProduct {
   variantDosage: string;
   regionId: number;
   regionName: string;
+  regionCode?: string;
   localName: string;
   packagingDescription?: string;
   barcode?: string;

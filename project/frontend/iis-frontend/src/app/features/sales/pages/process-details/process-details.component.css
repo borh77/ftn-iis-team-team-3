@@ -49,6 +49,32 @@
   background: #f5f7fb;
 }
 
+.primary-button,
+.secondary-button {
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.primary-button {
+  background: #2563eb;
+  color: #fff;
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.secondary-button {
+  background: #f8fafc;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
 .stage-card,
 .info-card {
   background: #fff;
@@ -259,4 +285,32 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.process-action-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin: 16px 0 20px;
+  padding: 16px;
+  border: 1px solid #dce3ef;
+  border-radius: 16px;
+  background: #f8fbff;
+}
+
+.process-action-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #4f5d75;
+  font-weight: 600;
+}
+
+.process-action-form input,
+.process-action-form select {
+  border: 1px solid #cfd7e6;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+  background: #fff;
 }

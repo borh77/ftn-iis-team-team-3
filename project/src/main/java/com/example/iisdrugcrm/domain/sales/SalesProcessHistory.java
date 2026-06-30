@@ -16,13 +16,11 @@ public class SalesProcessHistory {
     @JoinColumn(name = "sales_process_id", nullable = false)
     private SalesProcess salesProcess;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private SalesStage previousStage;
+    @Column(nullable = false, length = 100)
+    private String previousStage;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private SalesStage newStage;
+    @Column(nullable = false, length = 100)
+    private String newStage;
 
     @Column(nullable = false)
     private LocalDateTime changedAt;
@@ -34,8 +32,7 @@ public class SalesProcessHistory {
     protected SalesProcessHistory() {
     }
 
-    public SalesProcessHistory(SalesProcess salesProcess, SalesStage previousStage, SalesStage newStage, User changedBy) {
-        this.salesProcess = salesProcess;
+    public SalesProcessHistory(SalesProcess salesProcess, String previousStage, String newStage, User changedBy) {        this.salesProcess = salesProcess;
         this.previousStage = previousStage;
         this.newStage = newStage;
         this.changedBy = changedBy;
@@ -50,12 +47,12 @@ public class SalesProcessHistory {
         return salesProcess;
     }
 
-    public SalesStage getPreviousStage() {
-        return previousStage;
+    public String getPreviousStage() { 
+        return previousStage; 
     }
 
-    public SalesStage getNewStage() {
-        return newStage;
+    public String getNewStage() { 
+        return newStage; 
     }
 
     public LocalDateTime getChangedAt() {
