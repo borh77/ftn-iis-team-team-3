@@ -78,13 +78,30 @@
     <p class="success-box">{{ successMessage }}</p>
   }
 
+  <div class="filter-bar" aria-label="Pricelist filters">
+    <label>
+      <span>Status</span>
+      <select [(ngModel)]="selectedStatus" [ngModelOptions]="{standalone: true}">
+        @for (option of statusOptions; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </label>
+
+    <button type="button" class="ghost" (click)="resetFilters()" [disabled]="!statusFilterActive">
+      Reset filters
+    </button>
+  </div>
+
   @if (loading) {
     <p class="muted">Loading pricelists...</p>
   } @else if (!pricelists.length) {
     <p class="muted">You don't have any pricelists yet.</p>
+  } @else if (!filteredPricelists.length) {
+    <p class="muted">No pricelists found for the selected status.</p>
   } @else {
     <div class="pricelist-grid">
-      @for (p of pricelists; track p.id) {
+      @for (p of filteredPricelists; track p.id) {
         <article class="pricelist-card">
           <div class="pricelist-card__header">
             <div>

@@ -14,6 +14,8 @@ import { CatalogService } from '../../core/catalog.service';
 import { CatalogVariant } from '../../core/catalog.model';
 import { ERROR_MESSAGE_MS, SUCCESS_MESSAGE_MS, TransientMessageService } from '../../core/transient-message.service';
 
+type PricelistStatusFilter = Pricelist['status'] | 'ALL';
+
 @Component({
   selector: 'app-pricelist-list',
   standalone: true,
@@ -53,6 +55,15 @@ export class PricelistListComponent implements OnInit, OnDestroy {
   replacingItemId: number | null = null;
   replacementVariantIds: Record<number, number | null> = {};
   activeVariants: CatalogVariant[] = [];
+  selectedStatus: PricelistStatusFilter = 'ALL';
+
+  readonly statusOptions: Array<{ value: PricelistStatusFilter; label: string }> = [
+    { value: 'ALL', label: 'All statuses' },
+    { value: 'DRAFT', label: 'Draft' },
+    { value: 'IN_REVIEW', label: 'In review' },
+    { value: 'ACTIVE', label: 'Active' },
+    { value: 'ARCHIVED', label: 'Archived' },
+  ];
 
   ngOnInit(): void {
     const navigationSuccess = globalThis.history?.state?.successMessage;
@@ -89,6 +100,21 @@ export class PricelistListComponent implements OnInit, OnDestroy {
   reload(): void {
     this.loadDrafts();
     this.load();
+  }
+
+  get filteredPricelists(): Pricelist[] {
+    if (this.selectedStatus === 'ALL') {
+      return this.pricelists;
+    }
+    return this.pricelists.filter((pricelist) => pricelist.status === this.selectedStatus);
+  }
+
+  get statusFilterActive(): boolean {
+    return this.selectedStatus !== 'ALL';
+  }
+
+  resetFilters(): void {
+    this.selectedStatus = 'ALL';
   }
 
   loadDrafts(): void {
@@ -376,7 +402,13 @@ export class PricelistListComponent implements OnInit, OnDestroy {
   }
 
   statusLabel(status: Pricelist['status']): string {
-    return status.replace('_', ' ');
+    const labels: Record<Pricelist['status'], string> = {
+      DRAFT: 'Draft',
+      IN_REVIEW: 'In review',
+      ACTIVE: 'Active',
+      ARCHIVED: 'Archived',
+    };
+    return labels[status] ?? status.replace('_', ' ');
   }
 
   draftStepLabel(step: PricelistCreationStep): string {
