@@ -15,6 +15,8 @@ public interface PricelistService {
 
     List<PricelistResponseDTO> listTeamCenovniciForUser(Long currentUserId);
 
+    List<PricelistResponseDTO> listReviewQueueForUser(Long currentUserId, boolean currentUserAdmin, boolean currentUserPricelistCreator);
+
     PricelistResponseDTO getById(Long id, Long currentUserId);
 
     PricelistResponseDTO update(Long id, CreatePricelistDTO dto, Long currentUserId);
@@ -24,6 +26,8 @@ public interface PricelistService {
     PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto, Long currentUserId);
 
     PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto, Long currentUserId, boolean currentUserAdmin);
+
+    PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto, Long currentUserId, boolean currentUserAdmin, boolean currentUserPricelistCreator);
 
     PricelistResponseDTO createNewVersion(Long sourcePricelistId, Long currentUserId);
 

@@ -3,7 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { finalize } from 'rxjs';
+import { finalize, forkJoin } from 'rxjs';
 import { extractBackendErrorMessage } from '../../core/http-error-message';
 import { PricelistService } from '../../core/pricelist.service';
 import { Pricelist, PricelistCreationStep, PricelistItem, PricelistWizardState } from '../../core/pricelist.models';
@@ -77,10 +77,13 @@ export class PricelistListComponent implements OnInit, OnDestroy {
   load(): void {
     this.loading = true;
     this.clearError();
-    this.service.team().subscribe({
-      next: (list) => {
+    forkJoin({
+      team: this.service.team(),
+      reviewQueue: this.service.reviewQueue(),
+    }).subscribe({
+      next: ({ team, reviewQueue }) => {
         this.loading = false;
-        this.pricelists = [...list];
+        this.pricelists = this.mergePricelists(team, reviewQueue);
         this.cdr.detectChanges();
       },
       error: () => {
@@ -292,6 +295,16 @@ export class PricelistListComponent implements OnInit, OnDestroy {
 
   private canCollaborate(pricelist: Pricelist): boolean {
     return pricelist.canCollaborate === true;
+  }
+
+  private mergePricelists(...groups: Pricelist[][]): Pricelist[] {
+    const byId = new Map<number, Pricelist>();
+    for (const group of groups) {
+      for (const pricelist of group) {
+        byId.set(pricelist.id, pricelist);
+      }
+    }
+    return Array.from(byId.values()).sort((first, second) => second.id - first.id);
   }
 
   isChanging(pricelist: Pricelist): boolean {

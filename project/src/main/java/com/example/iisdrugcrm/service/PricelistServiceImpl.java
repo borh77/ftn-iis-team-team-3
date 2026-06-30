@@ -231,6 +231,29 @@ public class PricelistServiceImpl implements PricelistService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<PricelistResponseDTO> listReviewQueueForUser(Long currentUserId, boolean currentUserAdmin, boolean currentUserPricelistCreator) {
+        if (!currentUserAdmin && !currentUserPricelistCreator) {
+            return List.of();
+        }
+        return pricelistRepository.findAllByStatusOrderByIdDesc(PricelistStatus.IN_REVIEW).stream()
+                .filter(pricelist -> accessService.canActivateAsReviewer(
+                        pricelist,
+                        currentUserId,
+                        currentUserAdmin,
+                        currentUserPricelistCreator
+                ))
+                .map(pricelist -> toResponse(
+                        pricelist,
+                        currentUserId,
+                        accessService.canCollaborate(pricelist, currentUserId),
+                        currentUserAdmin,
+                        currentUserPricelistCreator
+                ))
+                .toList();
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto) {
         Pricelist pricelist = pricelistRepository.findById(id)
@@ -254,7 +277,20 @@ public class PricelistServiceImpl implements PricelistService {
         return changeStatus(pricelist, dto, currentUserId);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto, Long currentUserId, boolean currentUserAdmin, boolean currentUserPricelistCreator) {
+        Pricelist pricelist = pricelistRepository.findById(id)
+                .orElseThrow(() -> new PricelistNotFoundException("Pricelist not found"));
+        validateStatusChangeAccess(pricelist, dto.getTargetStatus(), currentUserId, currentUserAdmin, currentUserPricelistCreator);
+        return changeStatus(pricelist, dto, currentUserId, currentUserAdmin, currentUserPricelistCreator);
+    }
+
     private PricelistResponseDTO changeStatus(Pricelist pricelist, ChangePricelistStatusDTO dto, Long currentUserId) {
+        return changeStatus(pricelist, dto, currentUserId, false, false);
+    }
+
+    private PricelistResponseDTO changeStatus(Pricelist pricelist, ChangePricelistStatusDTO dto, Long currentUserId, boolean currentUserAdmin, boolean currentUserPricelistCreator) {
         if (pricelist.getStatus() == PricelistStatus.DRAFT
                 && dto.getTargetStatus() == PricelistStatus.IN_REVIEW
                 && !pricelist.isCreationCompleted()) {
@@ -294,13 +330,23 @@ public class PricelistServiceImpl implements PricelistService {
                 saved.getStatus()
         );
         LOGGER.info("Changed pricelist {} status from {} to {}", saved.getId(), previousStatus, saved.getStatus());
-        return toResponse(saved, currentUserId, accessService.canCollaborate(saved, currentUserId));
+        return toResponse(
+                saved,
+                currentUserId,
+                accessService.canCollaborate(saved, currentUserId),
+                currentUserAdmin,
+                currentUserPricelistCreator
+        );
     }
 
     private void validateStatusChangeAccess(Pricelist pricelist, PricelistStatus targetStatus, Long currentUserId, boolean currentUserAdmin) {
+        validateStatusChangeAccess(pricelist, targetStatus, currentUserId, currentUserAdmin, false);
+    }
+
+    private void validateStatusChangeAccess(Pricelist pricelist, PricelistStatus targetStatus, Long currentUserId, boolean currentUserAdmin, boolean currentUserPricelistCreator) {
         if (pricelist.getStatus() == PricelistStatus.IN_REVIEW
                 && (targetStatus == PricelistStatus.ACTIVE || targetStatus == PricelistStatus.DRAFT)) {
-            accessService.validateActivationReviewer(pricelist, currentUserId, currentUserAdmin);
+            accessService.validateActivationReviewer(pricelist, currentUserId, currentUserAdmin, currentUserPricelistCreator);
             return;
         }
         accessService.validateOwnerOnly(pricelist, currentUserId);
@@ -572,6 +618,16 @@ public class PricelistServiceImpl implements PricelistService {
         PricelistResponseDTO response = PricelistResponseDTO.fromEntity(pricelist, currentUserId, canCollaborate, catalogVariants);
         boolean canReview = pricelist.getStatus() == PricelistStatus.IN_REVIEW
                 && accessService.canActivateAsReviewer(pricelist, currentUserId);
+        response.setCanActivate(canReview && !hasInactiveVariants(pricelist, catalogVariants));
+        response.setCanReject(canReview);
+        return response;
+    }
+
+    private PricelistResponseDTO toResponse(Pricelist pricelist, Long currentUserId, boolean canCollaborate, boolean currentUserAdmin, boolean currentUserPricelistCreator) {
+        Map<Long, CatalogVariantDTO> catalogVariants = catalogVariantsFor(pricelist);
+        PricelistResponseDTO response = PricelistResponseDTO.fromEntity(pricelist, currentUserId, canCollaborate, catalogVariants);
+        boolean canReview = pricelist.getStatus() == PricelistStatus.IN_REVIEW
+                && accessService.canActivateAsReviewer(pricelist, currentUserId, currentUserAdmin, currentUserPricelistCreator);
         response.setCanActivate(canReview && !hasInactiveVariants(pricelist, catalogVariants));
         response.setCanReject(canReview);
         return response;

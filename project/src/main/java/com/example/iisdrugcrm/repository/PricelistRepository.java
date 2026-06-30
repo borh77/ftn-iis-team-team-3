@@ -24,6 +24,8 @@ public interface PricelistRepository extends JpaRepository<Pricelist, Long> {
 
     List<Pricelist> findAllByCreatedByInOrderByIdDesc(Collection<Long> createdBy);
 
+    List<Pricelist> findAllByStatusOrderByIdDesc(PricelistStatus status);
+
     List<Pricelist> findAllByRootPricelistIdOrderByVersionNumberDesc(Long rootPricelistId);
 
     List<Pricelist> findAllByParentPricelistIdOrderByVersionNumberDesc(Long parentPricelistId);

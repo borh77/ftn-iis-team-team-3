@@ -33,6 +33,10 @@ export class PricelistService {
     return this.http.get<Pricelist[]>(`${this.apiBaseUrl}/api/pricelists/team`);
   }
 
+  reviewQueue(): Observable<Pricelist[]> {
+    return this.http.get<Pricelist[]>(`${this.apiBaseUrl}/api/pricelists/review-queue`);
+  }
+
   changeStatus(id: number, payload: ChangePricelistStatusPayload): Observable<Pricelist> {
     return this.http.put<Pricelist>(`${this.apiBaseUrl}/api/pricelists/${id}/status`, payload);
   }
