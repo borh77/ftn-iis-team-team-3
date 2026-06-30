@@ -60,12 +60,12 @@ export class OrderUploadComponent implements OnDestroy {
 
   validateSelectedFile(): void {
     if (!this.selectedFile) {
-      this.showError('Please choose a JSON or CSV document first.');
+      this.showError('Please choose a CSV document first.');
       return;
     }
 
     if (!this.isSupportedFile(this.selectedFile)) {
-      this.showError('Unsupported file type. Please upload a JSON or CSV document.');
+      this.showError('Only CSV files are supported for procurement validation.');
       return;
     }
 
@@ -110,18 +110,13 @@ export class OrderUploadComponent implements OnDestroy {
     this.clearError();
 
     if (file && !this.isSupportedFile(file)) {
-      this.showError('Unsupported file type. Please upload a JSON or CSV document.');
+      this.showError('Only CSV files are supported for procurement validation.');
     }
   }
 
   private isSupportedFile(file: File): boolean {
     const name = file.name.toLowerCase();
-    const type = file.type.toLowerCase();
-    return name.endsWith('.json')
-      || name.endsWith('.csv')
-      || type === 'application/json'
-      || type === 'text/csv'
-      || type === 'application/csv';
+    return name.endsWith('.csv');
   }
 
   private createErrorMessage(error: HttpErrorResponse): string {

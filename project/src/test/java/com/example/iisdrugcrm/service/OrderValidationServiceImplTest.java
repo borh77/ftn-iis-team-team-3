@@ -34,11 +34,15 @@ import org.springframework.mock.web.MockMultipartFile;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -70,7 +74,7 @@ class OrderValidationServiceImplTest {
     @BeforeEach
     void setUp() throws Exception {
         service = new OrderValidationServiceImpl(userRepository, pricelistRepository, specialOfferRepository, catalogService, parserResolver);
-        file = new MockMultipartFile("file", "order.json", "application/json", "[]".getBytes());
+        file = new MockMultipartFile("file", "order.csv", "text/csv", "variantId,requestedQuantity\n".getBytes());
         Region region = region(1L, "Srbija", "RS");
         buyer = buyer("buyer", region, "Pharmacy chains");
         pricelist = pricelist(10L, region, "Pharmacy chains");
@@ -93,6 +97,26 @@ class OrderValidationServiceImplTest {
         assertTrue(result.isValid());
         assertEquals(new BigDecimal("90.00"), result.getValidatedItems().get(0).getUnitPrice());
         assertEquals(new BigDecimal("4950.00"), result.getTotalPrice());
+    }
+
+    @Test
+    void unsupportedJsonUploadFailsBeforeBusinessValidation() {
+        MockMultipartFile jsonFile = new MockMultipartFile(
+                "file",
+                "order.json",
+                "application/json",
+                "[{\"variantId\":2,\"requestedQuantity\":10}]".getBytes()
+        );
+        when(parserResolver.resolve(jsonFile))
+                .thenThrow(new IllegalArgumentException("Only CSV procurement documents are currently supported."));
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.validateOrderDocument("buyer", jsonFile)
+        );
+
+        assertEquals("Only CSV procurement documents are currently supported.", exception.getMessage());
+        verify(userRepository, never()).findByUsername(anyString());
     }
 
     @Test
@@ -188,6 +212,23 @@ class OrderValidationServiceImplTest {
     }
 
     @Test
+    void variantNameWithInvalidQuantityReturnsProblematicItem() throws Exception {
+        when(parser.parse(file)).thenReturn(List.of(new OrderDocumentItemDTO("Brufen LIQUID 400mg", 0)));
+        when(catalogService.findVariantsByDisplayNameIncludingInactive("Brufen LIQUID 400mg"))
+                .thenReturn(List.of(catalogVariant(101L, "Brufen LIQUID 400mg", true, null, null)));
+        when(catalogService.findVariantsByIdsIncludingInactive(anyCollection()))
+                .thenReturn(Map.of(101L, catalogVariant(101L, "Brufen LIQUID 400mg", true, null, null)));
+
+        ValidationResultDTO result = service.validateOrderDocument("buyer", file);
+
+        assertFalse(result.isValid());
+        assertEquals(1, result.getInvalidItems().size());
+        assertEquals("INVALID_QUANTITY", result.getInvalidItems().get(0).getErrorCode());
+        assertEquals("Brufen LIQUID 400mg", result.getInvalidItems().get(0).getVariantName());
+        assertEquals(0, result.getInvalidItems().get(0).getRequestedQuantity());
+    }
+
+    @Test
     void ambiguousVariantNameReturnsProblematicItem() throws Exception {
         when(parser.parse(file)).thenReturn(List.of(new OrderDocumentItemDTO("Medicine A 10mg", 10)));
         when(catalogService.findVariantsByDisplayNameIncludingInactive("Medicine A 10mg"))
@@ -223,6 +264,28 @@ class OrderValidationServiceImplTest {
         assertEquals("Old Medicine 10mg", replacement.getOldVariantName());
         assertEquals(303L, replacement.getNewVariantId());
         assertEquals(55, replacement.getRequestedQuantity());
+    }
+
+    @Test
+    void archivedAdvilVariantResolvedByNameReturnsReplacementSuggestion() throws Exception {
+        when(parser.parse(file)).thenReturn(List.of(new OrderDocumentItemDTO("Advil TABLET 400mg", 2)));
+        when(catalogService.findVariantsByDisplayNameIncludingInactive("Advil TABLET 400mg"))
+                .thenReturn(List.of(catalogVariant(202L, "Advil TABLET 400mg", false, 303L, "Replacement Medicine 20mg")));
+        when(catalogService.findVariantsByIdsIncludingInactive(any()))
+                .thenReturn(
+                        Map.of(202L, catalogVariant(202L, "Advil TABLET 400mg", false, 303L, "Replacement Medicine 20mg")),
+                        Map.of(303L, catalogVariant(303L, "Replacement Medicine 20mg", true, null, null))
+                );
+
+        ValidationResultDTO result = service.validateOrderDocument("buyer", file);
+
+        assertFalse(result.isValid());
+        assertEquals(1, result.getReplacements().size());
+        ReplacementSuggestionDTO replacement = result.getReplacements().get(0);
+        assertEquals(202L, replacement.getOldVariantId());
+        assertEquals("Advil TABLET 400mg", replacement.getOldVariantName());
+        assertEquals(303L, replacement.getNewVariantId());
+        assertEquals(2, replacement.getRequestedQuantity());
     }
 
     @Test

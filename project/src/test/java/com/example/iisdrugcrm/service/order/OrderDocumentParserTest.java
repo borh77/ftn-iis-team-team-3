@@ -12,39 +12,20 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class OrderDocumentParserTest {
 
     @Test
-    void jsonParserParsesValidDocument() throws Exception {
-        JsonOrderDocumentParser parser = new JsonOrderDocumentParser(new ObjectMapper());
-        MockMultipartFile file = new MockMultipartFile(
-                "file",
-                "order.json",
-                "application/json",
-                "[{\"variantId\":10,\"requestedQuantity\":150}]".getBytes()
-        );
-
-        List<OrderDocumentItemDTO> items = parser.parse(file);
-
-        assertEquals(1, items.size());
-        assertEquals(10L, items.get(0).getVariantId());
-        assertEquals(150, items.get(0).getRequestedQuantity());
-    }
-
-    @Test
     void csvParserParsesValidDocument() throws Exception {
         CsvOrderDocumentParser parser = new CsvOrderDocumentParser();
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "order.csv",
                 "text/csv",
-                "variantId,requestedQuantity\n10,150\n11,50\n".getBytes()
+                "variantId,requestedQuantity\n2,10\n".getBytes()
         );
 
         List<OrderDocumentItemDTO> items = parser.parse(file);
 
-        assertEquals(2, items.size());
-        assertEquals(10L, items.get(0).getVariantId());
-        assertEquals(150, items.get(0).getRequestedQuantity());
-        assertEquals(11L, items.get(1).getVariantId());
-        assertEquals(50, items.get(1).getRequestedQuantity());
+        assertEquals(1, items.size());
+        assertEquals(2L, items.get(0).getVariantId());
+        assertEquals(10, items.get(0).getRequestedQuantity());
     }
 
     @Test
@@ -85,14 +66,29 @@ class OrderDocumentParserTest {
 
     @Test
     void resolverRejectsUnsupportedFormat() {
-        OrderDocumentParserResolver resolver = new OrderDocumentParserResolver(List.of(
-                new JsonOrderDocumentParser(new ObjectMapper()),
-                new CsvOrderDocumentParser()
-        ));
+        OrderDocumentParserResolver resolver = new OrderDocumentParserResolver(List.of(new CsvOrderDocumentParser()));
         MockMultipartFile file = new MockMultipartFile("file", "order.txt", "text/plain", "demo".getBytes());
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> resolver.resolve(file));
 
-        assertEquals("Unsupported order document format. Please upload a JSON or CSV file.", exception.getMessage());
+        assertEquals("Only CSV procurement documents are currently supported.", exception.getMessage());
+    }
+
+    @Test
+    void resolverRejectsJsonUploadWithCsvOnlyMessage() {
+        OrderDocumentParserResolver resolver = new OrderDocumentParserResolver(List.of(
+                new JsonOrderDocumentParser(new ObjectMapper()),
+                new CsvOrderDocumentParser()
+        ));
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "order.json",
+                "application/json",
+                "[{\"variantId\":2,\"requestedQuantity\":10}]".getBytes()
+        );
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> resolver.resolve(file));
+
+        assertEquals("Only CSV procurement documents are currently supported.", exception.getMessage());
     }
 }

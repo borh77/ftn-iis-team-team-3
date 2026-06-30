@@ -3,7 +3,7 @@
     <div>
       <p class="kicker">Procurement validation</p>
       <h2>Procurement Document Validation</h2>
-      <p class="lede">Upload a JSON or CSV order document and validate requested variants against your active pricelist.</p>
+      <p class="lede">Upload a CSV order document and validate requested variants against your active pricelist.</p>
     </div>
   </div>
 </section>
@@ -21,7 +21,7 @@
       #fileInput
       type="file"
       class="file-input"
-      accept=".json,.csv,application/json,text/csv"
+      accept=".csv,text/csv,application/csv"
       (change)="onFileInputChange($event)"
     />
 
@@ -29,9 +29,12 @@
       <span class="upload-icon">CSV</span>
       <div>
         <h3>{{ selectedFile ? selectedFile.name : 'Drop your order document here' }}</h3>
-        <p class="muted">
-          Supported CSV columns: variantId, requestedQuantity; variantName, requestedQuantity; or productName, form, dosage, requestedQuantity.
-        </p>
+        <p class="muted">Supported format: CSV</p>
+        <ul class="csv-columns" aria-label="Supported CSV columns">
+          <li>variantId, requestedQuantity</li>
+          <li>variantName, requestedQuantity</li>
+          <li>productName, form, dosage, requestedQuantity</li>
+        </ul>
       </div>
     </div>
 

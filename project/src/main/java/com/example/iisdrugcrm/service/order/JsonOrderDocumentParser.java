@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Component
 public class JsonOrderDocumentParser implements OrderDocumentParser {
 
+    // TODO Sprint 3: JSON procurement uploads are disabled until the format is made reliable.
     private final ObjectMapper objectMapper;
 
     public JsonOrderDocumentParser(ObjectMapper objectMapper) {

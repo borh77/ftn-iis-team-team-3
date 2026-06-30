@@ -31,16 +31,18 @@ class ProcurementControllerTest {
     @BeforeEach
     void setUp() {
         orderValidationService = mock(OrderValidationService.class);
-        mockMvc = standaloneSetup(new ProcurementController(orderValidationService)).build();
+        mockMvc = standaloneSetup(new ProcurementController(orderValidationService))
+                .setControllerAdvice(new RestExceptionHandler())
+                .build();
     }
 
     @Test
     void validateOrderDocumentDelegatesToServiceWithAuthenticatedUsername() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
                 "file",
-                "order.json",
-                "application/json",
-                "[{\"variantId\":10,\"requestedQuantity\":150}]".getBytes()
+                "order.csv",
+                "text/csv",
+                "variantId,requestedQuantity\n2,10\n".getBytes()
         );
         ValidationResultDTO response = new ValidationResultDTO();
         response.setValid(true);
@@ -55,6 +57,26 @@ class ProcurementControllerTest {
                 .andExpect(jsonPath("$.valid").value(true));
 
         verify(orderValidationService).validateOrderDocument(eq("buyer"), any());
+    }
+
+    @Test
+    void jsonUploadReturnsCsvOnlyError() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "order.json",
+                "application/json",
+                "[{\"variantId\":2,\"requestedQuantity\":10}]".getBytes()
+        );
+        when(orderValidationService.validateOrderDocument(eq("buyer"), any()))
+                .thenThrow(new IllegalArgumentException("Only CSV procurement documents are currently supported."));
+
+        mockMvc.perform(multipart("/api/procurement/validation")
+                        .file(file)
+                        .principal(new TestingAuthenticationToken("buyer", null))
+                        .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.error").value("Only CSV procurement documents are currently supported."));
     }
 
     @Test

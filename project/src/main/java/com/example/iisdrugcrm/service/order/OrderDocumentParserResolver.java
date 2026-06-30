@@ -7,16 +7,22 @@ import org.springframework.web.multipart.MultipartFile;
 @Component
 public class OrderDocumentParserResolver {
 
-    private final List<OrderDocumentParser> parsers;
+    private static final String CSV_ONLY_MESSAGE = "Only CSV procurement documents are currently supported.";
+
+    private final CsvOrderDocumentParser csvParser;
 
     public OrderDocumentParserResolver(List<OrderDocumentParser> parsers) {
-        this.parsers = parsers;
+        this.csvParser = parsers.stream()
+                .filter(CsvOrderDocumentParser.class::isInstance)
+                .map(CsvOrderDocumentParser.class::cast)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("CSV order document parser is not configured"));
     }
 
     public OrderDocumentParser resolve(MultipartFile file) {
-        return parsers.stream()
-                .filter(parser -> parser.supports(file))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Unsupported order document format. Please upload a JSON or CSV file."));
+        if (!csvParser.supports(file)) {
+            throw new IllegalArgumentException(CSV_ONLY_MESSAGE);
+        }
+        return csvParser;
     }
 }

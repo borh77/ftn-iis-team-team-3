@@ -66,6 +66,7 @@ public class OrderValidationServiceImpl implements OrderValidationService {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Order document is empty");
         }
+        parserResolver.resolve(file);
 
         User buyer = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));

@@ -108,6 +108,17 @@
   font-size: 0.9rem;
 }
 
+.csv-columns {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.csv-columns li + li {
+  margin-top: 0.2rem;
+}
+
 .error-box {
   margin-top: 1rem;
   padding: 0.85rem 1rem;
