@@ -14,6 +14,7 @@ import com.example.iisdrugcrm.dto.pricelist.PricelistResponseDTO;
 import com.example.iisdrugcrm.exception.PricelistConflictException;
 import com.example.iisdrugcrm.exception.PricelistLockedException;
 import com.example.iisdrugcrm.exception.PricelistNotFoundException;
+import com.example.iisdrugcrm.exception.PricelistSubmissionValidationException;
 import com.example.iisdrugcrm.exception.VariantNotFoundException;
 import com.example.iisdrugcrm.repository.PricelistRepository;
 import com.example.iisdrugcrm.repository.RegionRepository;
@@ -233,6 +234,7 @@ public class PricelistServiceImpl implements PricelistService {
     public PricelistResponseDTO changeStatus(Long id, ChangePricelistStatusDTO dto) {
         Pricelist pricelist = pricelistRepository.findById(id)
                 .orElseThrow(() -> new PricelistNotFoundException("Pricelist not found"));
+        validateStatusChangeAccess(pricelist, dto.getTargetStatus(), pricelist.getCreatedBy(), false);
         return changeStatus(pricelist, dto, pricelist.getCreatedBy());
     }
 
@@ -255,7 +257,7 @@ public class PricelistServiceImpl implements PricelistService {
         if (pricelist.getStatus() == PricelistStatus.DRAFT
                 && dto.getTargetStatus() == PricelistStatus.IN_REVIEW
                 && !pricelist.isCreationCompleted()) {
-            throw new IllegalArgumentException("Pricelist was not completed through the wizard and cannot be submitted for review.");
+            throw new PricelistSubmissionValidationException("Pricelist was not completed through the wizard and cannot be submitted for review.");
         }
         if ((pricelist.getStatus() == PricelistStatus.DRAFT && dto.getTargetStatus() == PricelistStatus.IN_REVIEW)
                 || (pricelist.getStatus() == PricelistStatus.IN_REVIEW && dto.getTargetStatus() == PricelistStatus.ACTIVE)) {
@@ -288,7 +290,8 @@ public class PricelistServiceImpl implements PricelistService {
     }
 
     private void validateStatusChangeAccess(Pricelist pricelist, PricelistStatus targetStatus, Long currentUserId, boolean currentUserAdmin) {
-        if (pricelist.getStatus() == PricelistStatus.IN_REVIEW && targetStatus == PricelistStatus.ACTIVE) {
+        if (pricelist.getStatus() == PricelistStatus.IN_REVIEW
+                && (targetStatus == PricelistStatus.ACTIVE || targetStatus == PricelistStatus.DRAFT)) {
             accessService.validateActivationReviewer(pricelist, currentUserId, currentUserAdmin);
             return;
         }

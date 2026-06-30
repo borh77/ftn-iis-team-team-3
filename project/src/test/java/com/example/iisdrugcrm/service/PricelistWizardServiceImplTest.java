@@ -13,6 +13,7 @@ import com.example.iisdrugcrm.dto.pricelist.SaveItemsStepDTO;
 import com.example.iisdrugcrm.dto.pricelist.SaveThresholdsStepDTO;
 import com.example.iisdrugcrm.exception.InvalidPricelistThresholdException;
 import com.example.iisdrugcrm.exception.PricelistStartDateInPastException;
+import com.example.iisdrugcrm.exception.PricelistSubmissionValidationException;
 import com.example.iisdrugcrm.repository.PricelistRepository;
 import com.example.iisdrugcrm.repository.PricelistTeamRepository;
 import com.example.iisdrugcrm.repository.RegionRepository;
@@ -161,7 +162,7 @@ class PricelistWizardServiceImplTest {
     }
 
     @Test
-    void finishWizardMarksDraftCompleted() {
+    void finishWizardSubmitsDraftForReview() {
         Pricelist draft = completeDraft(100L);
         when(pricelistRepository.findById(100L)).thenReturn(Optional.of(draft));
         when(pricelistRepository.findOverlappingBlockingPricelistsExcludingCurrent(any(), any(), any(), any(), anyList(), any()))
@@ -171,7 +172,27 @@ class PricelistWizardServiceImplTest {
 
         assertTrue(draft.isCreationCompleted());
         assertEquals(PricelistCreationStep.COMPLETED, draft.getCreationStep());
+        assertEquals(PricelistStatus.IN_REVIEW, draft.getStatus());
         verify(pricelistRepository).save(draft);
+    }
+
+    @Test
+    void finishWizardRejectsInvalidDraft() {
+        Pricelist draft = draft(100L);
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(draft));
+
+        assertThrows(PricelistSubmissionValidationException.class, () -> service.finishWizard(100L, 99L));
+    }
+
+    @Test
+    void nonOwnerCollaboratorCannotSubmitDraftForReview() {
+        Pricelist draft = completeDraft(100L);
+        when(pricelistRepository.findById(100L)).thenReturn(Optional.of(draft));
+        when(accessService.canCollaborate(draft, 7L)).thenReturn(true);
+        org.mockito.Mockito.doThrow(new IllegalArgumentException("Only the owner can change this pricelist status."))
+                .when(accessService).validateOwnerOnly(draft, 7L);
+
+        assertThrows(IllegalArgumentException.class, () -> service.finishWizard(100L, 7L));
     }
 
     @Test

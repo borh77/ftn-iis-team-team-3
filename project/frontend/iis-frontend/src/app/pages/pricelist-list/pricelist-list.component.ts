@@ -134,9 +134,9 @@ export class PricelistListComponent implements OnInit, OnDestroy {
   }
 
   returnToDraft(pricelist: Pricelist): void {
-    const reason = window.prompt('Enter a reason for returning this pricelist to draft:')?.trim();
+    const reason = window.prompt('Enter a rejection reason for returning this pricelist to draft:')?.trim();
     if (!reason) {
-      this.showError('A reason is required to return a pricelist to draft.');
+      this.showError('A rejection reason is required to return a pricelist to draft.');
       return;
     }
     this.changeStatus(pricelist, 'DRAFT', reason);
@@ -197,11 +197,15 @@ export class PricelistListComponent implements OnInit, OnDestroy {
 
   canActivate(pricelist: Pricelist): boolean {
     return pricelist.status === 'IN_REVIEW'
-      && (pricelist.canActivate ?? (!this.isOwner(pricelist) && this.canCollaborate(pricelist)));
+      && pricelist.canActivate === true;
   }
 
   canReturnToDraft(pricelist: Pricelist): boolean {
-    return this.isOwner(pricelist) && pricelist.status === 'IN_REVIEW';
+    return pricelist.status === 'IN_REVIEW' && pricelist.canActivate === true;
+  }
+
+  isWaitingForExternalReview(pricelist: Pricelist): boolean {
+    return pricelist.status === 'IN_REVIEW' && this.isOwner(pricelist) && pricelist.canActivate !== true;
   }
 
   canArchive(pricelist: Pricelist): boolean {
@@ -463,14 +467,20 @@ export class PricelistListComponent implements OnInit, OnDestroy {
 
   private statusChangeErrorMessage(error: unknown): string {
     if (error instanceof HttpErrorResponse) {
+      const backend = String(error.error?.error ?? '');
+      if (backend.includes('You cannot activate a pricelist that you submitted for review.')) {
+        return 'You cannot activate a pricelist that you submitted for review.';
+      }
+      if (backend.includes('another authorized reviewer')) {
+        return 'A pricelist must be reviewed by another authorized user.';
+      }
+      if (backend.includes('Only the owner')) {
+        return 'Only the owner can change this pricelist status.';
+      }
+      if (backend.includes('inactive catalog variants')) {
+        return 'Pricelist contains inactive catalog variants. Replace them before continuing.';
+      }
       if (error.status === 400) {
-        const backend = String(error.error?.error ?? '');
-        if (backend.includes('Only the owner')) {
-          return 'Only the owner can change this pricelist status.';
-        }
-        if (backend.includes('inactive catalog variants')) {
-          return 'Pricelist contains inactive catalog variants. Replace them before continuing.';
-        }
         return 'This status change is not allowed.';
       }
       if (error.status === 409) {

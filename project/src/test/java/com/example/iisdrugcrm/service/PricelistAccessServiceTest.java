@@ -9,8 +9,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith(MockitoExtension.class)
@@ -73,6 +76,17 @@ class PricelistAccessServiceTest {
         Pricelist pricelist = pricelist(99L, null);
 
         assertFalse(service.canActivateAsReviewer(pricelist, 99L, true));
+    }
+
+    @Test
+    void validatingOwnerActivationReturnsClearMessage() {
+        PricelistAccessService service = new PricelistAccessService(teamRepository);
+        Pricelist pricelist = pricelist(99L, null);
+
+        AccessDeniedException exception = assertThrows(AccessDeniedException.class,
+                () -> service.validateActivationReviewer(pricelist, 99L, true));
+
+        assertEquals(PricelistAccessService.SELF_ACTIVATION_MESSAGE, exception.getMessage());
     }
 
     @Test

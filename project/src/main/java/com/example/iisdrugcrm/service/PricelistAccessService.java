@@ -11,6 +11,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class PricelistAccessService {
 
+    public static final String SELF_ACTIVATION_MESSAGE = "You cannot activate a pricelist that you submitted for review.";
+    public static final String REVIEWER_REQUIRED_MESSAGE = "A pricelist must be reviewed by another authorized reviewer.";
+
     private final PricelistTeamRepository teamRepository;
 
     public PricelistAccessService(PricelistTeamRepository teamRepository) {
@@ -60,8 +63,11 @@ public class PricelistAccessService {
     }
 
     public void validateActivationReviewer(Pricelist pricelist, Long userId, boolean admin) {
+        if (isOwner(pricelist, userId)) {
+            throw new AccessDeniedException(SELF_ACTIVATION_MESSAGE);
+        }
         if (!canActivateAsReviewer(pricelist, userId, admin)) {
-            throw new AccessDeniedException("A pricelist must be activated by another authorized reviewer.");
+            throw new AccessDeniedException(REVIEWER_REQUIRED_MESSAGE);
         }
     }
 

@@ -35,7 +35,7 @@
       <div class="actions">
         <button type="submit" [disabled]="loading || pdfDownloading">Generate report</button>
         <button type="button" class="secondary" [disabled]="loading || pdfDownloading" (click)="downloadPdf()">
-          {{ pdfDownloading ? 'Downloading...' : 'Preuzmi PDF' }}
+          {{ pdfDownloading ? 'Downloading...' : 'Download PDF' }}
         </button>
       </div>
     </form>

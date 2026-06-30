@@ -188,8 +188,12 @@
 
             @if (canReturnToDraft(p)) {
               <button type="button" class="secondary" (click)="returnToDraft(p)" [disabled]="isChanging(p)">
-                {{ isChanging(p) ? 'Updating...' : 'Return to draft' }}
+                {{ isChanging(p) ? 'Updating...' : 'Reject' }}
               </button>
+            }
+
+            @if (isWaitingForExternalReview(p)) {
+              <p class="review-note">Waiting for review by another authorized user.</p>
             }
 
             @if (canArchive(p)) {

@@ -107,8 +107,8 @@ public class PricelistItem {
         QuantityThreshold previous = null;
         for (int index = 0; index < sortedThresholds.size(); index++) {
             QuantityThreshold current = sortedThresholds.get(index);
-            if (current.getQuantityTo() != null && current.getQuantityTo() < current.getQuantityFrom()) {
-                throw invalid(prefix + "quantityTo must be greater than or equal to quantityFrom.");
+            if (current.getQuantityTo() != null && current.getQuantityTo() <= current.getQuantityFrom()) {
+                throw invalid(prefix + "quantityTo must be greater than quantityFrom.");
             }
             if (previous != null) {
                 if (previous.getQuantityTo() == null) {

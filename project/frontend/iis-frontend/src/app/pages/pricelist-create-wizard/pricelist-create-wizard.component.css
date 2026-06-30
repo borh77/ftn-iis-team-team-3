@@ -40,6 +40,9 @@
   padding: 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
   color: var(--color-muted);
   background: #f8fafc;
 }
@@ -98,6 +101,18 @@
 
 .progress-step.complete {
   color: var(--color-text);
+}
+
+.progress-step.disabled {
+  cursor: not-allowed;
+  color: #94a3b8;
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+.progress-step.disabled span {
+  color: #64748b;
+  background: #e2e8f0;
 }
 
 .progress-step.active small,

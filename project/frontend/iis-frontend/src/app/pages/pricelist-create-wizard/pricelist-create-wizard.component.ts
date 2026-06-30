@@ -12,7 +12,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { finalize, Observable, Subscription, timeout } from 'rxjs';
+import { catchError, finalize, forkJoin, map, Observable, of, Subscription, timeout } from 'rxjs';
 import { extractBackendErrorMessage } from '../../core/http-error-message';
 import { PortfolioService } from '../../core/portfolio.service';
 import { Category, Product, Subcategory, Variant } from '../../core/portfolio.models';
@@ -42,6 +42,8 @@ interface WizardStepDefinition {
   description: string;
 }
 
+type SaveAction = 'draft' | 'next' | 'review' | null;
+
 @Component({
   selector: 'app-pricelist-create-wizard',
   standalone: true,
@@ -69,13 +71,14 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   private readonly transientMessages = inject(TransientMessageService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly ngZone = inject(NgZone);
+  private readonly debugWizard = true;
 
   readonly steps: WizardStepDefinition[] = [
     { id: 'BASIC_INFO', label: 'Basic information', description: 'Region, segment, currency, and validity dates' },
     { id: 'TEAM_ACCESS', label: 'Team access', description: 'Private draft or shared team ownership' },
     { id: 'ITEMS', label: 'Items', description: 'Active product variants included in this pricelist' },
     { id: 'THRESHOLDS', label: 'Thresholds', description: 'Quantity breaks and prices for each item' },
-    { id: 'REVIEW', label: 'Review', description: 'Validate and finish the draft wizard' },
+    { id: 'REVIEW', label: 'Review', description: 'Validate and submit the draft for review' },
   ];
 
   readonly minPeriodStart = PricelistCreateWizardComponent.todayStartInputValue();
@@ -112,20 +115,25 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   state: PricelistWizardState | null = null;
   summary: PricelistWizardSummary | null = null;
 
-  loading = true;
+  wizardLoading = true;
+  lookupLoading = false;
   wizardReady = false;
   starting = false;
-  saving = false;
-  loadingSummary = false;
+  saveAction: SaveAction = null;
+  summaryLoading = false;
+  finishing = false;
   loadError: string | null = null;
   errorMessage = '';
   successMessage = '';
   lookupWarningMessages: string[] = [];
+  private summaryLoadedForWizardId: number | null = null;
+  private summaryLoadingForWizardId: number | null = null;
   private routeSubscription?: Subscription;
 
   regions: Region[] = [];
   teams: PricelistTeam[] = [];
   categories: Category[] = [];
+  availableVariants: Variant[] = [];
   subcategoriesByItem: Record<number, Subcategory[]> = {};
   productsByItem: Record<number, Product[]> = {};
   variantsByItem: Record<number, Variant[]> = {};
@@ -134,6 +142,7 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     this.loadLookups();
     this.routeSubscription = this.route.paramMap.subscribe((params) => {
       const id = params.get('id');
+      this.logWizardDebug('route id received', id);
       if (id) {
         const wizardId = Number(id);
         if (!Number.isFinite(wizardId) || wizardId <= 0) {
@@ -153,6 +162,7 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
       this.wizardId = null;
       this.state = null;
       this.summary = null;
+      this.summaryLoadedForWizardId = null;
       this.wizardReady = false;
       this.requestWizardRender();
       this.startWizard();
@@ -180,6 +190,10 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     return this.hasDuplicateVariants() ? 'A variant can only be selected once in this pricelist.' : '';
   }
 
+  get stepSaving(): boolean {
+    return this.saveAction === 'draft' || this.saveAction === 'next' || this.saveAction === 'review';
+  }
+
   retryLoad(): void {
     this.clearResultMessages();
     this.clearLoadError();
@@ -196,11 +210,25 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     if (this.activeStepIndex > 0) {
       this.clearResultMessages();
       this.activeStepIndex -= 1;
+      this.onActiveStepEntered(false);
     }
   }
 
+  goToStep(stepIndex: number): void {
+    if (stepIndex < 0 || stepIndex >= this.steps.length || this.wizardLoading || this.stepSaving || this.finishing) {
+      return;
+    }
+    if (!this.canAccessStep(stepIndex)) {
+      this.showError('Complete the previous step before continuing.');
+      return;
+    }
+    this.clearResultMessages();
+    this.activeStepIndex = stepIndex;
+    this.onActiveStepEntered(false);
+  }
+
   saveCurrentStep(advance: boolean): void {
-    if (!this.wizardId || this.saving) {
+    if (!this.wizardId || this.stepSaving || this.finishing) {
       return;
     }
 
@@ -220,25 +248,25 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
         this.saveThresholds(advance);
         break;
       case 'REVIEW':
-        this.loadSummary();
+        this.loadSummary(true, true);
         break;
     }
   }
 
   finish(): void {
-    if (!this.wizardId || this.saving) {
+    if (!this.wizardId || this.finishing || this.stepSaving) {
       return;
     }
     if (!this.summary?.readyToFinish) {
-      this.showError('Review the validation messages before finishing the wizard.');
+      this.showError('Review the validation messages before submitting for review.');
       return;
     }
-    this.saving = true;
+    this.finishing = true;
     this.clearResultMessages();
-    this.wizardService.finishWizard(this.wizardId).pipe(finalize(() => (this.saving = false))).subscribe({
+    this.wizardService.finishWizard(this.wizardId).pipe(finalize(() => (this.finishing = false))).subscribe({
       next: () => {
         this.router.navigate(['/content/mine'], {
-          state: { successMessage: 'Pricelist creation was completed.' },
+          state: { successMessage: 'Pricelist was submitted for review.' },
         });
       },
       error: (error: HttpErrorResponse) => {
@@ -325,15 +353,7 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
       this.variantsByItem[itemIndex] = [];
       return;
     }
-    this.portfolioService.getVariants(productId).pipe(timeout(30000)).subscribe({
-      next: (variants) => {
-        this.variantsByItem[itemIndex] = variants.filter((variant) => variant.status === 'ACTIVE');
-      },
-      error: () => {
-        this.variantsByItem[itemIndex] = [];
-        this.addLookupWarning('Variants could not be loaded for the selected product.');
-      },
-    });
+    this.variantsByItem[itemIndex] = this.availableVariants.filter((variant) => variant.productId === Number(productId));
   }
 
   addThreshold(itemIndex: number): void {
@@ -357,14 +377,21 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   }
 
   stepClass(index: number): string {
+    if (!this.canAccessStep(index)) {
+      return 'disabled';
+    }
     if (index === this.activeStepIndex) {
       return 'active';
     }
-    return index < this.activeStepIndex ? 'complete' : '';
+    return index < this.highestAccessibleStepIndex() ? 'complete' : '';
+  }
+
+  canAccessStep(index: number): boolean {
+    return index >= 0 && index <= this.highestAccessibleStepIndex();
   }
 
   stepActionDisabled(): boolean {
-    if (this.saving) {
+    if (this.stepSaving || this.finishing || !this.canAccessStep(this.activeStepIndex)) {
       return true;
     }
 
@@ -387,14 +414,14 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
       return;
     }
     this.starting = true;
-    this.loading = true;
+    this.wizardLoading = true;
     this.wizardReady = false;
     this.clearLoadError();
     this.clearError();
     this.requestWizardRender();
     this.wizardService.startWizard().pipe(timeout(30000), finalize(() => {
       this.starting = false;
-      this.loading = false;
+      this.wizardLoading = false;
       this.requestWizardRender();
     })).subscribe({
       next: (response) => {
@@ -422,21 +449,23 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     if (this.wizardReady && this.wizardId === id && this.state?.pricelistId === id) {
       return;
     }
+    this.logWizardDebug('getWizardState request started', id);
     this.wizardId = id;
-    this.loading = true;
+    this.wizardLoading = true;
     this.wizardReady = false;
     this.starting = false;
     this.clearLoadError();
     this.clearError();
     this.requestWizardRender();
     this.wizardService.getWizardState(id).pipe(timeout(30000), finalize(() => {
-      if (!this.loadError) {
-        this.loading = false;
-      }
+      this.wizardLoading = false;
+      this.logWizardDebug('getWizardState finalize', this.wizardDebugState());
       this.requestWizardRender();
     })).subscribe({
       next: (response) => {
+        this.logWizardDebug('getWizardState response received', response);
         const state = this.normalizeWizardState(response) ?? this.createFallbackWizardState(id, response);
+        this.logWizardDebug('normalized wizard state', state);
         this.finishWizardLoad(state);
       },
       error: (error: HttpErrorResponse) => {
@@ -446,31 +475,45 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   }
 
   private applyState(state: PricelistWizardState, followBackendStep: boolean): void {
+    this.logWizardDebug('applyState start', state);
     this.state = state;
     this.wizardId = state.pricelistId ?? this.wizardId;
     this.populateForms(state);
     if (followBackendStep) {
       this.setActiveStep(this.resolveCreationStep(state), state.status);
     }
-    if (this.activeStep.id === 'REVIEW') {
-      this.loadSummary();
-    }
+    this.logWizardDebug('applyState completed', this.wizardDebugState());
   }
 
   private finishWizardLoad(state: PricelistWizardState): void {
     this.ngZone.run(() => {
+      let applied = false;
       try {
         this.applyState(state, true);
         this.wizardReady = true;
+        this.wizardLoading = false;
         this.loadError = null;
+        applied = true;
       } catch (error) {
         console.error('Wizard data was loaded but could not be rendered.', error);
-        this.loadError = 'Wizard data was loaded but could not be rendered.';
         this.wizardReady = false;
+        this.wizardLoading = false;
+        this.loadError = 'Wizard data was loaded but could not be rendered.';
       } finally {
-        this.loading = false;
         this.starting = false;
+        this.logWizardDebug('finishWizardLoad completed', this.wizardDebugState());
         this.requestWizardRender();
+      }
+
+      if (applied && this.wizardReady) {
+        try {
+          this.onActiveStepEntered(false);
+        } catch (error) {
+          console.error('Wizard step entry failed after state load.', error);
+          this.showError('Wizard step data could not be refreshed. Try reloading the draft.');
+        } finally {
+          this.requestWizardRender();
+        }
       }
     });
   }
@@ -493,7 +536,7 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
       return;
     }
     const index = this.steps.findIndex((candidate) => candidate.id === step);
-    this.activeStepIndex = index >= 0 ? index : 0;
+    this.activeStepIndex = this.clampStepIndex(index >= 0 ? index : 0);
   }
 
   private saveBasicInfo(advance: boolean): void {
@@ -547,6 +590,7 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   private saveThresholds(advance: boolean): void {
     if (this.thresholdsForm.invalid || this.thresholdItems.length === 0) {
       this.thresholdsForm.markAllAsTouched();
+      this.showError(this.firstThresholdValidationMessage() || 'Review threshold validation messages before continuing.');
       return;
     }
     this.saveStep(
@@ -565,11 +609,18 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   }
 
   private saveStep(request: Observable<PricelistWizardState>, advance: boolean): void {
-    this.saving = true;
-    request.pipe(finalize(() => (this.saving = false))).subscribe({
+    const startedFromIndex = this.activeStepIndex;
+    this.saveAction = advance ? 'next' : 'draft';
+    request.pipe(finalize(() => (this.saveAction = null))).subscribe({
       next: (state) => {
         this.showSuccess('Step saved.');
-        this.applyState(state, advance);
+        this.applyState(state, false);
+        if (advance) {
+          this.activeStepIndex = this.clampStepIndex(startedFromIndex + 1);
+          this.onActiveStepEntered(false);
+        }
+        this.summary = null;
+        this.summaryLoadedForWizardId = null;
       },
       error: (error: HttpErrorResponse) => {
         this.showError(this.createErrorMessage(error));
@@ -577,17 +628,39 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     });
   }
 
-  private loadSummary(): void {
+  private loadSummary(force = false, userInitiated = false): void {
     if (!this.wizardId) {
       return;
     }
-    this.loadingSummary = true;
+    if (this.summaryLoading && this.summaryLoadingForWizardId === this.wizardId) {
+      return;
+    }
+    if (!force && this.summaryLoadedForWizardId === this.wizardId && this.summary) {
+      return;
+    }
+    const wizardId = this.wizardId;
+    if (userInitiated) {
+      this.saveAction = 'review';
+    }
+    this.summaryLoading = true;
+    this.summaryLoadingForWizardId = wizardId;
     this.summary = null;
-    this.wizardService.getSummary(this.wizardId).pipe(finalize(() => (this.loadingSummary = false))).subscribe({
+    this.wizardService.getSummary(wizardId).pipe(
+      timeout(30000),
+      finalize(() => {
+        this.summaryLoading = false;
+        this.summaryLoadingForWizardId = null;
+        if (this.saveAction === 'review') {
+          this.saveAction = null;
+        }
+      })
+    ).subscribe({
       next: (summary) => {
-        this.summary = summary;
+        this.summary = this.normalizeSummary(summary, wizardId);
+        this.summaryLoadedForWizardId = wizardId;
       },
       error: (error: HttpErrorResponse) => {
+        this.summaryLoadedForWizardId = null;
         this.showError(this.createErrorMessage(error));
       },
     });
@@ -656,11 +729,10 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   }
 
   private createItemGroup(item?: PricelistItem): UntypedFormGroup {
-    const lookupValidators = item ? [] : [Validators.required];
     return this.fb.group({
-      categoryId: new UntypedFormControl(null, lookupValidators),
-      subcategoryId: new UntypedFormControl(null, lookupValidators),
-      productId: new UntypedFormControl(null, lookupValidators),
+      categoryId: new UntypedFormControl(null),
+      subcategoryId: new UntypedFormControl(null),
+      productId: new UntypedFormControl(null),
       variantId: new UntypedFormControl(item?.variantId ?? null, [Validators.required]),
       existingVariantName: new UntypedFormControl(item?.variantName ?? ''),
     });
@@ -671,7 +743,10 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     return this.fb.group({
       variantId: new UntypedFormControl(item.variantId, [Validators.required]),
       variantName: new UntypedFormControl(item.variantName),
-      thresholds: this.fb.array(thresholds.map((threshold) => this.createThresholdGroup(threshold))),
+      thresholds: this.fb.array(
+        thresholds.map((threshold) => this.createThresholdGroup(threshold)),
+        [PricelistCreateWizardComponent.thresholdRangesValidator]
+      ),
     });
   }
 
@@ -684,6 +759,10 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   }
 
   private variantNameFor(item: any): string {
+    const availableMatch = this.availableVariants.find((variant) => variant.id === Number(item.variantId));
+    if (availableMatch) {
+      return `${availableMatch.productName} ${availableMatch.form} ${availableMatch.dosage}`.trim();
+    }
     for (const variants of Object.values(this.variantsByItem)) {
       const match = variants.find((variant) => variant.id === Number(item.variantId));
       if (match) {
@@ -701,27 +780,63 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
   }
 
   private loadLookups(): void {
-    this.regionService.list().pipe(timeout(30000)).subscribe({
-      next: (regions) => (this.regions = regions),
-      error: () => {
-        this.regions = [];
-        this.addLookupWarning('Regions could not be loaded. Region selection is temporarily unavailable.');
-      },
+    this.lookupLoading = true;
+    forkJoin({
+      regions: this.regionService.list().pipe(
+        timeout(30000),
+        catchError(() => {
+          this.addLookupWarning('Regions could not be loaded. Region selection is temporarily unavailable.');
+          return of([] as Region[]);
+        })
+      ),
+      teams: this.teamService.getMyTeams().pipe(
+        timeout(30000),
+        catchError(() => {
+          this.addLookupWarning('Teams could not be loaded. Team sharing is temporarily unavailable.');
+          return of([] as PricelistTeam[]);
+        })
+      ),
+      categories: this.portfolioService.getCategories().pipe(
+        timeout(30000),
+        map((categories) => categories.filter((category) => category.status === 'ACTIVE')),
+        catchError(() => {
+          this.addLookupWarning('Catalog categories could not be loaded. Item filtering is temporarily unavailable.');
+          return of([] as Category[]);
+        })
+      ),
+      variants: this.portfolioService.getVariants().pipe(
+        timeout(30000),
+        map((variants) => variants.filter((variant) => variant.status === 'ACTIVE')),
+        catchError(() => {
+          this.addLookupWarning('Active variants could not be loaded. Item selection is temporarily unavailable.');
+          return of([] as Variant[]);
+        })
+      ),
+    }).pipe(finalize(() => (this.lookupLoading = false))).subscribe(({ regions, teams, categories, variants }) => {
+      this.regions = regions;
+      this.teams = teams;
+      this.categories = categories;
+      this.availableVariants = variants;
+      this.rebuildVariantFilters();
     });
-    this.teamService.getMyTeams().pipe(timeout(30000)).subscribe({
-      next: (teams) => (this.teams = teams),
-      error: () => {
-        this.teams = [];
-        this.addLookupWarning('Teams could not be loaded. Team sharing is temporarily unavailable.');
-      },
-    });
-    this.portfolioService.getCategories().pipe(timeout(30000)).subscribe({
-      next: (categories) => (this.categories = categories.filter((category) => category.status === 'ACTIVE')),
-      error: () => {
-        this.categories = [];
-        this.addLookupWarning('Catalog categories could not be loaded. Item selection is temporarily unavailable.');
-      },
-    });
+  }
+
+  private onActiveStepEntered(forceSummary: boolean): void {
+    if (this.activeStep.id === 'THRESHOLDS') {
+      this.syncThresholdForms();
+    }
+    if (this.activeStep.id === 'REVIEW') {
+      this.loadSummary(forceSummary);
+    }
+  }
+
+  private rebuildVariantFilters(): void {
+    for (let index = 0; index < this.items.length; index++) {
+      const productId = Number(this.itemGroup(index).controls['productId'].value);
+      if (productId) {
+        this.variantsByItem[index] = this.availableVariants.filter((variant) => variant.productId === productId);
+      }
+    }
   }
 
   private reindexLookupCaches(removedIndex: number): void {
@@ -799,6 +914,29 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     return null;
   }
 
+  private normalizeSummary(response: unknown, fallbackId: number): PricelistWizardSummary {
+    const root = this.objectValue(response);
+    const candidate = this.objectValue(root?.['data'])
+      ?? this.objectValue(root?.['content'])
+      ?? this.objectValue(root?.['summary'])
+      ?? root;
+
+    const validationMessages = Array.isArray(candidate?.['validationMessages'])
+      ? candidate['validationMessages'].map((message) => String(message))
+      : [];
+    const pricelist = this.objectValue(candidate?.['pricelist']) as Pricelist | null;
+    const readyToFinish = typeof candidate?.['readyToFinish'] === 'boolean'
+      ? candidate['readyToFinish']
+      : validationMessages.length === 0;
+
+    return {
+      pricelistId: this.toPositiveNumber(candidate?.['pricelistId']) ?? fallbackId,
+      readyToFinish,
+      validationMessages,
+      pricelist,
+    };
+  }
+
   private createFallbackWizardState(id: number, response: unknown): PricelistWizardState {
     const pricelist = this.extractPricelist(response);
     return {
@@ -859,16 +997,135 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     return value === 'IN_REVIEW' || value === 'ACTIVE' || value === 'ARCHIVED' ? value : 'DRAFT';
   }
 
+  private highestAccessibleStepIndex(): number {
+    const derived = this.derivedAccessibleStepIndex();
+    const backend = this.backendAccessibleStepIndex();
+    return Math.max(0, Math.min(this.steps.length - 1, Math.max(derived, backend)));
+  }
+
+  private backendAccessibleStepIndex(): number {
+    const step = this.resolveCreationStep(this.state ?? this.createFormDerivedState());
+    if (step === 'COMPLETED') {
+      return this.state?.status === 'DRAFT' ? this.steps.length - 1 : 0;
+    }
+    const index = this.steps.findIndex((candidate) => candidate.id === step);
+    return index >= 0 ? index : 0;
+  }
+
+  private derivedAccessibleStepIndex(): number {
+    let highest = 0;
+    if (!this.basicInfoCompleted()) {
+      return highest;
+    }
+    highest = 1;
+    if (!this.teamAccessCompleted()) {
+      return highest;
+    }
+    highest = 2;
+    if (!this.itemsCompleted()) {
+      return highest;
+    }
+    highest = 3;
+    if (this.thresholdsCompleted()) {
+      highest = 4;
+    }
+    return highest;
+  }
+
+  private clampStepIndex(index: number): number {
+    return Math.max(0, Math.min(index, this.highestAccessibleStepIndex(), this.steps.length - 1));
+  }
+
+  private createFormDerivedState(): PricelistWizardState {
+    return {
+      pricelistId: this.wizardId ?? 0,
+      currentStep: null,
+      creationStep: 'BASIC_INFO',
+      creationCompleted: false,
+      status: 'DRAFT',
+      teamId: this.toPositiveNumber(this.teamAccessForm.get('teamId')?.value),
+      teamName: null,
+      lastEditedAt: null,
+      pricelist: null,
+    };
+  }
+
+  private basicInfoCompleted(): boolean {
+    const pricelist = this.state?.pricelist;
+    const regionId = this.toPositiveNumber(pricelist?.regionId ?? this.basicInfoForm.get('regionId')?.value);
+    const customerSegment = String(pricelist?.customerSegment ?? this.basicInfoForm.get('customerSegment')?.value ?? '').trim();
+    const currency = String(pricelist?.currency ?? this.basicInfoForm.get('currency')?.value ?? '').trim();
+    const periodStart = String(pricelist?.periodStart ?? this.basicInfoForm.get('periodStart')?.value ?? '').trim();
+    const periodEnd = String(pricelist?.periodEnd ?? this.basicInfoForm.get('periodEnd')?.value ?? '').trim();
+    return !!regionId
+      && !this.placeholderSegment(customerSegment)
+      && /^[A-Z]{3}$/.test(currency)
+      && !!periodStart
+      && !!periodEnd
+      && new Date(periodStart).getTime() < new Date(periodEnd).getTime();
+  }
+
+  private teamAccessCompleted(): boolean {
+    const backendStep = this.state?.currentStep ?? this.state?.creationStep;
+    if (backendStep === 'ITEMS' || backendStep === 'THRESHOLDS' || backendStep === 'REVIEW' || backendStep === 'COMPLETED' || this.state?.creationCompleted) {
+      return true;
+    }
+    return !!this.state?.teamId;
+  }
+
+  private itemsCompleted(): boolean {
+    const items = this.state?.pricelist?.items ?? [];
+    return items.some((item) => Number.isFinite(Number(item.variantId)) && Number(item.variantId) > 0);
+  }
+
+  private thresholdsCompleted(): boolean {
+    const items = this.state?.pricelist?.items ?? [];
+    return items.length > 0 && items.every((item) => this.thresholdsAreComplete(item.thresholds ?? []));
+  }
+
+  private thresholdsAreComplete(thresholds: QuantityThreshold[]): boolean {
+    if (!thresholds.length) {
+      return false;
+    }
+    const normalized = thresholds.map((threshold) => ({
+      quantityFrom: Number(threshold.quantityFrom),
+      quantityTo: threshold.quantityTo == null ? null : Number(threshold.quantityTo),
+      price: Number(threshold.price),
+    })).sort((first, second) => first.quantityFrom - second.quantityFrom);
+    for (let index = 0; index < normalized.length; index++) {
+      const current = normalized[index];
+      const previous = index > 0 ? normalized[index - 1] : null;
+      if (!Number.isFinite(current.quantityFrom) || current.quantityFrom < 1 || !Number.isFinite(current.price) || current.price <= 0) {
+        return false;
+      }
+      if (current.quantityTo != null && (!Number.isFinite(current.quantityTo) || current.quantityTo <= current.quantityFrom)) {
+        return false;
+      }
+      if (previous) {
+        if (previous.quantityTo == null || current.quantityFrom !== previous.quantityTo + 1 || current.price > previous.price) {
+          return false;
+        }
+      } else if (current.quantityFrom !== 1) {
+        return false;
+      }
+      if (current.quantityTo == null && index < normalized.length - 1) {
+        return false;
+      }
+    }
+    return normalized[normalized.length - 1].quantityTo == null;
+  }
+
   private showLoadError(error: unknown): void {
     const detail = extractBackendErrorMessage(error, '').trim();
     this.showLoadErrorMessage(detail || 'Please try again.');
   }
 
   private showLoadErrorMessage(message: string): void {
-    this.loading = false;
+    this.wizardLoading = false;
     this.starting = false;
     this.wizardReady = false;
     this.loadError = message;
+    this.logWizardDebug('loadError set', this.wizardDebugState());
     this.requestWizardRender();
   }
 
@@ -886,6 +1143,23 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
         console.warn('Wizard change detection skipped.', error);
       }
     });
+  }
+
+  private logWizardDebug(message: string, value?: unknown): void {
+    if (!this.debugWizard) {
+      return;
+    }
+    console.debug(`[PricelistWizard] ${message}`, value ?? '');
+  }
+
+  private wizardDebugState(): Record<string, unknown> {
+    return {
+      wizardLoading: this.wizardLoading,
+      wizardReady: this.wizardReady,
+      loadError: this.loadError,
+      wizardId: this.wizardId,
+      activeStep: this.activeStep.id,
+    };
   }
 
   private addLookupWarning(message: string): void {
@@ -962,6 +1236,83 @@ export class PricelistCreateWizardComponent implements OnInit, OnDestroy {
     }
 
     return Object.keys(errors).length ? errors : null;
+  }
+
+  static thresholdRangesValidator(control: AbstractControl): ValidationErrors | null {
+    const array = control as UntypedFormArray;
+    const thresholds = array.controls.map((thresholdControl, index) => {
+      const group = thresholdControl as UntypedFormGroup;
+      const quantityFrom = Number(group.get('quantityFrom')?.value);
+      const rawQuantityTo = group.get('quantityTo')?.value;
+      const quantityTo = rawQuantityTo == null || rawQuantityTo === '' ? null : Number(rawQuantityTo);
+      const price = Number(group.get('price')?.value);
+      return { index, quantityFrom, quantityTo, price };
+    });
+    const messages: string[] = [];
+
+    if (!thresholds.length) {
+      return { thresholdRange: ['Each item must have at least one threshold.'] };
+    }
+
+    for (const threshold of thresholds) {
+      const label = `Threshold ${threshold.index + 1}`;
+      if (!Number.isFinite(threshold.quantityFrom) || threshold.quantityFrom < 1) {
+        messages.push(`${label}: min quantity must be positive.`);
+      }
+      if (threshold.quantityTo != null && (!Number.isFinite(threshold.quantityTo) || threshold.quantityTo < 1)) {
+        messages.push(`${label}: max quantity must be positive.`);
+      }
+      if (threshold.quantityTo != null && threshold.quantityTo <= threshold.quantityFrom) {
+        messages.push(`${label}: max quantity must be greater than min quantity.`);
+      }
+      if (!Number.isFinite(threshold.price) || threshold.price <= 0) {
+        messages.push(`${label}: price must be greater than zero.`);
+      }
+    }
+
+    if (messages.length) {
+      return { thresholdRange: messages };
+    }
+
+    const sorted = [...thresholds].sort((first, second) => first.quantityFrom - second.quantityFrom);
+    for (let index = 0; index < sorted.length; index++) {
+      const current = sorted[index];
+      const previous = index > 0 ? sorted[index - 1] : null;
+
+      if (previous) {
+        if (previous.quantityTo == null) {
+          messages.push('No threshold can follow an open-ended threshold.');
+          break;
+        }
+        const expectedFrom = previous.quantityTo + 1;
+        if (current.quantityFrom < expectedFrom) {
+          messages.push('Quantity ranges cannot overlap.');
+        }
+        if (current.quantityFrom > expectedFrom) {
+          messages.push('Quantity ranges must be continuous without gaps.');
+        }
+        if (current.price > previous.price) {
+          messages.push('Price for a higher quantity threshold must be equal to or lower than the previous one.');
+        }
+      }
+
+      if (current.quantityTo == null && index < sorted.length - 1) {
+        messages.push('The open-ended threshold must be the final range.');
+      }
+    }
+
+    return messages.length ? { thresholdRange: Array.from(new Set(messages)) } : null;
+  }
+
+  private firstThresholdValidationMessage(): string {
+    for (const item of this.thresholdItems.controls) {
+      const thresholds = (item as UntypedFormGroup).get('thresholds');
+      const messages = thresholds?.errors?.['thresholdRange'];
+      if (Array.isArray(messages) && messages.length) {
+        return String(messages[0]);
+      }
+    }
+    return '';
   }
 
   private static isBeforeToday(value: string): boolean {

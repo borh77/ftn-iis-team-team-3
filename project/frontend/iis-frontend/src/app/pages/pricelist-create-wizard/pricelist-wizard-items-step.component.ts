@@ -77,7 +77,7 @@ import { Category, Product, Subcategory, Variant } from '../../core/portfolio.mo
                       {{ itemGroup(itemIndex).controls['existingVariantName'].value }}
                     </option>
                   }
-                  @for (variant of (variantsByItem[itemIndex] ?? []); track variant.id) {
+                  @for (variant of variantsForItem(itemIndex); track variant.id) {
                     <option
                       [ngValue]="variant.id"
                       [disabled]="isVariantSelectedElsewhere(variant.id, itemIndex)"
@@ -104,6 +104,7 @@ import { Category, Product, Subcategory, Variant } from '../../core/portfolio.mo
 export class PricelistWizardItemsStepComponent {
   @Input({ required: true }) form!: UntypedFormGroup;
   @Input() categories: Category[] = [];
+  @Input() availableVariants: Variant[] = [];
   @Input() subcategoriesByItem: Record<number, Subcategory[] | undefined> = {};
   @Input() productsByItem: Record<number, Product[] | undefined> = {};
   @Input() variantsByItem: Record<number, Variant[] | undefined> = {};
@@ -120,6 +121,14 @@ export class PricelistWizardItemsStepComponent {
 
   itemGroup(index: number): UntypedFormGroup {
     return this.items.at(index) as UntypedFormGroup;
+  }
+
+  variantsForItem(index: number): Variant[] {
+    const productId = this.itemGroup(index).controls['productId'].value;
+    if (productId) {
+      return this.variantsByItem[index] ?? [];
+    }
+    return this.availableVariants;
   }
 
   isVariantSelectedElsewhere(variantId: number, currentIndex: number): boolean {

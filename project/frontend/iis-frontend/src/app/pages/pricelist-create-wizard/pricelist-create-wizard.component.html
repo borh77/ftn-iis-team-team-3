@@ -3,14 +3,14 @@
     <div>
       <p class="kicker">Pricelist wizard</p>
       <h2>Create pricelist</h2>
-      <p>Define the region, team access, product variants, quantity thresholds, and review the draft before finishing.</p>
+      <p>Define the region, team access, product variants, quantity thresholds, and review the draft before submitting.</p>
     </div>
 
     <a class="ghost hero-action" routerLink="/content/mine">Back to pricelists</a>
   </header>
 
   <section class="panel wizard-panel">
-    @if (loading && !wizardReady) {
+    @if (wizardLoading && !wizardReady) {
       <p class="muted">Loading wizard...</p>
     } @else if (loadError) {
       <div class="error-box load-error" role="alert">
@@ -27,13 +27,21 @@
     } @else {
       <nav class="wizard-progress" aria-label="Pricelist creation steps">
         @for (step of steps; track step.id; let stepIndex = $index) {
-          <div class="progress-step" [class]="stepClass(stepIndex)" [attr.aria-current]="stepIndex === activeStepIndex ? 'step' : null">
+          <button
+            type="button"
+            class="progress-step"
+            [ngClass]="stepClass(stepIndex)"
+            [attr.aria-current]="stepIndex === activeStepIndex ? 'step' : null"
+            (click)="goToStep(stepIndex)"
+            [disabled]="wizardLoading || stepSaving || finishing || !canAccessStep(stepIndex)"
+            [title]="canAccessStep(stepIndex) ? step.label : 'Complete the previous step before continuing.'"
+          >
             <span>{{ stepIndex + 1 }}</span>
             <div>
               <strong>{{ step.label }}</strong>
               <small>{{ step.description }}</small>
             </div>
-          </div>
+          </button>
         }
       </nav>
 
@@ -81,6 +89,7 @@
             <app-pricelist-wizard-items-step
               [form]="itemsForm"
               [categories]="categories"
+              [availableVariants]="availableVariants"
               [subcategoriesByItem]="subcategoriesByItem"
               [productsByItem]="productsByItem"
               [variantsByItem]="variantsByItem"
@@ -102,37 +111,37 @@
           @case ('REVIEW') {
             <app-pricelist-wizard-review-step
               [summary]="summary"
-              [loading]="loadingSummary"
+              [loading]="summaryLoading"
             />
           }
         }
       </section>
 
       <div class="wizard-actions">
-        <button type="button" class="ghost" (click)="goBack()" [disabled]="activeStepIndex === 0 || saving">
+        <button type="button" class="ghost" (click)="goBack()" [disabled]="activeStepIndex === 0 || stepSaving || finishing">
           Back
         </button>
 
         @if (activeStep.id !== 'REVIEW') {
           <button type="button" class="secondary" (click)="saveCurrentStep(false)" [disabled]="stepActionDisabled()">
-            {{ saving ? 'Saving...' : 'Save draft' }}
+            {{ saveAction === 'draft' ? 'Saving...' : 'Save draft' }}
           </button>
 
           <button type="button" class="primary" (click)="saveCurrentStep(true)" [disabled]="stepActionDisabled()">
-            {{ saving ? 'Saving...' : 'Next' }}
+            {{ saveAction === 'next' ? 'Saving and continuing...' : 'Next' }}
           </button>
         } @else {
-          <button type="button" class="secondary" (click)="saveCurrentStep(false)" [disabled]="loadingSummary">
-            {{ loadingSummary ? 'Refreshing...' : 'Refresh review' }}
+          <button type="button" class="secondary" (click)="saveCurrentStep(false)" [disabled]="summaryLoading || finishing || stepSaving">
+            {{ saveAction === 'review' ? 'Refreshing...' : 'Refresh review' }}
           </button>
 
           <button
             type="button"
             class="primary"
             (click)="finish()"
-            [disabled]="saving || loadingSummary || !summary || summary.readyToFinish === false"
+            [disabled]="finishing || summaryLoading || !summary || summary.readyToFinish === false"
           >
-            {{ saving ? 'Finishing...' : 'Finish' }}
+            {{ finishing ? 'Submitting...' : 'Submit for review' }}
           </button>
         }
       </div>

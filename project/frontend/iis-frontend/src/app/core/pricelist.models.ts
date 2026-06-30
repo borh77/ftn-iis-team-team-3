@@ -21,6 +21,7 @@ export interface Pricelist {
   customerSegment: string;
   currency: string;
   status: 'DRAFT' | 'IN_REVIEW' | 'ACTIVE' | 'ARCHIVED';
+  createdBy?: number | null;
   creationStep?: PricelistCreationStep | null;
   creationCompleted?: boolean;
   lastEditedAt?: string | null;

@@ -77,6 +77,12 @@
   color: var(--color-muted);
 }
 
+.review-note {
+  margin: 0;
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
 .offers-panel,
 .suggestions-panel {
   display: grid;

@@ -19,6 +19,7 @@ import com.example.iisdrugcrm.dto.pricelist.SaveThresholdsStepDTO;
 import com.example.iisdrugcrm.dto.pricelist.StartPricelistWizardResponseDTO;
 import com.example.iisdrugcrm.exception.PricelistConflictException;
 import com.example.iisdrugcrm.exception.PricelistNotFoundException;
+import com.example.iisdrugcrm.exception.PricelistSubmissionValidationException;
 import com.example.iisdrugcrm.exception.VariantNotFoundException;
 import com.example.iisdrugcrm.repository.PricelistRepository;
 import com.example.iisdrugcrm.repository.PricelistTeamRepository;
@@ -212,10 +213,11 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
     @Transactional
     public PricelistWizardStateDTO finishWizard(Long pricelistId, Long currentUserId) {
         Pricelist pricelist = requireEditableDraft(pricelistId, currentUserId);
+        accessService.validateOwnerOnly(pricelist, currentUserId);
         PricelistDateRules.validateStartDateNotPast(pricelist.getPeriodStart());
         List<String> validationMessages = validationMessages(pricelist);
         if (!validationMessages.isEmpty()) {
-            throw new IllegalArgumentException(String.join(" ", validationMessages));
+            throw new PricelistSubmissionValidationException(String.join(" ", validationMessages));
         }
 
         validateAllVariantsActive(pricelist);
@@ -223,10 +225,11 @@ public class PricelistWizardServiceImpl implements PricelistWizardService {
         validateNoBlockingOverlapExcludingCurrent(pricelist);
         pricelist.setCreationCompleted(true);
         pricelist.setCreationStep(PricelistCreationStep.COMPLETED);
+        pricelist.setStatus(PricelistStatus.IN_REVIEW);
         pricelist.setLastEditedAt(OffsetDateTime.now(ZoneOffset.UTC));
 
         Pricelist saved = pricelistRepository.save(pricelist);
-        publishAction(saved, currentUserId, PricelistActionType.UPDATE_METADATA, "Completed pricelist creation wizard");
+        publishAction(saved, currentUserId, PricelistActionType.STATUS_CHANGE, "Submitted pricelist for review");
         return toState(saved, currentUserId);
     }
 

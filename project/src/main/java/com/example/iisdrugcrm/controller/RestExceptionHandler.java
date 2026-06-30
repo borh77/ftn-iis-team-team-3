@@ -7,6 +7,7 @@ import com.example.iisdrugcrm.exception.InvalidPricelistStatusTransitionExceptio
 import com.example.iisdrugcrm.exception.PricelistConflictException;
 import com.example.iisdrugcrm.exception.PricelistLockedException;
 import com.example.iisdrugcrm.exception.PricelistNotFoundException;
+import com.example.iisdrugcrm.exception.PricelistSubmissionValidationException;
 import com.example.iisdrugcrm.exception.PricelistStartDateInPastException;
 import com.example.iisdrugcrm.exception.RegionConflictException;
 import com.example.iisdrugcrm.exception.RegionInUseException;
@@ -52,7 +53,7 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(InvalidPricelistThresholdException.class)
     public ResponseEntity<Map<String, String>> handleInvalidPricelistThreshold(InvalidPricelistThresholdException exception) {
-        return ResponseEntity.badRequest().body(Map.of("error", exception.getMessage()));
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", exception.getMessage()));
     }
 
     @ExceptionHandler(InvalidPricelistStatusTransitionException.class)
@@ -77,6 +78,11 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(PricelistStartDateInPastException.class)
     public ResponseEntity<Map<String, String>> handlePricelistStartDateInPast(PricelistStartDateInPastException exception) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", exception.getMessage()));
+    }
+
+    @ExceptionHandler(PricelistSubmissionValidationException.class)
+    public ResponseEntity<Map<String, String>> handlePricelistSubmissionValidation(PricelistSubmissionValidationException exception) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", exception.getMessage()));
     }
 
