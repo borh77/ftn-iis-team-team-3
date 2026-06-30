@@ -49,6 +49,10 @@
   border: 1px solid #cbd5e1;
 }
 
+.secondary-button:hover {
+  background: #eef2f7;
+}
+
 .form-card {
   background: white;
   border-radius: 18px;
@@ -116,13 +120,37 @@ td {
   border-bottom: 1px solid #f1f5f9;
 }
 
-.status {
-  background: #dbeafe;
-  color: #1d4ed8;
+.badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.stage-badge,
+.status-badge {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.workflow-badge {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.outcome-badge {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.empty-badge {
+  background: #f1f5f9;
+  color: #64748b;
 }
 
 .process-form {

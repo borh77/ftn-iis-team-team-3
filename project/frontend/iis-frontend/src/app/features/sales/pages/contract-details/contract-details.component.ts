@@ -20,6 +20,7 @@ export class ContractDetailsComponent implements OnInit {
 
   contract?: Contract;
   loading = true;
+  signing = false;
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
@@ -46,5 +47,26 @@ export class ContractDetailsComponent implements OnInit {
     if (this.contract) {
       this.router.navigate(['/sales/processes', this.contract.salesProcessId]);
     }
+  }
+
+  signContract(): void {
+    if (!this.contract || this.contract.status !== 'PENDING') {
+      return;
+    }
+
+    this.signing = true;
+
+    this.salesApiService.signContract(this.contract.id).subscribe({
+      next: (response) => {
+        this.contract = response;
+        this.signing = false;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Failed to sign contract:', error);
+        this.signing = false;
+        this.cdr.detectChanges();
+      },
+    });
   }
 }

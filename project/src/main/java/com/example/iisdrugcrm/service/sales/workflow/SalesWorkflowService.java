@@ -14,7 +14,6 @@ import com.example.iisdrugcrm.repository.sales.workflow.SalesStageDefinitionRepo
 import com.example.iisdrugcrm.repository.sales.workflow.SalesStageTransitionRepository;
 import com.example.iisdrugcrm.repository.sales.workflow.SalesWorkflowRepository;
 import com.example.iisdrugcrm.domain.Region;
-import com.example.iisdrugcrm.repository.RegionRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -174,7 +173,9 @@ public class SalesWorkflowService {
 
     @Transactional(readOnly = true)
     public SalesStageResponse findStageByName(Long workflowId, String stageName) {
-        SalesWorkflow workflow = findActiveWorkflowEntity(workflowId);        SalesStageDefinition stage = findStageDefinition(workflow.getId(), stageName);
+        SalesWorkflow workflow = findActiveWorkflowEntity(workflowId);        
+        
+        SalesStageDefinition stage = findStageDefinition(workflow.getId(), stageName);
         return SalesStageResponse.from(stage);
     }
 

@@ -48,7 +48,7 @@
 
 .workflow-item {
   display: grid;
-  gap: 4px;
+  gap: 8px;
   width: 100%;
   padding: 14px;
   margin-bottom: 10px;
@@ -65,6 +65,10 @@
   background: #f9fafb;
 }
 
+.workflow-item.active {
+  box-shadow: inset 4px 0 0 #2563eb;
+}
+
 .workflow-item span {
   font-weight: 700;
 }
@@ -72,6 +76,18 @@
 .workflow-item small,
 .muted {
   color: #6b7280;
+}
+
+.region-badge {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .divider {
@@ -85,13 +101,6 @@
   justify-content: space-between;
   gap: 20px;
   align-items: center;
-}
-
-.summary-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
 }
 
 .summary-stats {
@@ -216,10 +225,19 @@ label {
 input,
 select {
   width: 100%;
-  padding: 10px 12px;
+  height: 44px;
+  padding: 0 12px;
   border: 1px solid #d1d5db;
   border-radius: 10px;
   background: #ffffff;
+  box-sizing: border-box;
+  font: inherit;
+}
+
+input:disabled,
+select:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
 }
 
 .checkbox {
@@ -233,6 +251,7 @@ select {
 }
 
 .primary-button {
+  min-height: 42px;
   padding: 11px 14px;
   border: none;
   border-radius: 10px;
@@ -265,6 +284,7 @@ select {
 }
 
 .secondary-button {
+  min-height: 42px;
   padding: 10px 12px;
   border: 1px solid #d1d5db;
   border-radius: 10px;
@@ -310,6 +330,7 @@ select {
   border: 1px solid #d1d5db;
   border-radius: 16px;
   background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
 }
 
 .stage-step:not(:last-child)::after {
@@ -347,8 +368,11 @@ select {
   margin-top: 10px;
 }
 
+.disabled-form {
+  opacity: 0.75;
+}
+
 @media (max-width: 1000px) {
-  .summary-actions,
   .form-heading {
     justify-content: flex-start;
   }

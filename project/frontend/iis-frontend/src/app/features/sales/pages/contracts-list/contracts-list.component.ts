@@ -80,13 +80,6 @@ export class ContractsListComponent implements OnInit {
     });
   }
 
-  signContract(contract: Contract): void {
-    this.salesApiService.signContract(contract.id).subscribe({
-      next: () => this.loadContracts(),
-      error: (error) => console.error('Failed to sign contract:', error),
-    });
-  }
-
   viewDetails(contract: Contract): void {
     this.router.navigate(['/sales/contracts', contract.id]);
   }

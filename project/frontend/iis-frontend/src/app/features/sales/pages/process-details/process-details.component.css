@@ -75,6 +75,10 @@
   border: 1px solid #cbd5e1;
 }
 
+.secondary-button:hover {
+  background: #eef2f7;
+}
+
 .stage-card,
 .info-card {
   background: #fff;
@@ -150,23 +154,52 @@
   border-bottom: none;
 }
 
-.status {
+.status,
+.badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
-  min-width: 110px;
   padding: 8px 14px;
-
   border-radius: 999px;
-  background: #dfe9ff;
-  color: #2f63ea;
   font-size: 13px;
   font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.status,
+.stage-badge,
+.status-badge {
+  background: #dfe9ff;
+  color: #2f63ea;
+}
+
+.workflow-badge {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.outcome-badge {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.empty-badge {
+  background: #f1f5f9;
+  color: #64748b;
 }
 
 .muted-text {
   color: #7a8699;
+}
+
+.empty-state {
+  margin: 14px 0 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
 }
 
 .loading {
@@ -243,6 +276,13 @@
   color: #64748b;
 }
 
+.history-user {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+
 .communication-form {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -270,6 +310,11 @@
   padding: 10px 12px;
   font: inherit;
   background: #fff;
+}
+
+.communication-form input,
+.communication-form select {
+  height: 44px;
 }
 
 .communication-form textarea {
@@ -313,4 +358,9 @@
   padding: 10px 12px;
   font: inherit;
   background: #fff;
+}
+
+.process-action-form input,
+.process-action-form select {
+  height: 44px;
 }

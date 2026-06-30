@@ -20,7 +20,7 @@
         [class.active]="selectedWorkflow?.id === workflow.id"
         (click)="selectWorkflow(workflow)">
         <span>{{ workflow.name }}</span>
-        <small>{{ getWorkflowRegionLabel(workflow) }}</small>
+        <small class="region-badge">{{ getWorkflowRegionLabel(workflow) }}</small>
       </button>
 
       <p *ngIf="!loading && workflows.length === 0" class="empty">
@@ -56,22 +56,12 @@
         <div>
           <p class="eyebrow">Selected workflow</p>
           <h2>{{ selectedWorkflow.name }}</h2>
-          <p>Region: <strong>{{ getWorkflowRegionLabel(selectedWorkflow) }}</strong></p>
+          <p>Region: <span class="region-badge">{{ getWorkflowRegionLabel(selectedWorkflow) }}</span></p>
         </div>
 
         <div class="summary-stats">
           <span>{{ stages.length }} stages</span>
           <span>{{ transitions.length }} transitions</span>
-        </div>
-
-        <div class="summary-actions">
-          <button type="button" class="secondary-button" (click)="showStageForm = true">
-            Add stage
-          </button>
-
-          <button type="button" class="secondary-button" (click)="showTransitionForm = true">
-            Add transition
-          </button>
         </div>
       </article>
 
@@ -295,13 +285,13 @@
           </div>
 
           <p *ngIf="stages.length < 2" class="empty">
-            At least two stages are required before adding a transition.
+            Add at least two stages before creating transitions.
           </p>
 
-          <form *ngIf="showTransitionForm" class="form" (ngSubmit)="createTransition()">
+          <form *ngIf="showTransitionForm" class="form" (ngSubmit)="createTransition()" [class.disabled-form]="stages.length < 2">
             <label>
               From stage
-              <select [(ngModel)]="newTransition.fromStageId" name="fromStage" required>
+              <select [(ngModel)]="newTransition.fromStageId" name="fromStage" [disabled]="stages.length < 2" required>
                 <option [ngValue]="0" disabled>Select stage</option>
                 <option *ngFor="let stage of stages" [ngValue]="stage.id">
                   {{ stage.name }}
@@ -311,7 +301,7 @@
 
             <label>
               To stage
-              <select [(ngModel)]="newTransition.toStageId" name="toStage" required>
+              <select [(ngModel)]="newTransition.toStageId" name="toStage" [disabled]="stages.length < 2" required>
                 <option [ngValue]="0" disabled>Select stage</option>
                 <option *ngFor="let stage of stages" [ngValue]="stage.id">
                   {{ stage.name }}
@@ -325,12 +315,12 @@
 
             <label>
               Condition type
-              <input [(ngModel)]="newTransition.conditionType" name="conditionType" />
+              <input [(ngModel)]="newTransition.conditionType" name="conditionType" [disabled]="stages.length < 2" />
             </label>
 
             <label>
               Description
-              <input [(ngModel)]="newTransition.conditionDescription" name="conditionDescription" />
+              <input [(ngModel)]="newTransition.conditionDescription" name="conditionDescription" [disabled]="stages.length < 2" />
             </label>
 
             <button

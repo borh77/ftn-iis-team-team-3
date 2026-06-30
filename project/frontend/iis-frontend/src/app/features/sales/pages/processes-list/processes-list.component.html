@@ -11,7 +11,7 @@
         class="primary-button"
         type="button"
         (click)="showCreateForm = !showCreateForm">
-        + Add Process
+        Create Process
     </button>
   </section>
 
@@ -50,7 +50,7 @@
         </button>
 
         <button type="submit" class="primary-button" [disabled]="saving || newProcess.customerId === 0 || newProcess.workflowId === 0">
-          {{ saving ? 'Saving...' : 'Save Process' }}
+          {{ saving ? 'Saving...' : 'Create' }}
         </button>
       </div>
     </form>
@@ -78,10 +78,14 @@
         <tr *ngFor="let process of processes">
           <td>{{ process.title }}</td>
           <td>{{ process.customerName }}</td>
-          <td>{{ process.workflowName || '-' }}</td>
-          <td><span class="status">{{ process.stage }}</span></td>
-          <td>{{ process.status }}</td>
-          <td>{{ process.outcome }}</td>
+          <td>
+            <span class="badge workflow-badge" [class.empty-badge]="!process.workflowName">
+              {{ process.workflowName || 'No workflow' }}
+            </span>
+          </td>
+          <td><span class="badge stage-badge">{{ process.stage }}</span></td>
+          <td><span class="badge status-badge">{{ process.status }}</span></td>
+          <td><span class="badge outcome-badge">{{ process.outcome || '-' }}</span></td>
           <td>
             <button type="button" class="secondary-button" (click)="viewDetails(process)">
               View Details
@@ -92,7 +96,7 @@
     </table>
 
     <div *ngIf="!loading && processes.length === 0" class="loading">
-      No sales processes found.
+      No sales processes found. Start a process for an existing customer.
     </div>
   </section>
 </main>

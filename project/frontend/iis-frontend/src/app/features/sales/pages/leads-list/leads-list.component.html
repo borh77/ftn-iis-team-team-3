@@ -11,7 +11,7 @@
       class="primary-button"
       type="button"
       (click)="showCreateForm = !showCreateForm">
-      + Add Lead
+      Create Lead
     </button>
   </section>
 
@@ -60,7 +60,7 @@
         </button>
 
         <button type="submit" class="primary-button" [disabled]="saving">
-          {{ saving ? 'Saving...' : 'Save Lead' }}
+          {{ saving ? 'Saving...' : 'Create' }}
         </button>
       </div>
     </form>

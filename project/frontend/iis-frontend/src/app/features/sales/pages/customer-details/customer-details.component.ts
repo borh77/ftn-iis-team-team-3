@@ -71,4 +71,8 @@ export class CustomerDetailsComponent implements OnInit {
   viewProcess(process: SalesProcess): void {
     this.router.navigate(['/sales/processes', process.id]);
   }
+
+  startSalesProcess(): void {
+    this.router.navigate(['/sales/processes']);
+  }
 }

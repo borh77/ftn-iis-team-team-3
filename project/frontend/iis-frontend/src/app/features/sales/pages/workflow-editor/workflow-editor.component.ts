@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 
 import { RegionService } from '../../../../core/region.service';
 import { Region } from '../../../../core/region.model';
@@ -80,7 +81,7 @@ export class WorkflowEditorComponent implements OnInit {
     this.loadWorkflows();
   }
 
-  loadWorkflows(): void {
+  loadWorkflows(preferredWorkflowId?: number, selectLatest = false): void {
     this.loading = true;
     const selectedWorkflowId = this.selectedWorkflow?.id ?? null;
 
@@ -89,7 +90,21 @@ export class WorkflowEditorComponent implements OnInit {
         this.workflows = workflows ?? [];
         this.loading = false;
 
-        this.selectWorkflowFromList(selectedWorkflowId);
+        const workflowToSelect = this.findWorkflowToSelect(
+          selectedWorkflowId,
+          preferredWorkflowId,
+          selectLatest,
+        );
+
+        if (workflowToSelect) {
+          this.selectWorkflow(workflowToSelect);
+          return;
+        }
+
+        this.selectedWorkflow = null;
+        this.stages = [];
+        this.transitions = [];
+        this.loadingWorkflowDetails = false;
         this.cdr.detectChanges();
       },
       error: err => {
@@ -98,6 +113,7 @@ export class WorkflowEditorComponent implements OnInit {
         this.selectedWorkflow = null;
         this.stages = [];
         this.transitions = [];
+        this.loadingWorkflowDetails = false;
         this.cdr.detectChanges();
       },
     });
@@ -105,66 +121,31 @@ export class WorkflowEditorComponent implements OnInit {
 
   selectWorkflow(workflow: SalesWorkflow): void {
     this.selectedWorkflow = workflow;
-    this.cdr.detectChanges();
-    this.refreshSelectedWorkflowDetails();
-  }
-
-  refreshSelectedWorkflowDetails(): void {
-    if (!this.selectedWorkflow) {
-      this.stages = [];
-      this.transitions = [];
-      this.loadingWorkflowDetails = false;
-      this.cdr.detectChanges();
-      return;
-    }
-
-    const workflow = this.selectedWorkflow;
     this.loadingWorkflowDetails = true;
+    this.cdr.detectChanges();
 
-    this.refreshStages(workflow.id);
-    this.refreshTransitions(workflow.id);
-  }
-
-  refreshStages(workflowId = this.selectedWorkflow?.id): void {
-    if (!workflowId) {
-      this.stages = [];
-      return;
-    }
-
-    this.salesApi.getSalesWorkflowStages(workflowId).subscribe({
-      next: stages => {
-        if (this.selectedWorkflow?.id === workflowId) {
-          this.stages = this.sortStages(stages ?? []);
+    forkJoin({
+      stages: this.salesApi.getSalesWorkflowStages(workflow.id),
+      transitions: this.salesApi.getSalesWorkflowTransitions(workflow.id),
+    }).subscribe({
+      next: ({ stages, transitions }) => {
+        if (this.selectedWorkflow?.id !== workflow.id) {
+          return;
         }
 
+        this.stages = this.sortStages(stages ?? []);
+        this.transitions = transitions ?? [];
         this.loadingWorkflowDetails = false;
         this.cdr.detectChanges();
       },
-      error: err => {
-        console.error(err);
-        this.loadingWorkflowDetails = false;
-        this.cdr.detectChanges();
-      },
-    });
-  }
-
-  refreshTransitions(workflowId = this.selectedWorkflow?.id): void {
-    if (!workflowId) {
-      this.transitions = [];
-      this.cdr.detectChanges();
-      return;
-    }
-
-    this.salesApi.getSalesWorkflowTransitions(workflowId).subscribe({
-      next: transitions => {
-        if (this.selectedWorkflow?.id === workflowId) {
-          this.transitions = transitions ?? [];
+      error: error => {
+        console.error('Failed to load workflow details:', error);
+        if (this.selectedWorkflow?.id === workflow.id) {
+          this.stages = [];
+          this.transitions = [];
+          this.loadingWorkflowDetails = false;
+          this.cdr.detectChanges();
         }
-        this.cdr.detectChanges();
-      },
-      error: err => {
-        console.error(err);
-        this.cdr.detectChanges();
       },
     });
   }
@@ -176,19 +157,18 @@ export class WorkflowEditorComponent implements OnInit {
           name: '',
           regionId: null,
         };
+        this.cdr.detectChanges();
 
         if (workflow?.id) {
           this.workflows = [
             ...this.workflows.filter(item => item.id !== workflow.id),
             workflow,
           ];
-          this.selectWorkflow(workflow);
-          this.refreshWorkflows(workflow.id);
-          this.cdr.detectChanges();
+          this.loadWorkflows(workflow.id);
           return;
         }
 
-        this.refreshWorkflows(undefined, true);
+        this.loadWorkflows(undefined, true);
       },
     });
   }
@@ -222,8 +202,9 @@ export class WorkflowEditorComponent implements OnInit {
         this.stageMode = 'PREDEFINED';
         this.selectedPredefinedStage = '';
         this.showStageForm = true;
+        this.cdr.detectChanges();
 
-        this.refreshStages();
+        this.selectWorkflow(this.selectedWorkflow!);
       },
     });
   }
@@ -248,7 +229,8 @@ export class WorkflowEditorComponent implements OnInit {
         };
 
         this.showTransitionForm = true;
-        this.refreshTransitions();
+        this.cdr.detectChanges();
+        this.selectWorkflow(this.selectedWorkflow!);
       },
     });
   }
@@ -311,59 +293,18 @@ export class WorkflowEditorComponent implements OnInit {
     return workflow.regionName || 'GLOBAL';
   }
 
-  refreshSelectedWorkflow(): void {
-    if (!this.selectedWorkflow) {
-      return;
-    }
-
-    const workflowId = this.selectedWorkflow.id;
-    const currentWorkflow = this.workflows.find(workflow => workflow.id === workflowId) ?? this.selectedWorkflow;
-    this.selectWorkflow(currentWorkflow);
-  }
-
-  refreshWorkflows(preferredWorkflowId?: number, selectLatest = false): void {
-    this.loading = true;
-    const selectedWorkflowId = this.selectedWorkflow?.id ?? null;
-
-    this.salesApi.getSalesWorkflows().subscribe({
-      next: workflows => {
-        this.workflows = workflows ?? [];
-        this.loading = false;
-
-        this.selectWorkflowFromList(selectedWorkflowId, preferredWorkflowId, selectLatest);
-        this.cdr.detectChanges();
-      },
-      error: err => {
-        console.error('Failed to load sales workflows:', err);
-        this.loading = false;
-        this.selectedWorkflow = null;
-        this.stages = [];
-        this.transitions = [];
-        this.cdr.detectChanges();
-      },
-    });
-  }
-
-  private selectWorkflowFromList(
+  private findWorkflowToSelect(
     selectedWorkflowId: number | null,
     preferredWorkflowId?: number,
     selectLatest = false,
-  ): void {
-    const workflowToSelect =
+  ): SalesWorkflow | null {
+    return (
       this.workflows.find(workflow => workflow.id === preferredWorkflowId) ??
       (selectLatest ? this.getLatestWorkflow(this.workflows) : null) ??
       this.workflows.find(workflow => workflow.id === selectedWorkflowId) ??
       this.workflows[0] ??
-      null;
-
-    if (workflowToSelect) {
-      this.selectWorkflow(workflowToSelect);
-      return;
-    }
-
-    this.selectedWorkflow = null;
-    this.stages = [];
-    this.transitions = [];
+      null
+    );
   }
 
   private sortStages(stages: SalesStageDefinition[]): SalesStageDefinition[] {

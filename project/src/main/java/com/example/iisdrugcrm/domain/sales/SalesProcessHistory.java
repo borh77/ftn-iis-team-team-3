@@ -32,7 +32,8 @@ public class SalesProcessHistory {
     protected SalesProcessHistory() {
     }
 
-    public SalesProcessHistory(SalesProcess salesProcess, String previousStage, String newStage, User changedBy) {        this.salesProcess = salesProcess;
+    public SalesProcessHistory(SalesProcess salesProcess, String previousStage, String newStage, User changedBy) {
+        this.salesProcess = salesProcess;
         this.previousStage = previousStage;
         this.newStage = newStage;
         this.changedBy = changedBy;
