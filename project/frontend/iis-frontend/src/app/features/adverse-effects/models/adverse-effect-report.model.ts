@@ -11,6 +11,8 @@ export interface AdverseEffectReport {
   medicationName: string;
   reportType: ReportType;
   reporterUsername: string;
+  currentVersionId?: number;
+  currentVersionNumber?: number;
   // Doctor-specific
   effectDescription?: string;
   additionalNotes?: string;
@@ -54,6 +56,23 @@ export interface StatusTransition {
   verdict?: string;
 }
 
+export interface AdverseEffectReportVersion {
+  id: number;
+  reportId: number;
+  versionNumber: number;
+  active: boolean;
+  createdAt: string;
+  createdByUsername: string;
+  medicationName: string;
+  source?: string;
+  severity?: string;
+  symptomDate?: string;
+  effectDescription?: string;
+  additionalNotes?: string;
+  patientGender?: string;
+  patientAge?: number;
+}
+
 export interface AnalystNote {
   id: number;
   content: string;
@@ -67,4 +86,30 @@ export interface ChangeStatusRequest {
   priority?: string;
   closureReason?: string;
   verdict?: string;
+}
+
+export interface AnalyticsCountItem {
+  label: string;
+  count: number;
+  percentage: number;
+}
+
+export interface AnalyticsTimeBucket {
+  period: string;
+  count: number;
+}
+
+export interface AdverseEffectAnalyticsSummary {
+  totalReports: number;
+  doctorReports: number;
+  patientReports: number;
+  submittedReports: number;
+  underReviewReports: number;
+  closedReports: number;
+  evidencedReports: number;
+  reportsByMedication: AnalyticsCountItem[];
+  reportsByEffect: AnalyticsCountItem[];
+  reportsByStatus: AnalyticsCountItem[];
+  reportsByReporterType: AnalyticsCountItem[];
+  reportsOverTime: AnalyticsTimeBucket[];
 }

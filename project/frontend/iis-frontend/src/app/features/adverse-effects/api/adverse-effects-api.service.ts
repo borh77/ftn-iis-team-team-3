@@ -4,6 +4,8 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../../../core/api.token';
 import {
   AdverseEffectReport,
+  AdverseEffectAnalyticsSummary,
+  AdverseEffectReportVersion,
   AnalystNote,
   ChangeStatusRequest,
   CreateDoctorReportRequest,
@@ -75,5 +77,28 @@ export class AdverseEffectsApiService {
 
   getNotes(id: number): Observable<AnalystNote[]> {
     return this.http.get<AnalystNote[]>(`${this.base}/reports/${id}/notes`);
+  }
+
+  getReportVersions(id: number): Observable<AdverseEffectReportVersion[]> {
+    return this.http.get<AdverseEffectReportVersion[]>(`${this.base}/reports/${id}/versions`);
+  }
+
+  getAnalyticsSummary(filters: { from?: string; to?: string } = {}): Observable<AdverseEffectAnalyticsSummary> {
+    const params: Record<string, string> = {};
+    if (filters.from) params['from'] = filters.from;
+    if (filters.to) params['to'] = filters.to;
+    params['_ts'] = Date.now().toString();
+
+    return this.http.get<AdverseEffectAnalyticsSummary>(`${this.base}/analytics/summary`, { params });
+  }
+
+  downloadAnalyticsPdf(payload: {
+    from?: string;
+    to?: string;
+    analystInterpretation?: string;
+  } = {}): Observable<Blob> {
+    return this.http.post(`${this.base}/analytics/report/pdf`, payload, {
+      responseType: 'blob'
+    });
   }
 }

@@ -2,6 +2,7 @@
 
   <nav class="ae-nav">
     <a class="nav-link" [routerLink]="isPharmacovigilant ? '/adverse-effects/all-reports' : '/adverse-effects/my-reports'" routerLinkActive="active">Back</a>
+    <a class="nav-link" *ngIf="isPharmacovigilant" routerLink="/adverse-effects/analytics" routerLinkActive="active">Analytics</a>
   </nav>
 
   <div class="loading" *ngIf="loading">Loading...</div>
@@ -53,6 +54,50 @@
       <div class="info-item full-width" *ngIf="report.additionalNotes">
         <span class="label">Additional Notes</span>
         <span class="value text-block">{{ report.additionalNotes }}</span>
+      </div>
+    </div>
+
+    <div class="section" *ngIf="report.reportType === 'DOCTOR'">
+      <div class="section-title-row">
+        <h2>Content Version History</h2>
+        <span class="version-summary" *ngIf="report.currentVersionNumber">Current v{{ report.currentVersionNumber }}</span>
+      </div>
+
+      <div class="empty-inline" *ngIf="versionsLoading">Loading versions...</div>
+      <div class="empty-inline" *ngIf="!versionsLoading && versions.length === 0">No content versions recorded yet.</div>
+
+      <div class="version-list" *ngIf="!versionsLoading && versions.length > 0">
+        <article class="version-card" *ngFor="let version of versions">
+          <div class="version-header">
+            <div>
+              <strong>Version {{ version.versionNumber }}</strong>
+              <span>{{ version.createdAt | date:'dd.MM.yyyy HH:mm' }} by {{ version.createdByUsername }}</span>
+            </div>
+            <span class="active-pill" *ngIf="version.active">Active</span>
+          </div>
+
+          <div class="version-grid">
+            <div>
+              <span class="label">Medication</span>
+              <span class="value">{{ version.medicationName }}</span>
+            </div>
+            <div>
+              <span class="label">Severity</span>
+              <span class="value">{{ version.severity || '-' }}</span>
+            </div>
+            <div>
+              <span class="label">Symptom Date</span>
+              <span class="value">{{ version.symptomDate || '-' }}</span>
+            </div>
+            <div>
+              <span class="label">Patient</span>
+              <span class="value">{{ version.patientGender || '-' }}{{ version.patientAge ? ', ' + version.patientAge : '' }}</span>
+            </div>
+          </div>
+
+          <p class="version-description">{{ version.effectDescription || '-' }}</p>
+          <p class="version-notes" *ngIf="version.additionalNotes">{{ version.additionalNotes }}</p>
+        </article>
       </div>
     </div>
 

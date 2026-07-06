@@ -38,6 +38,10 @@ public abstract class AdverseEffectReport {
     @Column(name = "medication_name", nullable = false)
     private String medicationName;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "current_version_id")
+    private AdverseEffectReportVersion currentVersion;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -67,4 +71,7 @@ public abstract class AdverseEffectReport {
 
     public String getMedicationName() { return medicationName; }
     public void setMedicationName(String medicationName) { this.medicationName = medicationName; }
+
+    public AdverseEffectReportVersion getCurrentVersion() { return currentVersion; }
+    public void setCurrentVersion(AdverseEffectReportVersion currentVersion) { this.currentVersion = currentVersion; }
 }

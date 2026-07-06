@@ -1,7 +1,10 @@
 package com.example.iisdrugcrm.controller.adverse;
 
 import com.example.iisdrugcrm.dto.adverse.AddNoteRequestDTO;
+import com.example.iisdrugcrm.dto.adverse.AdverseEffectAnalyticsPdfRequestDTO;
+import com.example.iisdrugcrm.dto.adverse.AdverseEffectAnalyticsSummaryDTO;
 import com.example.iisdrugcrm.dto.adverse.AdverseEffectReportResponseDTO;
+import com.example.iisdrugcrm.dto.adverse.AdverseEffectReportVersionResponseDTO;
 import com.example.iisdrugcrm.dto.adverse.AnalystNoteResponseDTO;
 import com.example.iisdrugcrm.dto.adverse.ChangeStatusRequestDTO;
 import com.example.iisdrugcrm.dto.adverse.CreateDoctorReportRequestDTO;
@@ -10,12 +13,17 @@ import com.example.iisdrugcrm.dto.adverse.StatusTransitionResponseDTO;
 import com.example.iisdrugcrm.dto.adverse.UpdateDoctorReportRequestDTO;
 import com.example.iisdrugcrm.service.adverse.AdverseEffectReportService;
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -74,6 +82,46 @@ public class AdverseEffectReportController {
         return ResponseEntity.ok(service.getAllReportsFiltered(status, medicationName, severity));
     }
 
+    @GetMapping("/analytics/summary")
+    @PreAuthorize("hasRole('FARMAKOVIGILANT')")
+    public ResponseEntity<AdverseEffectAnalyticsSummaryDTO> getAnalyticsSummary(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(service.getAnalyticsSummary(from, to));
+    }
+
+    @GetMapping("/analytics/report/pdf")
+    @PreAuthorize("hasRole('FARMAKOVIGILANT')")
+    public ResponseEntity<byte[]> getAnalyticsPdfReport(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        byte[] pdf = service.generateAnalyticsPdfReport(from, to, null);
+
+        return pdfResponse(pdf);
+    }
+
+    @PostMapping("/analytics/report/pdf")
+    @PreAuthorize("hasRole('FARMAKOVIGILANT')")
+    public ResponseEntity<byte[]> createAnalyticsPdfReport(
+            @RequestBody(required = false) AdverseEffectAnalyticsPdfRequestDTO request) {
+        LocalDate from = request == null ? null : request.getFrom();
+        LocalDate to = request == null ? null : request.getTo();
+        String analystInterpretation = request == null ? null : request.getAnalystInterpretation();
+        byte[] pdf = service.generateAnalyticsPdfReport(from, to, analystInterpretation);
+
+        return pdfResponse(pdf);
+    }
+
+    private ResponseEntity<byte[]> pdfResponse(byte[] pdf) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename("adverse-effect-analytics-report.pdf")
+                        .build()
+                        .toString())
+                .body(pdf);
+    }
+
     // US-03: Single report details
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('LEKAR', 'FARMAKOVIGILANT')")
@@ -116,6 +164,14 @@ public class AdverseEffectReportController {
     @PreAuthorize("hasAnyRole('FARMAKOVIGILANT','LEKAR')")
     public ResponseEntity<List<AnalystNoteResponseDTO>> getNotes(@PathVariable Long id) {
         return ResponseEntity.ok(service.getNotes(id));
+    }
+
+    @GetMapping("/reports/{id}/versions")
+    @PreAuthorize("hasAnyRole('FARMAKOVIGILANT','LEKAR')")
+    public ResponseEntity<List<AdverseEffectReportVersionResponseDTO>> getVersions(
+            @PathVariable Long id,
+            Authentication auth) {
+        return ResponseEntity.ok(service.getReportVersions(id, auth.getName()));
     }
 
     // US-03: Doctor report editing only while SUBMITTED

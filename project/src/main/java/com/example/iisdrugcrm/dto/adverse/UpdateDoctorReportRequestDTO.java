@@ -22,6 +22,10 @@ public class UpdateDoctorReportRequestDTO {
 
     private String additionalNotes;
 
+    private String patientGender;
+
+    private Integer patientAge;
+
     public String getMedicationName() { return medicationName; }
     public void setMedicationName(String medicationName) { this.medicationName = medicationName; }
 
@@ -39,4 +43,10 @@ public class UpdateDoctorReportRequestDTO {
 
     public String getAdditionalNotes() { return additionalNotes; }
     public void setAdditionalNotes(String additionalNotes) { this.additionalNotes = additionalNotes; }
+
+    public String getPatientGender() { return patientGender; }
+    public void setPatientGender(String patientGender) { this.patientGender = patientGender; }
+
+    public Integer getPatientAge() { return patientAge; }
+    public void setPatientAge(Integer patientAge) { this.patientAge = patientAge; }
 }

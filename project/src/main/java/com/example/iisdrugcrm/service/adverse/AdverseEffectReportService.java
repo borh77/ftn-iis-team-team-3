@@ -2,7 +2,9 @@ package com.example.iisdrugcrm.service.adverse;
 
 import com.example.iisdrugcrm.dto.adverse.AdverseEffectReportResponseDTO;
 import com.example.iisdrugcrm.dto.adverse.AddNoteRequestDTO;
+import com.example.iisdrugcrm.dto.adverse.AdverseEffectAnalyticsSummaryDTO;
 import com.example.iisdrugcrm.dto.adverse.AnalystNoteResponseDTO;
+import com.example.iisdrugcrm.dto.adverse.AdverseEffectReportVersionResponseDTO;
 import com.example.iisdrugcrm.dto.adverse.ChangeStatusRequestDTO;
 import com.example.iisdrugcrm.dto.adverse.CreateDoctorReportRequestDTO;
 import com.example.iisdrugcrm.dto.adverse.CreatePatientReportRequestDTO;
@@ -10,6 +12,7 @@ import com.example.iisdrugcrm.dto.adverse.StatusTransitionResponseDTO;
 import com.example.iisdrugcrm.dto.adverse.UpdateDoctorReportRequestDTO;
 
 import java.util.List;
+import java.time.LocalDate;
 
 public interface AdverseEffectReportService {
 
@@ -40,4 +43,10 @@ public interface AdverseEffectReportService {
     List<StatusTransitionResponseDTO> getStatusHistory(Long reportId);
 
     List<AnalystNoteResponseDTO> getNotes(Long reportId);
+
+    List<AdverseEffectReportVersionResponseDTO> getReportVersions(Long reportId, String currentUsername);
+
+    AdverseEffectAnalyticsSummaryDTO getAnalyticsSummary(LocalDate from, LocalDate to);
+
+    byte[] generateAnalyticsPdfReport(LocalDate from, LocalDate to, String analystInterpretation);
 }

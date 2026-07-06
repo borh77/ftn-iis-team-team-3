@@ -1,0 +1,189 @@
+<div class="page-wrapper">
+  <nav class="ae-nav">
+    <a class="nav-link" routerLink="/adverse-effects/all-reports" routerLinkActive="active">All Reports</a>
+    <a class="nav-link" routerLink="/adverse-effects/analytics" routerLinkActive="active">Analytics</a>
+  </nav>
+
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Pharmacovigilance analytics</p>
+      <h1>Adverse effect reports</h1>
+      <p>Signal-oriented overview of medicine safety reports, status workload and reporter source.</p>
+    </div>
+
+    <form class="report-builder" (ngSubmit)="generatePdfReport()">
+      <label>
+        Analyst interpretation for PDF report
+        <textarea
+          name="analystInterpretation"
+          [(ngModel)]="analystInterpretation"
+          rows="3"
+          placeholder="Write your conclusion, e.g. Aspirin has the highest number of reported stomach pain cases and should be reviewed as a potential pharmacovigilance signal."></textarea>
+      </label>
+      <div class="filter-actions">
+        <button class="btn-primary" type="button" (click)="refreshAnalytics()">
+          Refresh analytics
+        </button>
+        <button class="btn-secondary" type="submit" [disabled]="!canGeneratePdf || pdfDownloading">
+          {{ pdfDownloading ? 'Generating...' : 'Generate PDF report' }}
+        </button>
+      </div>
+      <small class="pdf-hint" *ngIf="!canGeneratePdf">
+        Write an analyst interpretation to enable PDF generation.
+      </small>
+    </form>
+  </section>
+
+  <div class="loading" *ngIf="loading">{{ refreshNotice || 'Refreshing analytics...' }}</div>
+  <div class="error-message" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="error-message" *ngIf="pdfErrorMessage">{{ pdfErrorMessage }}</div>
+
+  <ng-container *ngIf="summary as data">
+    <div class="empty-summary" *ngIf="data.totalReports === 0 && !errorMessage">
+      No adverse effect reports are available for analytics.
+    </div>
+
+    <section class="metrics-grid">
+      <div class="metric">
+        <span>Total cases</span>
+        <strong>{{ data.totalReports }}</strong>
+        <small *ngIf="lastUpdatedAt">Updated {{ lastUpdatedAt }}</small>
+      </div>
+      <div class="metric">
+        <span>Doctor source</span>
+        <strong>{{ data.doctorReports }}</strong>
+        <small>{{ percent(data.doctorReports, data.totalReports) }}%</small>
+      </div>
+      <div class="metric">
+        <span>Patient source</span>
+        <strong>{{ data.patientReports }}</strong>
+        <small>{{ percent(data.patientReports, data.totalReports) }}%</small>
+      </div>
+      <div class="metric">
+        <span>Under review</span>
+        <strong>{{ data.underReviewReports }}</strong>
+        <small>analyst workload</small>
+      </div>
+      <div class="metric">
+        <span>Closed</span>
+        <strong>{{ data.closedReports }}</strong>
+        <small>completed analysis</small>
+      </div>
+      <div class="metric">
+        <span>Evidenced</span>
+        <strong>{{ data.evidencedReports }}</strong>
+        <small>patient reports</small>
+      </div>
+    </section>
+
+    <section class="insight-grid">
+      <article class="analytics-panel signal-panel">
+        <p class="eyebrow">Potential signal focus</p>
+        <h2 *ngIf="topItem(data.reportsByMedication) as medication">{{ medication.label }}</h2>
+        <h2 *ngIf="!topItem(data.reportsByMedication)">No signal yet</h2>
+        <p>{{ signalNarrative(data) }}</p>
+        <div class="signal-meta" *ngIf="topItem(data.reportsByMedication) as medication">
+          <span>{{ medication.count }} reports</span>
+          <span>{{ medication.percentage }}% of dataset</span>
+        </div>
+      </article>
+
+      <article class="analytics-panel source-panel">
+        <div>
+          <p class="eyebrow">Reporter source</p>
+          <h2>Doctor vs patient</h2>
+        </div>
+        <div class="donut-wrap">
+          <div class="donut" [style.background]="sourceDonut(data)">
+            <span>{{ data.totalReports }}</span>
+            <small>reports</small>
+          </div>
+          <div class="legend">
+            <div><i class="legend-dot doctor"></i>Doctor {{ percent(data.doctorReports, data.totalReports) }}%</div>
+            <div><i class="legend-dot patient"></i>Patient {{ percent(data.patientReports, data.totalReports) }}%</div>
+          </div>
+        </div>
+      </article>
+
+      <article class="analytics-panel status-panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Workflow health</p>
+            <h2>Status pipeline</h2>
+          </div>
+        </div>
+        <div class="status-pipeline">
+          <div
+            class="status-stage"
+            *ngFor="let item of data.reportsByStatus"
+            [ngClass]="statusClass(item.label)">
+            <span>{{ statusLabel(item.label) }}</span>
+            <strong>{{ item.count }}</strong>
+            <small>{{ item.percentage }}%</small>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="reports-grid">
+      <article class="analytics-panel chart-panel wide">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Medicine signal ranking</p>
+            <h2>Top reported medicines</h2>
+          </div>
+        </div>
+        <div class="empty" *ngIf="data.reportsByMedication.length === 0">No medication data.</div>
+        <div class="ranked-chart" *ngIf="data.reportsByMedication.length > 0">
+          <div class="rank-row" *ngFor="let item of topItems(data.reportsByMedication); let index = index">
+            <span class="rank">{{ index + 1 }}</span>
+            <div class="bar-meta">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.count }} reports</strong>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill medication" [style.width.%]="barWidth(item.count, maxCount(data.reportsByMedication))"></div>
+            </div>
+            <small>{{ item.percentage }}%</small>
+          </div>
+        </div>
+      </article>
+
+      <article class="analytics-panel chart-panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Effect profile</p>
+            <h2>Most frequent effects</h2>
+          </div>
+        </div>
+        <div class="empty" *ngIf="data.reportsByEffect.length === 0">No effect data.</div>
+        <div class="effect-cloud" *ngIf="data.reportsByEffect.length > 0">
+          <div class="effect-pill" *ngFor="let item of topItems(data.reportsByEffect, 8)">
+            <span>{{ item.label }}</span>
+            <strong>{{ item.count }}</strong>
+            <small>{{ item.percentage }}%</small>
+          </div>
+        </div>
+      </article>
+
+      <article class="analytics-panel chart-panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Source breakdown</p>
+            <h2>Reporter contribution</h2>
+          </div>
+        </div>
+        <div class="source-split compact-source">
+          <div class="source-item" *ngFor="let item of data.reportsByReporterType">
+            <span>{{ item.label }}</span>
+            <strong>{{ item.count }}</strong>
+            <div class="bar-track">
+              <div class="bar-fill source" [style.width.%]="barWidth(item.count, maxCount(data.reportsByReporterType))"></div>
+            </div>
+            <small>{{ item.percentage }}%</small>
+          </div>
+        </div>
+      </article>
+    </section>
+  </ng-container>
+</div>

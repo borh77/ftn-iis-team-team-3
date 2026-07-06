@@ -6,6 +6,7 @@ import { finalize } from 'rxjs';
 import { AdverseEffectsApiService } from '../../api/adverse-effects-api.service';
 import {
   AdverseEffectReport,
+  AdverseEffectReportVersion,
   AnalystNote,
   ChangeStatusRequest,
   ReportStatus,
@@ -34,9 +35,11 @@ export class ReportDetailComponent implements OnInit, OnDestroy {
   report: AdverseEffectReport | null = null;
   statusHistory: StatusTransition[] = [];
   notes: AnalystNote[] = [];
+  versions: AdverseEffectReportVersion[] = [];
   reportId: number | null = null;
   loading = true;
   actionLoading = false;
+  versionsLoading = false;
   errorMessage = '';
   successMessage = '';
 
@@ -177,6 +180,11 @@ export class ReportDetailComponent implements OnInit, OnDestroy {
     this.api.getReportById(id).pipe(finalize(() => (this.loading = false))).subscribe({
       next: (data) => {
         this.report = data;
+        if (data.reportType === 'DOCTOR') {
+          this.loadVersions(id);
+        } else {
+          this.versions = [];
+        }
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -207,6 +215,20 @@ export class ReportDetailComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.notes = [];
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  private loadVersions(id: number): void {
+    this.versionsLoading = true;
+    this.api.getReportVersions(id).pipe(finalize(() => (this.versionsLoading = false))).subscribe({
+      next: (data) => {
+        this.versions = data;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.versions = [];
         this.cdr.detectChanges();
       }
     });

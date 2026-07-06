@@ -4,6 +4,7 @@ import { passwordChangeGuard } from './core/auth/password-change.guard';
 import { CreateDoctorReportComponent } from './features/adverse-effects/pages/create-doctor-report/create-doctor-report.component';
 import { MyReportsComponent } from './features/adverse-effects/pages/my-reports/my-reports.component';
 import { AllReportsComponent } from './features/adverse-effects/pages/all-reports/all-reports.component';
+import { AdverseAnalyticsComponent } from './features/adverse-effects/pages/analytics/adverse-analytics.component';
 import { ReportDetailComponent } from './features/adverse-effects/pages/report-detail/report-detail.component';
 import { CreatePatientReportComponent } from './features/adverse-effects/pages/create-patient-report/create-patient-report.component';
 import { EditReportComponent } from './features/adverse-effects/pages/edit-report/edit-report.component';
@@ -268,6 +269,13 @@ export const routes: Routes = [
 		canActivate: [authGuard, passwordChangeGuard],
 		data: { roles: ['ROLE_FARMAKOVIGILANT'] },
 		title: 'IIS Drug CRM | All Reports',
+	},
+	{
+		path: 'adverse-effects/analytics',
+		component: AdverseAnalyticsComponent,
+		canActivate: [authGuard, passwordChangeGuard],
+		data: { roles: ['ROLE_FARMAKOVIGILANT'] },
+		title: 'IIS Drug CRM | Adverse Effect Analytics',
 	},
 	{
 		path: 'adverse-effects/create-patient-report',

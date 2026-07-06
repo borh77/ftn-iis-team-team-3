@@ -14,6 +14,8 @@ public class AdverseEffectReportResponseDTO {
     private String medicationName;
     private String reportType;       // DOCTOR or PATIENT
     private String reporterUsername;
+    private Long currentVersionId;
+    private Integer currentVersionNumber;
 
     // Fields specific to DoctorReport
     private String effectDescription;
@@ -49,6 +51,12 @@ public class AdverseEffectReportResponseDTO {
 
     public String getReporterUsername() { return reporterUsername; }
     public void setReporterUsername(String reporterUsername) { this.reporterUsername = reporterUsername; }
+
+    public Long getCurrentVersionId() { return currentVersionId; }
+    public void setCurrentVersionId(Long currentVersionId) { this.currentVersionId = currentVersionId; }
+
+    public Integer getCurrentVersionNumber() { return currentVersionNumber; }
+    public void setCurrentVersionNumber(Integer currentVersionNumber) { this.currentVersionNumber = currentVersionNumber; }
 
     public String getEffectDescription() { return effectDescription; }
     public void setEffectDescription(String effectDescription) { this.effectDescription = effectDescription; }
