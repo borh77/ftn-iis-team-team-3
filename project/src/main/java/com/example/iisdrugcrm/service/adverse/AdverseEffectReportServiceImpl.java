@@ -30,6 +30,7 @@ import com.example.iisdrugcrm.service.EmailService;
 import com.lowagie.text.Document;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
+import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
 import com.lowagie.text.pdf.PdfPCell;
@@ -38,6 +39,7 @@ import com.lowagie.text.pdf.PdfWriter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -53,6 +55,24 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class AdverseEffectReportServiceImpl implements AdverseEffectReportService {
+
+    private static final String REPORT_COMPREHENSIVE = "comprehensive";
+    private static final String REPORT_MEDICATION = "medication";
+    private static final String REPORT_EFFECTS = "effects";
+    private static final String REPORT_STATUS = "status";
+    private static final String REPORT_REPORTER = "reporter";
+    private static final String REPORT_SOURCE = "source";
+    private static final String REPORT_TIMELINE = "timeline";
+
+    private static final Color COLOR_NAVY = new Color(21, 36, 71);
+    private static final Color COLOR_BLUE = new Color(37, 99, 235);
+    private static final Color COLOR_TEAL = new Color(15, 159, 143);
+    private static final Color COLOR_GREEN = new Color(22, 163, 74);
+    private static final Color COLOR_ORANGE = new Color(245, 158, 11);
+    private static final Color COLOR_RED = new Color(220, 38, 38);
+    private static final Color COLOR_PURPLE = new Color(124, 58, 237);
+    private static final Color COLOR_GRAY = new Color(226, 232, 240);
+    private static final Color COLOR_LIGHT = new Color(248, 250, 252);
 
     private final DoctorReportRepository doctorReportRepository;
     private final PatientReportRepository patientReportRepository;
@@ -308,34 +328,30 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
         summary.setReportsByEffect(toCountItems(countByEffect(reports), total));
         summary.setReportsByStatus(toCountItems(countByStatusLabel(reports), total));
         summary.setReportsByReporterType(toCountItems(countByReporterType(reports), total));
+        summary.setReportsBySource(toCountItems(countBySource(reports), total));
         summary.setReportsOverTime(toTimeBuckets(reports));
         return summary;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public byte[] generateAnalyticsPdfReport(LocalDate from, LocalDate to, String analystInterpretation) {
+    public byte[] generateAnalyticsPdfReport(LocalDate from, LocalDate to, String analystInterpretation, String reportType) {
         AdverseEffectAnalyticsSummaryDTO summary = getAnalyticsSummary(from, to);
+        String normalizedReportType = normalizeReportType(reportType);
+        if (REPORT_COMPREHENSIVE.equals(normalizedReportType) && trimToNull(analystInterpretation) == null) {
+            throw new IllegalArgumentException("Analyst interpretation is required for the comprehensive analytics report.");
+        }
 
         try {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            Document document = new Document();
+            Document document = new Document(PageSize.A4, 32, 32, 32, 32);
             PdfWriter.getInstance(document, outputStream);
             document.open();
 
-            Paragraph title = new Paragraph("Adverse Effect Analytics Report", font(16, Font.BOLD));
-            title.setAlignment(Element.ALIGN_CENTER);
-            document.add(title);
-            document.add(new Paragraph("Generated at: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")), font(9, Font.NORMAL)));
-            document.add(new Paragraph("Period: " + periodLabel(from, to), font(10, Font.NORMAL)));
-            document.add(new Paragraph(" "));
-
-            addSummarySection(document, summary);
-            addCountSection(document, "Reports by medication", summary.getReportsByMedication());
-            addCountSection(document, "Reports by adverse effect", summary.getReportsByEffect());
-            addCountSection(document, "Reports by status", summary.getReportsByStatus());
-            addCountSection(document, "Doctor vs patient reports", summary.getReportsByReporterType());
-            addSignalSection(document, summary, analystInterpretation);
+            addReportHeader(document, normalizedReportType, from, to);
+            addKpiSection(document, summary);
+            addInsightSection(document, summary, analystInterpretation, normalizedReportType);
+            addReportSections(document, summary, normalizedReportType);
 
             document.close();
             return outputStream.toByteArray();
@@ -344,52 +360,203 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
         }
     }
 
-    private void addSummarySection(Document document, AdverseEffectAnalyticsSummaryDTO summary) throws Exception {
-        document.add(new Paragraph("Summary", font(12, Font.BOLD)));
-        PdfPTable table = table(2);
-        addRow(table, "Total reports", String.valueOf(summary.getTotalReports()));
-        addRow(table, "Doctor reports", String.valueOf(summary.getDoctorReports()));
-        addRow(table, "Patient reports", String.valueOf(summary.getPatientReports()));
-        addRow(table, "Submitted", String.valueOf(summary.getSubmittedReports()));
-        addRow(table, "Under review", String.valueOf(summary.getUnderReviewReports()));
-        addRow(table, "Closed", String.valueOf(summary.getClosedReports()));
-        addRow(table, "Evidenced", String.valueOf(summary.getEvidencedReports()));
+    private void addReportHeader(Document document, String reportType, LocalDate from, LocalDate to) throws Exception {
+        PdfPTable header = table(1);
+        PdfPCell cell = new PdfPCell();
+        cell.setBorder(PdfPCell.NO_BORDER);
+        cell.setPadding(16);
+        cell.setBackgroundColor(COLOR_NAVY);
+
+        Paragraph title = new Paragraph(reportTitle(reportType), font(18, Font.BOLD, Color.WHITE));
+        title.setSpacingAfter(6);
+        cell.addElement(title);
+        cell.addElement(new Paragraph("Adverse effect reports | Period: " + periodLabel(from, to), font(10, Font.NORMAL, Color.WHITE)));
+        cell.addElement(new Paragraph("Generated: " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")), font(9, Font.NORMAL, new Color(207, 217, 235))));
+        header.addCell(cell);
+        document.add(header);
+        document.add(new Paragraph(" "));
+    }
+
+    private void addKpiSection(Document document, AdverseEffectAnalyticsSummaryDTO summary) throws Exception {
+        PdfPTable kpis = table(3);
+        kpis.setSpacingBefore(4);
+        kpis.addCell(metricCell("Total cases", summary.getTotalReports(), "All adverse effect reports", COLOR_BLUE));
+        kpis.addCell(metricCell("Doctor reports", summary.getDoctorReports(), percentLabel(summary.getDoctorReports(), summary.getTotalReports()), COLOR_TEAL));
+        kpis.addCell(metricCell("Patient reports", summary.getPatientReports(), percentLabel(summary.getPatientReports(), summary.getTotalReports()), COLOR_PURPLE));
+        kpis.addCell(metricCell("Submitted", summary.getSubmittedReports(), "Awaiting review", COLOR_ORANGE));
+        kpis.addCell(metricCell("Under review", summary.getUnderReviewReports(), "Analyst workload", COLOR_RED));
+        kpis.addCell(metricCell("Closed", summary.getClosedReports(), "Completed analysis", COLOR_GREEN));
+        document.add(kpis);
+        document.add(new Paragraph(" "));
+    }
+
+    private PdfPCell metricCell(String label, long value, String note, Color accent) {
+        PdfPCell cell = new PdfPCell();
+        cell.setPadding(10);
+        cell.setBorderColor(COLOR_GRAY);
+        cell.setBackgroundColor(COLOR_LIGHT);
+
+        Paragraph labelParagraph = new Paragraph(label.toUpperCase(Locale.ROOT), font(8, Font.BOLD, new Color(88, 103, 128)));
+        labelParagraph.setSpacingAfter(4);
+        cell.addElement(labelParagraph);
+        cell.addElement(new Paragraph(String.valueOf(value), font(20, Font.BOLD, accent)));
+        cell.addElement(new Paragraph(note == null ? "" : note, font(8, Font.NORMAL, new Color(95, 111, 136))));
+        return cell;
+    }
+
+    private void addInsightSection(Document document, AdverseEffectAnalyticsSummaryDTO summary, String analystInterpretation, String reportType) throws Exception {
+        PdfPTable table = table(1);
+        PdfPCell cell = new PdfPCell();
+        cell.setPadding(12);
+        cell.setBorderColor(new Color(191, 219, 254));
+        cell.setBackgroundColor(new Color(239, 246, 255));
+        cell.addElement(new Paragraph("Executive insight", font(12, Font.BOLD, COLOR_NAVY)));
+        cell.addElement(new Paragraph(autoInsight(summary, reportType), font(10, Font.NORMAL, new Color(46, 61, 86))));
+
+        String analystText = trimToNull(analystInterpretation);
+        if (analystText != null) {
+            Paragraph analyst = new Paragraph("Analyst interpretation: " + analystText, font(10, Font.BOLD, new Color(31, 75, 140)));
+            analyst.setSpacingBefore(8);
+            cell.addElement(analyst);
+        }
+
+        table.addCell(cell);
         document.add(table);
         document.add(new Paragraph(" "));
     }
 
-    private void addCountSection(Document document, String title, List<AdverseEffectAnalyticsSummaryDTO.CountItemDTO> items) throws Exception {
-        document.add(new Paragraph(title, font(12, Font.BOLD)));
-        PdfPTable table = table(3);
-        table.addCell(headerCell("Item"));
-        table.addCell(headerCell("Count"));
-        table.addCell(headerCell("Share"));
+    private void addReportSections(Document document, AdverseEffectAnalyticsSummaryDTO summary, String reportType) throws Exception {
+        if (REPORT_COMPREHENSIVE.equals(reportType) || REPORT_STATUS.equals(reportType)) {
+            addCountChartSection(document, "Workflow status pipeline", "Shows operational workload across Submitted, Under Review, Closed and Evidenced reports.", summary.getReportsByStatus(), COLOR_ORANGE);
+        }
+        if (REPORT_COMPREHENSIVE.equals(reportType) || REPORT_MEDICATION.equals(reportType)) {
+            addCountChartSection(document, "Medicine signal ranking", "Highlights medicines with the highest adverse-effect report volume.", summary.getReportsByMedication(), COLOR_BLUE);
+        }
+        if (REPORT_COMPREHENSIVE.equals(reportType) || REPORT_EFFECTS.equals(reportType)) {
+            addCountChartSection(document, "Adverse effect profile", "Ranks the most frequent recorded symptoms or effect descriptions.", summary.getReportsByEffect(), COLOR_RED);
+        }
+        if (REPORT_COMPREHENSIVE.equals(reportType) || REPORT_REPORTER.equals(reportType)) {
+            addCountChartSection(document, "Reporter contribution", "Compares reports submitted by doctors and patients.", summary.getReportsByReporterType(), COLOR_TEAL);
+        }
+        if (REPORT_COMPREHENSIVE.equals(reportType) || REPORT_SOURCE.equals(reportType)) {
+            addCountChartSection(document, "Submission channel breakdown", "Shows whether cases came through web, patient portal or another configured source.", summary.getReportsBySource(), COLOR_PURPLE);
+        }
+        if (REPORT_COMPREHENSIVE.equals(reportType) || REPORT_TIMELINE.equals(reportType)) {
+            addTimelineSection(document, "Case intake over time", "Daily report volume used for spotting spikes in pharmacovigilance workload.", summary.getReportsOverTime(), COLOR_GREEN);
+        }
+    }
 
-        if (items.isEmpty()) {
-            PdfPCell empty = valueCell("No data for selected period.");
-            empty.setColspan(3);
-            table.addCell(empty);
-        } else {
-            for (AdverseEffectAnalyticsSummaryDTO.CountItemDTO item : items) {
-                table.addCell(valueCell(item.getLabel()));
-                table.addCell(valueCell(String.valueOf(item.getCount())));
-                table.addCell(valueCell(item.getPercentage() + "%"));
-            }
+    private void addCountChartSection(
+            Document document,
+            String title,
+            String description,
+            List<AdverseEffectAnalyticsSummaryDTO.CountItemDTO> items,
+            Color color) throws Exception {
+        addSectionHeading(document, title, description);
+
+        if (items == null || items.isEmpty()) {
+            document.add(emptyParagraph("No data available for this statistic."));
+            return;
         }
 
-        document.add(table);
+        PdfPTable chart = table(4);
+        chart.setWidths(new float[]{2.4f, 4.2f, 1f, 1f});
+        chart.addCell(headerCell("Item"));
+        chart.addCell(headerCell("Distribution"));
+        chart.addCell(headerCell("Count"));
+        chart.addCell(headerCell("Share"));
+
+        for (AdverseEffectAnalyticsSummaryDTO.CountItemDTO item : items.stream().limit(12).collect(Collectors.toList())) {
+            chart.addCell(valueCell(item.getLabel()));
+            chart.addCell(barChartCell(item.getPercentage(), color));
+            chart.addCell(valueCell(String.valueOf(item.getCount())));
+            chart.addCell(valueCell(item.getPercentage() + "%"));
+        }
+
+        document.add(chart);
+        addTopFinding(document, items);
         document.add(new Paragraph(" "));
     }
 
-    private void addSignalSection(Document document, AdverseEffectAnalyticsSummaryDTO summary, String analystInterpretation) throws Exception {
-        document.add(new Paragraph("Analyst interpretation", font(12, Font.BOLD)));
+    private void addTimelineSection(
+            Document document,
+            String title,
+            String description,
+            List<AdverseEffectAnalyticsSummaryDTO.TimeBucketDTO> items,
+            Color color) throws Exception {
+        addSectionHeading(document, title, description);
 
-        String message = trimToNull(analystInterpretation);
-        if (message == null) {
-            message = "No analyst interpretation was provided for this generated report.";
+        if (items == null || items.isEmpty()) {
+            document.add(emptyParagraph("No timeline data available."));
+            return;
         }
 
-        document.add(new Paragraph(message, font(10, Font.NORMAL)));
+        long max = items.stream().mapToLong(AdverseEffectAnalyticsSummaryDTO.TimeBucketDTO::getCount).max().orElse(0);
+        PdfPTable chart = table(3);
+        chart.setWidths(new float[]{2f, 5f, 1f});
+        chart.addCell(headerCell("Date"));
+        chart.addCell(headerCell("Volume"));
+        chart.addCell(headerCell("Count"));
+
+        for (AdverseEffectAnalyticsSummaryDTO.TimeBucketDTO item : items.stream().limit(14).collect(Collectors.toList())) {
+            double percentage = max == 0 ? 0 : Math.round((item.getCount() * 1000.0) / max) / 10.0;
+            chart.addCell(valueCell(item.getPeriod()));
+            chart.addCell(barChartCell(percentage, color));
+            chart.addCell(valueCell(String.valueOf(item.getCount())));
+        }
+
+        document.add(chart);
+        document.add(new Paragraph(" "));
+    }
+
+    private void addSectionHeading(Document document, String title, String description) throws Exception {
+        Paragraph heading = new Paragraph(title, font(13, Font.BOLD, COLOR_NAVY));
+        heading.setSpacingBefore(8);
+        heading.setSpacingAfter(4);
+        document.add(heading);
+        document.add(new Paragraph(description, font(9, Font.NORMAL, new Color(90, 102, 122))));
+    }
+
+    private void addTopFinding(Document document, List<AdverseEffectAnalyticsSummaryDTO.CountItemDTO> items) throws Exception {
+        AdverseEffectAnalyticsSummaryDTO.CountItemDTO top = items.isEmpty() ? null : items.get(0);
+        if (top == null) {
+            return;
+        }
+        Paragraph finding = new Paragraph(
+                "Top finding: " + top.getLabel() + " accounts for " + top.getCount() + " reports (" + top.getPercentage() + "%).",
+                font(9, Font.BOLD, new Color(42, 68, 112)));
+        finding.setSpacingBefore(6);
+        document.add(finding);
+    }
+
+    private PdfPCell barChartCell(double percentage, Color color) {
+        try {
+            float filled = (float) Math.max(2, Math.min(99, percentage));
+            float empty = Math.max(1, 100 - filled);
+
+            PdfPTable bar = new PdfPTable(2);
+            bar.setWidthPercentage(100);
+            bar.setWidths(new float[]{filled, empty});
+
+            PdfPCell filledCell = new PdfPCell(new Phrase(" "));
+            filledCell.setFixedHeight(10);
+            filledCell.setBorder(PdfPCell.NO_BORDER);
+            filledCell.setBackgroundColor(color);
+            bar.addCell(filledCell);
+
+            PdfPCell emptyCell = new PdfPCell(new Phrase(" "));
+            emptyCell.setFixedHeight(10);
+            emptyCell.setBorder(PdfPCell.NO_BORDER);
+            emptyCell.setBackgroundColor(COLOR_GRAY);
+            bar.addCell(emptyCell);
+
+            PdfPCell wrapper = new PdfPCell(bar);
+            wrapper.setPadding(7);
+            wrapper.setBorderColor(COLOR_GRAY);
+            return wrapper;
+        } catch (Exception exception) {
+            return valueCell(percentage + "%");
+        }
     }
 
     private PdfPTable table(int columns) {
@@ -399,25 +566,90 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
         return table;
     }
 
-    private void addRow(PdfPTable table, String label, String value) {
-        table.addCell(headerCell(label));
-        table.addCell(valueCell(value));
-    }
-
     private PdfPCell headerCell(String text) {
-        PdfPCell cell = new PdfPCell(new Phrase(text, font(10, Font.BOLD)));
-        cell.setPadding(6);
+        PdfPCell cell = new PdfPCell(new Phrase(text, font(9, Font.BOLD, Color.WHITE)));
+        cell.setPadding(7);
+        cell.setBorderColor(COLOR_NAVY);
+        cell.setBackgroundColor(COLOR_NAVY);
         return cell;
     }
 
     private PdfPCell valueCell(String text) {
-        PdfPCell cell = new PdfPCell(new Phrase(text == null ? "" : text, font(10, Font.NORMAL)));
-        cell.setPadding(6);
+        PdfPCell cell = new PdfPCell(new Phrase(text == null ? "" : text, font(9, Font.NORMAL, new Color(38, 50, 69))));
+        cell.setPadding(7);
+        cell.setBorderColor(COLOR_GRAY);
         return cell;
     }
 
+    private Paragraph emptyParagraph(String text) {
+        Paragraph paragraph = new Paragraph(text, font(9, Font.NORMAL, new Color(95, 111, 136)));
+        paragraph.setSpacingAfter(8);
+        return paragraph;
+    }
+
     private Font font(int size, int style) {
-        return new Font(Font.HELVETICA, size, style);
+        return font(size, style, Color.BLACK);
+    }
+
+    private Font font(int size, int style, Color color) {
+        return new Font(Font.HELVETICA, size, style, color);
+    }
+
+    private String reportTitle(String reportType) {
+        return switch (reportType) {
+            case REPORT_MEDICATION -> "Medicine Signal Ranking Report";
+            case REPORT_EFFECTS -> "Adverse Effect Profile Report";
+            case REPORT_STATUS -> "Workflow Status Report";
+            case REPORT_REPORTER -> "Reporter Contribution Report";
+            case REPORT_SOURCE -> "Submission Channel Report";
+            case REPORT_TIMELINE -> "Case Intake Trend Report";
+            default -> "Comprehensive Pharmacovigilance Analytics Report";
+        };
+    }
+
+    private String autoInsight(AdverseEffectAnalyticsSummaryDTO summary, String reportType) {
+        AdverseEffectAnalyticsSummaryDTO.CountItemDTO medication = firstItem(summary.getReportsByMedication());
+        AdverseEffectAnalyticsSummaryDTO.CountItemDTO effect = firstItem(summary.getReportsByEffect());
+
+        if (summary.getTotalReports() == 0) {
+            return "No adverse effect reports are available yet. The report is ready to populate once cases are submitted.";
+        }
+
+        String lead = medication == null
+                ? "No medicine has enough report volume to form a clear signal."
+                : medication.getLabel() + " has the highest case volume with " + medication.getCount() + " reports.";
+        String effectText = effect == null
+                ? "Effect distribution is not available yet."
+                : effect.getLabel() + " is the most frequent recorded effect.";
+        String workload = summary.getUnderReviewReports() + " reports are currently under review and " + summary.getClosedReports() + " are closed.";
+
+        if (REPORT_STATUS.equals(reportType)) {
+            return workload + " Submitted reports should be triaged first to reduce review backlog.";
+        }
+        if (REPORT_EFFECTS.equals(reportType)) {
+            return effectText + " Compare this with the leading medicine signal before drawing a causality conclusion.";
+        }
+        if (REPORT_TIMELINE.equals(reportType)) {
+            return "Timeline view helps identify intake spikes. " + lead;
+        }
+        return lead + " " + effectText + " " + workload;
+    }
+
+    private AdverseEffectAnalyticsSummaryDTO.CountItemDTO firstItem(List<AdverseEffectAnalyticsSummaryDTO.CountItemDTO> items) {
+        return items == null || items.isEmpty() ? null : items.get(0);
+    }
+
+    private String normalizeReportType(String reportType) {
+        String normalized = trimToNull(reportType);
+        if (normalized == null) {
+            return REPORT_COMPREHENSIVE;
+        }
+
+        normalized = normalized.toLowerCase(Locale.ROOT);
+        return switch (normalized) {
+            case REPORT_MEDICATION, REPORT_EFFECTS, REPORT_STATUS, REPORT_REPORTER, REPORT_SOURCE, REPORT_TIMELINE -> normalized;
+            default -> REPORT_COMPREHENSIVE;
+        };
     }
 
     private String periodLabel(LocalDate from, LocalDate to) {
@@ -431,6 +663,10 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
             return "From " + from;
         }
         return "Until " + to;
+    }
+
+    private String percentLabel(long part, long total) {
+        return percentage(part, total) + "% of dataset";
     }
 
     private void validateAnalyticsPeriod(LocalDate from, LocalDate to) {
@@ -586,6 +822,14 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
                         Collectors.counting()));
     }
 
+    private Map<String, Long> countBySource(List<AdverseEffectReport> reports) {
+        return reports.stream()
+                .collect(Collectors.groupingBy(
+                        this::sourceLabel,
+                        LinkedHashMap::new,
+                        Collectors.counting()));
+    }
+
     private Map<String, Long> countByEffect(List<AdverseEffectReport> reports) {
         Map<String, Long> counts = new LinkedHashMap<>();
         for (AdverseEffectReport report : reports) {
@@ -607,6 +851,17 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
         }
 
         return List.of("Unspecified effect");
+    }
+
+    private String sourceLabel(AdverseEffectReport report) {
+        String source = trimToNull(report.getSource());
+        if (source != null) {
+            return toTitleCase(source);
+        }
+        if (report instanceof PatientReport) {
+            return "Patient Portal";
+        }
+        return "Unknown Source";
     }
 
     private List<String> splitSymptoms(String symptoms) {

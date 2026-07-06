@@ -6,6 +6,7 @@ public class AdverseEffectAnalyticsPdfRequestDTO {
     private LocalDate from;
     private LocalDate to;
     private String analystInterpretation;
+    private String reportType;
 
     public LocalDate getFrom() {
         return from;
@@ -29,5 +30,13 @@ public class AdverseEffectAnalyticsPdfRequestDTO {
 
     public void setAnalystInterpretation(String analystInterpretation) {
         this.analystInterpretation = analystInterpretation;
+    }
+
+    public String getReportType() {
+        return reportType;
+    }
+
+    public void setReportType(String reportType) {
+        this.reportType = reportType;
     }
 }

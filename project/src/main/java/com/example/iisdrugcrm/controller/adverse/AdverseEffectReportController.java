@@ -94,10 +94,11 @@ public class AdverseEffectReportController {
     @PreAuthorize("hasRole('FARMAKOVIGILANT')")
     public ResponseEntity<byte[]> getAnalyticsPdfReport(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        byte[] pdf = service.generateAnalyticsPdfReport(from, to, null);
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) String reportType) {
+        byte[] pdf = service.generateAnalyticsPdfReport(from, to, null, reportType);
 
-        return pdfResponse(pdf);
+        return pdfResponse(pdf, reportType);
     }
 
     @PostMapping("/analytics/report/pdf")
@@ -107,19 +108,27 @@ public class AdverseEffectReportController {
         LocalDate from = request == null ? null : request.getFrom();
         LocalDate to = request == null ? null : request.getTo();
         String analystInterpretation = request == null ? null : request.getAnalystInterpretation();
-        byte[] pdf = service.generateAnalyticsPdfReport(from, to, analystInterpretation);
+        String reportType = request == null ? null : request.getReportType();
+        byte[] pdf = service.generateAnalyticsPdfReport(from, to, analystInterpretation, reportType);
 
-        return pdfResponse(pdf);
+        return pdfResponse(pdf, reportType);
     }
 
-    private ResponseEntity<byte[]> pdfResponse(byte[] pdf) {
+    private ResponseEntity<byte[]> pdfResponse(byte[] pdf, String reportType) {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
-                        .filename("adverse-effect-analytics-report.pdf")
+                        .filename("adverse-effect-" + normalizeReportType(reportType) + "-report.pdf")
                         .build()
                         .toString())
                 .body(pdf);
+    }
+
+    private String normalizeReportType(String reportType) {
+        if (reportType == null || reportType.isBlank()) {
+            return "comprehensive";
+        }
+        return reportType.trim().toLowerCase().replaceAll("[^a-z0-9-]", "-");
     }
 
     // US-03: Single report details

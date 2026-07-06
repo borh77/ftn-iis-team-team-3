@@ -48,5 +48,5 @@ public interface AdverseEffectReportService {
 
     AdverseEffectAnalyticsSummaryDTO getAnalyticsSummary(LocalDate from, LocalDate to);
 
-    byte[] generateAnalyticsPdfReport(LocalDate from, LocalDate to, String analystInterpretation);
+    byte[] generateAnalyticsPdfReport(LocalDate from, LocalDate to, String analystInterpretation, String reportType);
 }

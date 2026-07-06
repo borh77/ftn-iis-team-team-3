@@ -6,6 +6,7 @@ import {
   AdverseEffectReport,
   AdverseEffectAnalyticsSummary,
   AdverseEffectReportVersion,
+  AnalyticsReportType,
   AnalystNote,
   ChangeStatusRequest,
   CreateDoctorReportRequest,
@@ -96,6 +97,7 @@ export class AdverseEffectsApiService {
     from?: string;
     to?: string;
     analystInterpretation?: string;
+    reportType?: AnalyticsReportType;
   } = {}): Observable<Blob> {
     return this.http.post(`${this.base}/analytics/report/pdf`, payload, {
       responseType: 'blob'

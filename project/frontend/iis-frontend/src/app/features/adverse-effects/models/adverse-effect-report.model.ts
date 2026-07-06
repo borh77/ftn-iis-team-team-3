@@ -1,5 +1,6 @@
 export type ReportStatus = 'SUBMITTED' | 'UNDER_REVIEW' | 'CLOSED' | 'EVIDENCED';
 export type ReportType = 'DOCTOR' | 'PATIENT';
+export type AnalyticsReportType = 'comprehensive' | 'medication' | 'effects' | 'status' | 'reporter' | 'source' | 'timeline';
 
 export interface AdverseEffectReport {
   id: number;
@@ -111,5 +112,6 @@ export interface AdverseEffectAnalyticsSummary {
   reportsByEffect: AnalyticsCountItem[];
   reportsByStatus: AnalyticsCountItem[];
   reportsByReporterType: AnalyticsCountItem[];
+  reportsBySource: AnalyticsCountItem[];
   reportsOverTime: AnalyticsTimeBucket[];
 }

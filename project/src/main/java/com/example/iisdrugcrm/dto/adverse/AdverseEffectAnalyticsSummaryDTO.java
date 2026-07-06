@@ -16,6 +16,7 @@ public class AdverseEffectAnalyticsSummaryDTO {
     private List<CountItemDTO> reportsByEffect;
     private List<CountItemDTO> reportsByStatus;
     private List<CountItemDTO> reportsByReporterType;
+    private List<CountItemDTO> reportsBySource;
     private List<TimeBucketDTO> reportsOverTime;
 
     public long getTotalReports() { return totalReports; }
@@ -50,6 +51,9 @@ public class AdverseEffectAnalyticsSummaryDTO {
 
     public List<CountItemDTO> getReportsByReporterType() { return reportsByReporterType; }
     public void setReportsByReporterType(List<CountItemDTO> reportsByReporterType) { this.reportsByReporterType = reportsByReporterType; }
+
+    public List<CountItemDTO> getReportsBySource() { return reportsBySource; }
+    public void setReportsBySource(List<CountItemDTO> reportsBySource) { this.reportsBySource = reportsBySource; }
 
     public List<TimeBucketDTO> getReportsOverTime() { return reportsOverTime; }
     public void setReportsOverTime(List<TimeBucketDTO> reportsOverTime) { this.reportsOverTime = reportsOverTime; }

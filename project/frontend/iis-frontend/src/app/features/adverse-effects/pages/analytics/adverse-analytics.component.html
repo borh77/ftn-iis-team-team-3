@@ -11,7 +11,7 @@
       <p>Signal-oriented overview of medicine safety reports, status workload and reporter source.</p>
     </div>
 
-    <form class="report-builder" (ngSubmit)="generatePdfReport()">
+    <form class="report-builder" (ngSubmit)="generatePdfReport('comprehensive')">
       <label>
         Analyst interpretation for PDF report
         <textarea
@@ -24,12 +24,12 @@
         <button class="btn-primary" type="button" (click)="refreshAnalytics()">
           Refresh analytics
         </button>
-        <button class="btn-secondary" type="submit" [disabled]="!canGeneratePdf || pdfDownloading">
-          {{ pdfDownloading ? 'Generating...' : 'Generate PDF report' }}
+        <button class="btn-secondary" type="submit" [disabled]="!canGenerateReport('comprehensive') || pdfDownloading">
+          {{ isReportDownloading('comprehensive') ? 'Generating...' : 'Generate comprehensive PDF' }}
         </button>
       </div>
       <small class="pdf-hint" *ngIf="!canGeneratePdf">
-        Write an analyst interpretation to enable PDF generation.
+        Comprehensive PDF requires an analyst conclusion. Focused statistic PDFs can be generated immediately.
       </small>
     </form>
   </section>
@@ -76,6 +76,40 @@
       </div>
     </section>
 
+    <section class="report-library">
+      <div class="report-library-header">
+        <div>
+          <p class="eyebrow">PDF report library</p>
+          <h2>Generate reports per statistic</h2>
+        </div>
+        <small>Comprehensive reports need an analyst conclusion. Focused statistic reports can be generated immediately.</small>
+      </div>
+
+      <div class="report-option-grid">
+        <article
+          class="report-option"
+          *ngFor="let option of reportOptions"
+          [class.primary-report]="option.requiresInterpretation">
+          <div class="report-option-body">
+            <span>{{ option.title }}</span>
+            <p>{{ option.description }}</p>
+          </div>
+          <div class="report-option-footer">
+            <small [class.required]="option.requiresInterpretation">
+              {{ reportRequirementLabel(option.type) }}
+            </small>
+            <button
+              class="report-generate-btn"
+              type="button"
+              (click)="generatePdfReport(option.type)"
+              [disabled]="!canGenerateReport(option.type) || pdfDownloading">
+              {{ isReportDownloading(option.type) ? 'Generating...' : 'Generate PDF' }}
+            </button>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <section class="insight-grid">
       <article class="analytics-panel signal-panel">
         <p class="eyebrow">Potential signal focus</p>
@@ -111,6 +145,9 @@
             <p class="eyebrow">Workflow health</p>
             <h2>Status pipeline</h2>
           </div>
+          <button class="panel-report-btn" type="button" (click)="generatePdfReport('status')" [disabled]="pdfDownloading">
+            PDF
+          </button>
         </div>
         <div class="status-pipeline">
           <div
@@ -132,6 +169,9 @@
             <p class="eyebrow">Medicine signal ranking</p>
             <h2>Top reported medicines</h2>
           </div>
+          <button class="panel-report-btn" type="button" (click)="generatePdfReport('medication')" [disabled]="pdfDownloading">
+            PDF
+          </button>
         </div>
         <div class="empty" *ngIf="data.reportsByMedication.length === 0">No medication data.</div>
         <div class="ranked-chart" *ngIf="data.reportsByMedication.length > 0">
@@ -155,6 +195,9 @@
             <p class="eyebrow">Effect profile</p>
             <h2>Most frequent effects</h2>
           </div>
+          <button class="panel-report-btn" type="button" (click)="generatePdfReport('effects')" [disabled]="pdfDownloading">
+            PDF
+          </button>
         </div>
         <div class="empty" *ngIf="data.reportsByEffect.length === 0">No effect data.</div>
         <div class="effect-cloud" *ngIf="data.reportsByEffect.length > 0">
@@ -172,6 +215,9 @@
             <p class="eyebrow">Source breakdown</p>
             <h2>Reporter contribution</h2>
           </div>
+          <button class="panel-report-btn" type="button" (click)="generatePdfReport('reporter')" [disabled]="pdfDownloading">
+            PDF
+          </button>
         </div>
         <div class="source-split compact-source">
           <div class="source-item" *ngFor="let item of data.reportsByReporterType">
@@ -181,6 +227,51 @@
               <div class="bar-fill source" [style.width.%]="barWidth(item.count, maxCount(data.reportsByReporterType))"></div>
             </div>
             <small>{{ item.percentage }}%</small>
+          </div>
+        </div>
+      </article>
+
+      <article class="analytics-panel chart-panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Submission channels</p>
+            <h2>Intake source mix</h2>
+          </div>
+          <button class="panel-report-btn" type="button" (click)="generatePdfReport('source')" [disabled]="pdfDownloading">
+            PDF
+          </button>
+        </div>
+        <div class="empty" *ngIf="data.reportsBySource.length === 0">No source data.</div>
+        <div class="source-split compact-source" *ngIf="data.reportsBySource.length > 0">
+          <div class="source-item" *ngFor="let item of data.reportsBySource">
+            <span>{{ item.label }}</span>
+            <strong>{{ item.count }}</strong>
+            <div class="bar-track">
+              <div class="bar-fill channel" [style.width.%]="barWidth(item.count, maxCount(data.reportsBySource))"></div>
+            </div>
+            <small>{{ item.percentage }}%</small>
+          </div>
+        </div>
+      </article>
+
+      <article class="analytics-panel chart-panel wide">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Case intake trend</p>
+            <h2>Reports over time</h2>
+          </div>
+          <button class="panel-report-btn" type="button" (click)="generatePdfReport('timeline')" [disabled]="pdfDownloading">
+            PDF
+          </button>
+        </div>
+        <div class="empty" *ngIf="data.reportsOverTime.length === 0">No timeline data.</div>
+        <div class="timeline-chart" *ngIf="data.reportsOverTime.length > 0">
+          <div class="timeline-row" *ngFor="let item of data.reportsOverTime">
+            <span>{{ item.period }}</span>
+            <div class="bar-track">
+              <div class="bar-fill timeline" [style.width.%]="timeBarWidth(item.count, maxTimeCount(data.reportsOverTime))"></div>
+            </div>
+            <strong>{{ item.count }}</strong>
           </div>
         </div>
       </article>
