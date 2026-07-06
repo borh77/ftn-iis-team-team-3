@@ -1,4 +1,4 @@
-import { Component, OnDestroy, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
@@ -19,6 +19,7 @@ export class CreateDoctorReportComponent implements OnDestroy {
 
   private readonly api = inject(AdverseEffectsApiService);
   private readonly router = inject(Router);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly transientMessages = inject(TransientMessageService);
 
   saving = false;
@@ -49,7 +50,10 @@ export class CreateDoctorReportComponent implements OnDestroy {
     this.transientMessages.clearField(this, 'errorMessage');
     this.transientMessages.clearField(this, 'successMessage');
 
-    this.api.createDoctorReport(this.form).pipe(finalize(() => (this.saving = false))).subscribe({
+    this.api.createDoctorReport(this.form).pipe(finalize(() => {
+      this.saving = false;
+      this.cdr.detectChanges();
+    })).subscribe({
       next: (report) => {
         // Redirect to my-reports with success message passed via router state
         this.router.navigate(['/adverse-effects/my-reports'], {
@@ -61,8 +65,10 @@ export class CreateDoctorReportComponent implements OnDestroy {
           this,
           'errorMessage',
           extractBackendErrorMessage(err, 'Error creating report. Please check your input.'),
-          ERROR_MESSAGE_MS
+          ERROR_MESSAGE_MS,
+          () => this.cdr.detectChanges()
         );
+        this.cdr.detectChanges();
       }
     });
   }

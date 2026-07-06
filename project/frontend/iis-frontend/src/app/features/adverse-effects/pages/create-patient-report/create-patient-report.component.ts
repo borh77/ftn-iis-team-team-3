@@ -101,7 +101,10 @@ export class CreatePatientReportComponent implements OnDestroy {
     this.saving = true;
     this.clearResultMessages();
 
-    this.api.createPatientReport(this.form).pipe(finalize(() => (this.saving = false))).subscribe({
+    this.api.createPatientReport(this.form).pipe(finalize(() => {
+      this.saving = false;
+      this.cdr.detectChanges();
+    })).subscribe({
       next: (report) => {
         this.showSuccess('Thank you for submitting your report! We appreciate you taking the time to inform us. Your report has been recorded and we will take it into consideration.');
         this.form = { medicationName: '', symptoms: '', additionalDesc: '', patientGender: '', patientAge: undefined, symptomDate: '' };

@@ -44,7 +44,10 @@ export class EditReportComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.reportId = Number(this.route.snapshot.paramMap.get('id'));
-    this.api.getReportById(this.reportId).pipe(finalize(() => (this.loading = false))).subscribe({
+    this.api.getReportById(this.reportId).pipe(finalize(() => {
+      this.loading = false;
+      this.cdr.detectChanges();
+    })).subscribe({
       next: (report) => {
         this.form.medicationName = report.medicationName;
         this.form.severity = report.severity ?? '';
@@ -69,7 +72,10 @@ export class EditReportComponent implements OnInit, OnDestroy {
   submit(): void {
     this.saving = true;
     this.clearError();
-    this.api.updateDoctorReport(this.reportId, this.form).pipe(finalize(() => (this.saving = false))).subscribe({
+    this.api.updateDoctorReport(this.reportId, this.form).pipe(finalize(() => {
+      this.saving = false;
+      this.cdr.detectChanges();
+    })).subscribe({
       next: () => {
         this.router.navigate(['/adverse-effects/my-reports'], {
           state: { successMessage: `Report #${this.reportId} updated successfully!` }

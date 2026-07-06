@@ -163,7 +163,10 @@ export class AdverseAnalyticsComponent implements OnInit {
       analystInterpretation: this.analystInterpretation.trim(),
       reportType
     })
-      .pipe(finalize(() => (this.pdfDownloadingType = null)))
+      .pipe(finalize(() => {
+        this.pdfDownloadingType = null;
+        this.cdr.detectChanges();
+      }))
       .subscribe({
         next: (blob) => this.savePdf(blob, reportType),
         error: () => {

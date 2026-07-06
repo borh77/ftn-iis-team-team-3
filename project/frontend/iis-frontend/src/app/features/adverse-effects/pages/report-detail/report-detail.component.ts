@@ -101,7 +101,10 @@ export class ReportDetailComponent implements OnInit, OnDestroy {
     this.actionLoading = true;
     this.clearError();
 
-    this.api.changeStatus(this.reportId, this.statusForm).pipe(finalize(() => (this.actionLoading = false))).subscribe({
+    this.api.changeStatus(this.reportId, this.statusForm).pipe(finalize(() => {
+      this.actionLoading = false;
+      this.cdr.detectChanges();
+    })).subscribe({
       next: (updated) => {
         this.report = updated;
         this.showSuccess('Status changed successfully.');
@@ -122,7 +125,10 @@ export class ReportDetailComponent implements OnInit, OnDestroy {
     this.actionLoading = true;
     this.clearError();
 
-    this.api.addNote(this.reportId, { content: this.newNoteContent.trim() }).pipe(finalize(() => (this.actionLoading = false))).subscribe({
+    this.api.addNote(this.reportId, { content: this.newNoteContent.trim() }).pipe(finalize(() => {
+      this.actionLoading = false;
+      this.cdr.detectChanges();
+    })).subscribe({
       next: (note) => {
         this.notes = [...this.notes, note];
         this.newNoteContent = '';
@@ -177,7 +183,10 @@ export class ReportDetailComponent implements OnInit, OnDestroy {
   }
 
   private loadReport(id: number): void {
-    this.api.getReportById(id).pipe(finalize(() => (this.loading = false))).subscribe({
+    this.api.getReportById(id).pipe(finalize(() => {
+      this.loading = false;
+      this.cdr.detectChanges();
+    })).subscribe({
       next: (data) => {
         this.report = data;
         if (data.reportType === 'DOCTOR') {
@@ -222,7 +231,10 @@ export class ReportDetailComponent implements OnInit, OnDestroy {
 
   private loadVersions(id: number): void {
     this.versionsLoading = true;
-    this.api.getReportVersions(id).pipe(finalize(() => (this.versionsLoading = false))).subscribe({
+    this.api.getReportVersions(id).pipe(finalize(() => {
+      this.versionsLoading = false;
+      this.cdr.detectChanges();
+    })).subscribe({
       next: (data) => {
         this.versions = data;
         this.cdr.detectChanges();
