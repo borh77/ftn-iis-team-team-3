@@ -19,6 +19,7 @@ import com.example.iisdrugcrm.dto.adverse.CreateDoctorReportRequestDTO;
 import com.example.iisdrugcrm.dto.adverse.CreatePatientReportRequestDTO;
 import com.example.iisdrugcrm.dto.adverse.StatusTransitionResponseDTO;
 import com.example.iisdrugcrm.dto.adverse.UpdateDoctorReportRequestDTO;
+import com.example.iisdrugcrm.mongo.AdverseEffectMongoSyncService;
 import com.example.iisdrugcrm.repository.UserRepository;
 import com.example.iisdrugcrm.repository.adverse.AdverseEffectReportRepository;
 import com.example.iisdrugcrm.repository.adverse.AdverseEffectReportVersionRepository;
@@ -82,6 +83,7 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
     private final AnalystNoteRepository analystNoteRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final AdverseEffectMongoSyncService mongoSyncService;
 
     public AdverseEffectReportServiceImpl(
             DoctorReportRepository doctorReportRepository,
@@ -91,7 +93,8 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
             StatusTransitionRepository statusTransitionRepository,
             AnalystNoteRepository analystNoteRepository,
             UserRepository userRepository,
-            EmailService emailService) {
+            EmailService emailService,
+            AdverseEffectMongoSyncService mongoSyncService) {
         this.doctorReportRepository = doctorReportRepository;
         this.patientReportRepository = patientReportRepository;
         this.reportRepository = reportRepository;
@@ -100,6 +103,7 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
         this.analystNoteRepository = analystNoteRepository;
         this.userRepository = userRepository;
         this.emailService = emailService;
+        this.mongoSyncService = mongoSyncService;
     }
 
     @Override
@@ -122,7 +126,9 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
         AdverseEffectReportVersion version = createActiveVersion(saved, reporter);
         saved.setCurrentVersion(version);
 
-        return toDTO(doctorReportRepository.save(saved));
+        AdverseEffectReportResponseDTO response = toDTO(doctorReportRepository.save(saved));
+        mongoSyncService.syncReportSafely(saved.getId());
+        return response;
     }
 
     @Override
@@ -139,7 +145,10 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
         report.setReporter(reporter);
         report.setStatus(ReportStatus.EVIDENCED);
 
-        return toDTO(patientReportRepository.save(report));
+        PatientReport saved = patientReportRepository.save(report);
+        AdverseEffectReportResponseDTO response = toDTO(saved);
+        mongoSyncService.syncReportSafely(saved.getId());
+        return response;
     }
 
     @Override
@@ -179,7 +188,9 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
         AdverseEffectReportVersion version = createActiveVersion(saved, saved.getReporter());
         saved.setCurrentVersion(version);
 
-        return toDTO(doctorReportRepository.save(saved));
+        AdverseEffectReportResponseDTO response = toDTO(doctorReportRepository.save(saved));
+        mongoSyncService.syncReportSafely(saved.getId());
+        return response;
     }
 
     @Override
@@ -242,7 +253,9 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
                     transition.getComment());
         }
 
-        return toDTO(saved);
+        AdverseEffectReportResponseDTO response = toDTO(saved);
+        mongoSyncService.syncReportSafely(saved.getId());
+        return response;
     }
 
     @Override
@@ -256,7 +269,9 @@ public class AdverseEffectReportServiceImpl implements AdverseEffectReportServic
         note.setContent(dto.getContent().trim());
         note.setCreatedAt(LocalDateTime.now());
 
-        return toDTO(analystNoteRepository.save(note));
+        AnalystNoteResponseDTO noteDto = toDTO(analystNoteRepository.save(note));
+        mongoSyncService.syncReportSafely(reportId);
+        return noteDto;
     }
 
     @Override
