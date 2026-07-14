@@ -11,6 +11,7 @@ public record SalesStagnationAlertDTO(
         Integer daysInStage,
         String message,
         String status,
+        String followUpStatus,
         LocalDateTime createdAt
 ) {
 }

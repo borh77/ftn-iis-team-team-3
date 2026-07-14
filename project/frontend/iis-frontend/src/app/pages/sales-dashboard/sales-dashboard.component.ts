@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import { SalesApiService, SalesAnalyticsSummary, SalesStagnationAlert } from '../../features/sales/api/sales-api.service';
+import { SalesApiService, SalesAnalyticsSummary, SalesStagnationAlert, SalesStagnationThreshold, StagnationCheckResult } from '../../features/sales/api/sales-api.service';
 
 @Component({
   selector: 'app-sales-dashboard',
@@ -22,10 +22,14 @@ export class SalesDashboardComponent implements OnInit {
   runningStagnationCheck = false;
   stagnationAlerts: SalesStagnationAlert[] = [];
   stagnationMessage = '';
+  stagnationThresholds: SalesStagnationThreshold[] = [];
+  thresholdsLoading = false;
+  lastStagnationCheckResult: StagnationCheckResult | null = null;
 
   ngOnInit(): void {
     this.loadSummary();
     this.loadStagnationAlerts();
+    this.loadStagnationThresholds();
   }
 
   loadSummary(): void {
@@ -77,11 +81,14 @@ export class SalesDashboardComponent implements OnInit {
   runStagnationCheck(): void {
     this.runningStagnationCheck = true;
     this.stagnationMessage = '';
+    this.lastStagnationCheckResult = null;
 
     this.salesApiService.runSalesStagnationCheck().subscribe({
-      next: () => {
+      next: (result) => {
+        this.lastStagnationCheckResult = result;
         this.runningStagnationCheck = false;
         this.stagnationMessage = 'Stagnation check completed successfully.';
+
         this.loadStagnationAlerts();
         this.loadSummary();
         this.cdr.detectChanges();
@@ -90,6 +97,23 @@ export class SalesDashboardComponent implements OnInit {
         console.error('Failed to run stagnation check:', error);
         this.runningStagnationCheck = false;
         this.stagnationMessage = 'Stagnation check failed.';
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  loadStagnationThresholds(): void {
+    this.thresholdsLoading = true;
+
+    this.salesApiService.getSalesStagnationThresholds().subscribe({
+      next: (thresholds) => {
+        this.stagnationThresholds = thresholds;
+        this.thresholdsLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (error) => {
+        console.error('Failed to load stagnation thresholds:', error);
+        this.thresholdsLoading = false;
         this.cdr.detectChanges();
       },
     });

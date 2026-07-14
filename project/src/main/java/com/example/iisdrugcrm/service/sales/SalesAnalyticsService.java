@@ -4,6 +4,8 @@ import com.example.iisdrugcrm.domain.sales.*;
 import com.example.iisdrugcrm.dto.sales.analytics.SalesAnalyticsSummaryDTO;
 import com.example.iisdrugcrm.repository.sales.*;
 import com.example.iisdrugcrm.dto.sales.analytics.SalesStagnationAlertDTO;
+import com.example.iisdrugcrm.dto.sales.analytics.SalesStagnationThresholdDTO;
+import com.example.iisdrugcrm.dto.sales.analytics.StagnationCheckResultDTO;
 import org.springframework.jdbc.core.JdbcTemplate;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Paragraph;
@@ -110,8 +112,85 @@ public class SalesAnalyticsService {
     }
 
     @Transactional
-    public void runStagnationCheck() {
+    public StagnationCheckResultDTO runStagnationCheck() {
+        Integer checkedProcesses = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM sales_processes
+                WHERE status = 'ACTIVE'
+                """,
+                Integer.class
+        );
+
+        Integer alertsBefore = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM sales_stagnation_alerts",
+                Integer.class
+        );
+
+        Integer activitiesBefore = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM sales_activities
+                WHERE type = 'FOLLOW_UP'
+                AND title = 'Follow up stagnant sales process'
+                """,
+                Integer.class
+        );
+
         jdbcTemplate.execute("CALL pr_run_sales_stagnation_check()");
+
+        Integer alertsAfter = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM sales_stagnation_alerts",
+                Integer.class
+        );
+
+        Integer activitiesAfter = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM sales_activities
+                WHERE type = 'FOLLOW_UP'
+                AND title = 'Follow up stagnant sales process'
+                """,
+                Integer.class
+        );
+
+        Integer openAlerts = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM sales_stagnation_alerts
+                WHERE status = 'OPEN'
+                """,
+                Integer.class
+        );
+
+        return new StagnationCheckResultDTO(
+                checkedProcesses,
+                alertsAfter - alertsBefore,
+                activitiesAfter - activitiesBefore,
+                openAlerts,
+                LocalDateTime.now()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<SalesStagnationThresholdDTO> getStagnationThresholds() {
+        return jdbcTemplate.query(
+                """
+                SELECT
+                    stage_name,
+                    warning_days,
+                    critical_days,
+                    active
+                FROM sales_stage_stagnation_thresholds
+                ORDER BY stage_name
+                """,
+                (resultSet, rowNumber) -> new SalesStagnationThresholdDTO(
+                        resultSet.getString("stage_name"),
+                        resultSet.getInt("warning_days"),
+                        resultSet.getInt("critical_days"),
+                        resultSet.getBoolean("active")
+                )
+        );
     }
 
     @Transactional(readOnly = true)
@@ -126,10 +205,20 @@ public class SalesAnalyticsService {
                     alert.days_in_stage,
                     alert.message,
                     alert.status,
+                    follow_up.status AS follow_up_status,
                     alert.created_at
                 FROM sales_stagnation_alerts alert
                 JOIN sales_processes process
                     ON process.id = alert.sales_process_id
+                LEFT JOIN LATERAL (
+                    SELECT activity.status
+                    FROM sales_activities activity
+                    WHERE activity.sales_process_id = alert.sales_process_id
+                    AND activity.type = 'FOLLOW_UP'
+                    AND activity.title = 'Follow up stagnant sales process'
+                    ORDER BY activity.scheduled_at DESC, activity.id DESC
+                    LIMIT 1
+                ) follow_up ON TRUE
                 WHERE alert.status = 'OPEN'
                 ORDER BY
                     CASE alert.severity
@@ -152,6 +241,7 @@ public class SalesAnalyticsService {
                         resultSet.getInt("days_in_stage"),
                         resultSet.getString("message"),
                         resultSet.getString("status"),
+                        resultSet.getString("follow_up_status"),
                         resultSet.getTimestamp("created_at").toLocalDateTime()
                 )
         );

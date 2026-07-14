@@ -145,6 +145,70 @@
         {{ stagnationMessage }}
       </p>
 
+      <div
+        *ngIf="lastStagnationCheckResult"
+        class="stagnation-check-result"
+      >
+        <div class="result-card">
+          <span class="result-label">Checked processes</span>
+          <strong>{{ lastStagnationCheckResult.checkedProcesses }}</strong>
+        </div>
+
+        <div class="result-card">
+          <span class="result-label">New alerts</span>
+          <strong>{{ lastStagnationCheckResult.newAlerts }}</strong>
+        </div>
+
+        <div class="result-card">
+          <span class="result-label">New follow-up activities</span>
+          <strong>{{ lastStagnationCheckResult.newActivities }}</strong>
+        </div>
+
+        <div class="result-card">
+          <span class="result-label">Open alerts</span>
+          <strong>{{ lastStagnationCheckResult.openAlerts }}</strong>
+        </div>
+      </div>
+
+      <div class="thresholds-section">
+        <div class="thresholds-heading">
+          <div>
+            <h3>Configured stage thresholds</h3>
+            <p>
+              Warning and critical limits used by the PL/pgSQL procedure.
+            </p>
+          </div>
+        </div>
+
+        <div *ngIf="thresholdsLoading" class="loading">
+          Loading stage thresholds...
+        </div>
+
+        <div
+          *ngIf="!thresholdsLoading && stagnationThresholds.length > 0"
+          class="threshold-grid"
+        >
+          <div
+            *ngFor="let threshold of stagnationThresholds"
+            class="threshold-card"
+          >
+            <div class="threshold-stage">
+              {{ threshold.stageName }}
+            </div>
+
+            <div class="threshold-values">
+              <span class="threshold-warning">
+                Warning: {{ threshold.warningDays }} days
+              </span>
+
+              <span class="threshold-critical">
+                Critical: {{ threshold.criticalDays }} days
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div *ngIf="alertsLoading" class="loading">
         Loading stagnation alerts...
       </div>
@@ -155,6 +219,15 @@
       >
         No open stagnation alerts.
       </div>
+
+      <p
+        *ngIf="!alertsLoading && stagnationAlerts.length > 0"
+        class="open-alert-count"
+      >
+        {{ stagnationAlerts.length }}
+        active stagnation
+        {{ stagnationAlerts.length === 1 ? 'alert' : 'alerts' }}
+      </p>
 
       <div
         *ngIf="!alertsLoading && stagnationAlerts.length > 0"
@@ -167,6 +240,7 @@
               <th>Stage</th>
               <th>Days in Stage</th>
               <th>Severity</th>
+              <th>Follow-up</th>
               <th>Created</th>
             </tr>
           </thead>
@@ -190,6 +264,21 @@
                 >
                   {{ alert.severity }}
                 </span>
+              </td>
+
+              <td>
+                <span
+                  *ngIf="alert.followUpStatus; else noFollowUp"
+                  class="follow-up-badge"
+                >
+                  ✓ {{ alert.followUpStatus }}
+                </span>
+
+                <ng-template #noFollowUp>
+                  <span class="follow-up-missing">
+                    Not created
+                  </span>
+                </ng-template>
               </td>
 
               <td>{{ alert.createdAt | date: 'dd.MM.yyyy HH:mm' }}</td>

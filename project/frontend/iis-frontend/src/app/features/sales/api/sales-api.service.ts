@@ -42,7 +42,23 @@ export interface SalesStagnationAlert {
   daysInStage: number;
   message: string;
   status: 'OPEN' | 'RESOLVED';
+  followUpStatus: string | null;
   createdAt: string;
+}
+
+export interface SalesStagnationThreshold {
+  stageName: string;
+  warningDays: number;
+  criticalDays: number;
+  active: boolean;
+}
+
+export interface StagnationCheckResult {
+  checkedProcesses: number;
+  newAlerts: number;
+  newActivities: number;
+  openAlerts: number;
+  executedAt: string;
 }
 
 export interface SalesMarketProduct {
@@ -321,10 +337,16 @@ export class SalesApiService {
     );
   }
 
-  runSalesStagnationCheck(): Observable<void> {
-    return this.http.post<void>(
+  runSalesStagnationCheck(): Observable<StagnationCheckResult> {
+    return this.http.post<StagnationCheckResult>(
       `${this.apiBaseUrl}/api/sales/analytics/stagnation-check`,
       {},
+    );
+  }
+
+  getSalesStagnationThresholds(): Observable<SalesStagnationThreshold[]> {
+    return this.http.get<SalesStagnationThreshold[]>(
+      `${this.apiBaseUrl}/api/sales/analytics/stagnation-thresholds`,
     );
   }
 

@@ -3,6 +3,9 @@ package com.example.iisdrugcrm.controller.sales;
 import com.example.iisdrugcrm.dto.sales.analytics.SalesAnalyticsSummaryDTO;
 import com.example.iisdrugcrm.service.sales.SalesAnalyticsService;
 import com.example.iisdrugcrm.dto.sales.analytics.SalesStagnationAlertDTO;
+import com.example.iisdrugcrm.dto.sales.analytics.SalesStagnationThresholdDTO;
+import com.example.iisdrugcrm.dto.sales.analytics.StagnationCheckResultDTO;
+
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -37,9 +40,14 @@ public class SalesAnalyticsController {
 
     @PostMapping("/stagnation-check")
     @PreAuthorize("hasAnyRole('SALES_REPRESENTATIVE', 'SALES_MANAGER', 'ACCOUNT_MANAGER')")
-    public ResponseEntity<Void> runStagnationCheck() {
-        salesAnalyticsService.runStagnationCheck();
-        return ResponseEntity.noContent().build();
+    public StagnationCheckResultDTO runStagnationCheck() {
+        return salesAnalyticsService.runStagnationCheck();
+    }
+
+    @GetMapping("/stagnation-thresholds")
+    @PreAuthorize("hasAnyRole('SALES_REPRESENTATIVE', 'SALES_MANAGER', 'ACCOUNT_MANAGER')")
+    public List<SalesStagnationThresholdDTO> getStagnationThresholds() {
+        return salesAnalyticsService.getStagnationThresholds();
     }
 
     @GetMapping("/stagnation-alerts")

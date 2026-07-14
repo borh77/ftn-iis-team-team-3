@@ -290,3 +290,130 @@
     gap: 14px;
   }
 }
+
+.stagnation-check-result {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.result-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+  background: #f8fbff;
+}
+
+.result-card strong {
+  color: #0f172a;
+  font-size: 24px;
+}
+
+.result-label {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.thresholds-section {
+  margin: 0 0 24px;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.thresholds-heading {
+  margin-bottom: 16px;
+}
+
+.thresholds-heading h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.thresholds-heading p {
+  margin: 6px 0 0;
+  color: #64748b;
+}
+
+.threshold-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.threshold-card {
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.threshold-stage {
+  margin-bottom: 10px;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.threshold-values {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.threshold-warning {
+  color: #92400e;
+}
+
+.threshold-critical {
+  color: #b91c1c;
+}
+
+.open-alert-count {
+  margin: 0 0 12px;
+  color: #475569;
+  font-weight: 700;
+}
+
+@media (max-width: 1100px) {
+  .stagnation-check-result {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .threshold-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .stagnation-check-result,
+  .threshold-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.follow-up-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.follow-up-missing {
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+}
