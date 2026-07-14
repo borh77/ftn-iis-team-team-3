@@ -3,6 +3,8 @@ package com.example.iisdrugcrm.service.sales;
 import com.example.iisdrugcrm.domain.sales.*;
 import com.example.iisdrugcrm.dto.sales.analytics.SalesAnalyticsSummaryDTO;
 import com.example.iisdrugcrm.repository.sales.*;
+import com.example.iisdrugcrm.dto.sales.analytics.SalesStagnationAlertDTO;
+import org.springframework.jdbc.core.JdbcTemplate;
 import com.lowagie.text.DocumentException;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.pdf.PdfWriter;
@@ -29,19 +31,22 @@ public class SalesAnalyticsService {
     private final SalesProcessRepository salesProcessRepository;
     private final OfferRepository offerRepository;
     private final ContractRepository contractRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     public SalesAnalyticsService(
             LeadRepository leadRepository,
             CustomerRepository customerRepository,
             SalesProcessRepository salesProcessRepository,
             OfferRepository offerRepository,
-            ContractRepository contractRepository
+            ContractRepository contractRepository,
+            JdbcTemplate jdbcTemplate
     ) {
         this.leadRepository = leadRepository;
         this.customerRepository = customerRepository;
         this.salesProcessRepository = salesProcessRepository;
         this.offerRepository = offerRepository;
         this.contractRepository = contractRepository;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Transactional(readOnly = true)
@@ -101,6 +106,54 @@ public class SalesAnalyticsService {
                 processesByStage,
                 offersByStatus,
                 contractsByStatus
+        );
+    }
+
+    @Transactional
+    public void runStagnationCheck() {
+        jdbcTemplate.execute("CALL pr_run_sales_stagnation_check()");
+    }
+
+    @Transactional(readOnly = true)
+    public List<SalesStagnationAlertDTO> getOpenStagnationAlerts() {
+        String sql = """
+                SELECT
+                    alert.id,
+                    alert.sales_process_id,
+                    process.title AS process_title,
+                    alert.stage_name,
+                    alert.severity,
+                    alert.days_in_stage,
+                    alert.message,
+                    alert.status,
+                    alert.created_at
+                FROM sales_stagnation_alerts alert
+                JOIN sales_processes process
+                    ON process.id = alert.sales_process_id
+                WHERE alert.status = 'OPEN'
+                ORDER BY
+                    CASE alert.severity
+                        WHEN 'CRITICAL' THEN 1
+                        WHEN 'WARNING' THEN 2
+                        ELSE 3
+                    END,
+                    alert.days_in_stage DESC,
+                    alert.created_at DESC
+                """;
+
+        return jdbcTemplate.query(
+                sql,
+                (resultSet, rowNumber) -> new SalesStagnationAlertDTO(
+                        resultSet.getLong("id"),
+                        resultSet.getLong("sales_process_id"),
+                        resultSet.getString("process_title"),
+                        resultSet.getString("stage_name"),
+                        resultSet.getString("severity"),
+                        resultSet.getInt("days_in_stage"),
+                        resultSet.getString("message"),
+                        resultSet.getString("status"),
+                        resultSet.getTimestamp("created_at").toLocalDateTime()
+                )
         );
     }
 

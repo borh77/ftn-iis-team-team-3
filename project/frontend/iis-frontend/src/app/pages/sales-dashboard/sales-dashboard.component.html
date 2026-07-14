@@ -121,5 +121,82 @@
         </article>
       </section>
     </ng-container>
+    <section class="stagnation-section">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">PL/pgSQL monitoring</p>
+          <h2>Sales Process Stagnation Alerts</h2>
+          <p class="section-description">
+            Active sales processes that have remained in the same stage longer than the configured threshold.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="run-check-button"
+          [disabled]="runningStagnationCheck"
+          (click)="runStagnationCheck()"
+        >
+          {{ runningStagnationCheck ? 'Running check...' : 'Run stagnation check' }}
+        </button>
+      </div>
+
+      <p *ngIf="stagnationMessage" class="stagnation-message">
+        {{ stagnationMessage }}
+      </p>
+
+      <div *ngIf="alertsLoading" class="loading">
+        Loading stagnation alerts...
+      </div>
+
+      <div
+        *ngIf="!alertsLoading && stagnationAlerts.length === 0"
+        class="empty-alerts"
+      >
+        No open stagnation alerts.
+      </div>
+
+      <div
+        *ngIf="!alertsLoading && stagnationAlerts.length > 0"
+        class="alerts-table-wrapper"
+      >
+        <table class="alerts-table">
+          <thead>
+            <tr>
+              <th>Sales Process</th>
+              <th>Stage</th>
+              <th>Days in Stage</th>
+              <th>Severity</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let alert of stagnationAlerts">
+              <td>
+                <strong>{{ alert.processTitle }}</strong>
+                <small>Process #{{ alert.salesProcessId }}</small>
+              </td>
+
+              <td>{{ alert.stageName }}</td>
+
+              <td>{{ alert.daysInStage }}</td>
+
+              <td>
+                <span
+                  class="severity-badge"
+                  [class.severity-warning]="alert.severity === 'WARNING'"
+                  [class.severity-critical]="alert.severity === 'CRITICAL'"
+                >
+                  {{ alert.severity }}
+                </span>
+              </td>
+
+              <td>{{ alert.createdAt | date: 'dd.MM.yyyy HH:mm' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </section>
 </main>

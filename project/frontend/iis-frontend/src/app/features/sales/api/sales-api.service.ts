@@ -33,6 +33,18 @@ export interface SalesAnalyticsSummary {
   contractsByStatus: Record<string, number>;
 }
 
+export interface SalesStagnationAlert {
+  id: number;
+  salesProcessId: number;
+  processTitle: string;
+  stageName: string;
+  severity: 'WARNING' | 'CRITICAL';
+  daysInStage: number;
+  message: string;
+  status: 'OPEN' | 'RESOLVED';
+  createdAt: string;
+}
+
 export interface SalesMarketProduct {
   id: number;
   productId: number;
@@ -300,6 +312,19 @@ export class SalesApiService {
   getSalesAnalyticsSummary(): Observable<SalesAnalyticsSummary> {
     return this.http.get<SalesAnalyticsSummary>(
       `${this.apiBaseUrl}/api/sales/analytics/summary`,
+    );
+  }
+
+  getSalesStagnationAlerts(): Observable<SalesStagnationAlert[]> {
+    return this.http.get<SalesStagnationAlert[]>(
+      `${this.apiBaseUrl}/api/sales/analytics/stagnation-alerts`,
+    );
+  }
+
+  runSalesStagnationCheck(): Observable<void> {
+    return this.http.post<void>(
+      `${this.apiBaseUrl}/api/sales/analytics/stagnation-check`,
+      {},
     );
   }
 
